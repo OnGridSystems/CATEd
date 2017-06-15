@@ -1,0 +1,26 @@
+{% extends 'trade/base.html' %}
+{% block content %}
+    <div style="width:40%; margin: 0 auto;">
+        <h3 class="center">Регистрация</h3>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.errors %}
+                {% for error in form.username.errors %}
+                    <span class="red-text">{{ error }}</span>
+                {% endfor %}
+                <br/>
+                {% for error in form.password2.errors %}
+                    <span class="red-text">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+            {% for f in form %}
+                <div class="input-field">
+                    <label for="{{ f.id_for_label }}">{{ f.label }}</label>
+                    {{ f }}
+                </div>
+                <span class="grey-text text-lighten-1"><small>{{ f.help_text | safe }}</small></span>
+            {% endfor %}
+            <button type="submit" class="btn red waves-purple waves-effect right">Готово</button>
+        </form>
+    </div>
+{% endblock %}

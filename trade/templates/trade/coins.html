@@ -1,0 +1,43 @@
+{% load coin_full_name %}
+{% if coins %}
+    <table class="exchange user_coins">
+        <thead>
+        <tr>
+            <th width="5%">Coin</th>
+            <th width="10%">Name</th>
+            <th width="15%">Available</th>
+            <th></th>
+            <th width="15%">Btc value</th>
+            <th width="15%">Last update</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for coin in coins %}
+            <tr class="balances">
+                <td>{{ coin.coin }}</td>
+                <td>{{ coin.coin | get_full_name }}</td>
+                <td class="balance">{{ coin.balance }}</td>
+                <td></td>
+                <td>{{ coin.btc_value }}</td>
+                <td>{{ coin.last_update | date:"o.m.d H:i:s" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <table class="exchange user_coins">
+        <thead>
+        <tr>
+            <th width="5%">Name</th>
+            <th></th>
+            <th width="15%">Available</th>
+            <th width="15%">Last update</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4">Ещё не запускали скрипт для данного аккаунта</td>
+        </tr>
+        </tbody>
+    </table>
+{% endif %}

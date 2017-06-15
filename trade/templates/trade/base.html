@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>TradeOnGrid</title>
+    <link rel="stylesheet" href="{% static 'css/materialize.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<nav>
+    <div class="nav-wrapper main-nav">
+        <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <li><a href="{% url 'index' %}"><b>Главная</b></a></li>
+            {% if user.is_authenticated %}
+                <li><a href="{% url 'account_logout' %}"><i class="material-icons left tiny">input</i>Выход</a></li>
+            {% else %}
+                <li><a href="{% url 'account_login' %}"><i class="material-icons left tiny">input</i>Вход</a></li>
+            {% endif %}
+
+            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a></li>
+        </ul>
+    </div>
+</nav>
+{% block content %}{% endblock %}
+</body>
+<script src="https://code.jquery.com/jquery-2.2.4.min.js"
+        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script type="text/javascript" src="{% static 'js/materialize.js' %}"></script>
+<script type="text/javascript" src="{% static 'js/script.js' %}"></script>
+</html>

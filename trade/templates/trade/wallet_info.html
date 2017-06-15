@@ -1,0 +1,21 @@
+{% load value_to_eth %}
+{% if success == 1 %}
+    <table width="100%">
+        <tr>
+            <td><b>In trans total:</b></td>
+            <td>{{ in_trans | length }} РС.</td>
+        </tr>
+        <tr>
+            <td><b>Out trans total:</b></td>
+            <td>{{ out_trans | length }} РС.</td>
+        </tr>
+        <tr>
+            <td><b>In trans total value:</b></td>
+            <td>{{ in_trans_sum | value_to_eth }}</td>
+        </tr>
+        <tr>
+            <td><b>Out trans total value:</b></td>
+            <td>{{ out_trans_sum | value_to_eth }}</td>
+        </tr>
+    </table>
+{% endif %}

@@ -1,0 +1,100 @@
+.main-nav {
+    background: #0a6970;
+}
+
+.main-nav li {
+    border-left: 1px solid #0b6e74;
+    border-right: 1px solid #06393b;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 14px;
+    text-shadow: 0 1px 1px #06393b;
+}
+
+.main-nav li:first-child {
+    border-left: 1px solid #06393b;
+}
+
+.main-nav li a {
+    color: lightgray;
+}
+
+.brand-logo img {
+    margin: 0 auto;
+    padding: 10px;
+}
+
+.exchange {
+    width: 100%;
+    text-align: center;
+}
+
+.exchange th {
+    border: none;
+    color: #1e2324;
+    text-align: center;
+    background: #b3d5d6;
+    font-weight: bolder;
+}
+
+.user_coins td:first-child {
+    font-weight: bolder;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+tr.balances td:last-child {
+    text-align: right;
+}
+
+.mysize {
+    font-size: 1.5rem !important;
+}
+
+.exchange-header th:nth-child(1) {
+    width: 10% !important;
+}
+
+.main-content {
+    margin-top: 30px;
+    padding: 48px 0 48px 0;
+    background-color: #e5f0e6;
+    min-height: 200px;
+}
+
+.user-info {
+    border-right: 1px solid lightgray;
+}
+
+.totalBTC {
+    font-family: Roboto, serif;
+    font-size: xx-large;
+    display: block;
+    text-align: center;
+}
+
+.wallet {
+    padding: 20px;
+    margin-bottom: 50px;
+    background: #b3d5d6;
+}
+
+.transactions-table {
+    max-width: 100%;
+    width: 100%;
+}
+
+.transactions-table thead th {
+    background: #009688;
+    color: white;
+}
+
+.transactions-table tbody td {
+    word-break: break-all;
+    border-bottom: 1px solid grey;
+}
+
+.transaction-type {
+    padding: 2px;
+    border-radius: 2px;
+}

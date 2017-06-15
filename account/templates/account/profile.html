@@ -1,0 +1,42 @@
+{% extends 'trade/base.html' %}
+{% block content %}
+    <h2 class="center">Мой профиль</h2>
+    <div class="main-content">
+        <div class="container">
+            <div class="row">
+                <h5 class="center">Complete your user profile to increase your limits.</h5>
+                <div class="col s12 l12 m12">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="input-field">
+                            <label for="firstname">
+                                Имя
+                            </label>
+                            <input {% if user.first_name %}disabled{% endif %} type="text" id="firstname"
+                                   name="firstname"
+                                   value="{{ user.first_name }}">
+                        </div>
+                        <div class="input-field">
+                            <label for="lastname">
+                                Фамилия
+                            </label>
+                            <input {% if user.last_name %}disabled{% endif %} type="text" id="lastname" name="lastname"
+                                   value="{{ user.last_name }}">
+                        </div>
+                        <div class="input-field">
+                            <label for="email">
+                                E-mail
+                            </label>
+                            <input {% if user.email %}disabled{% endif %} type="email" id="email" name="email"
+                                   value="{{ user.email }}">
+                        </div>
+                        <button class="btn waves-effect waves-light" type="submit" name="action">Сохранить
+                            <i class="material-icons right">send</i>
+                        </button>
+                    </form>
+                {{ form.as_p }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

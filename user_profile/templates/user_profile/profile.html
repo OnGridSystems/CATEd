@@ -1,0 +1,77 @@
+{% extends 'trade/base.html' %}
+{% block content %}
+    <h2 class="center">Мой профиль</h2>
+    <div class="main-content">
+        <div class="container">
+            <div class="row">
+                <h5 class="center">Complete your user profile to increase your limits.</h5>
+                <div class="col s12 l4 m12 user-info">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="input-field">
+                            <input {% if user.first_name %}disabled{% endif %} type="text" id="firstname"
+                                   name="firstname"
+                                   value="{{ user.first_name }}" placeholder="Имя">
+                        </div>
+                        <div class="input-field">
+                            <input {% if user.last_name %}disabled{% endif %} type="text" id="lastname" name="lastname"
+                                   value="{{ user.last_name }}" placeholder="Фамилия">
+                        </div>
+                        <div class="input-field">
+                            <input {% if user.email %}disabled{% endif %} type="email" id="email" name="email"
+                                   value="{{ user.email }}" placeholder="E-mail">
+                        </div>
+                        <button {% if user.last_name and user.first_name %}disabled{% endif %}
+                                class="btn waves-effect waves-light cyan darken-4" type="submit" name="action">Сохранить
+                            <i class="material-icons right">send</i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col s12 m12 l8 user-exchanges-info">
+                    <table class="exchange">
+                        <thead>
+                        <tr>
+                            <th>Биржа</th>
+                            <th>Ключ</th>
+                            <th>Включена</th>
+                            <th>Корректна</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in user_exchanges %}
+                            <tr>
+                                <td>{{ item.exchange.exchange }}</td>
+                                <td>{{ item.apikey | truncatechars:20 }}</td>
+                                <td>
+                                    {% if item.is_active == True %}
+                                        <i class="fa fa-check center green-text"
+                                           aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-times center red-text"
+                                           aria-hidden="true"></i>
+
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.is_correct == True %}
+                                        <i class="fa fa-check center green-text"
+                                           aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="fa fa-times center red-text"
+                                           aria-hidden="true"></i>
+
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="chip">Всего бирж: {{ user_exchanges | length }}</div>
+                    <div class="chip">Из них активных: {{ user_active_exchanges | length }}</div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

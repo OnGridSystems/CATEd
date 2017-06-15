@@ -1,0 +1,21 @@
+{% extends 'trade/base.html' %}
+{% block content %}
+    <div style="width:40%; margin: 0 auto;">
+        <h3 class="center">Авторизация</h3>
+        <form method="post">
+            {% csrf_token %}
+            {% if errors %}
+                <span class="red-text">{{ errors }}</span>
+            {% endif %}
+            <div class="input-field">
+                <input type="text" name="name" id="name" required>
+                <label for="name">Введите имя</label>
+            </div>
+            <div class="input-field">
+                <input type="password" name="password" id="password" required>
+                <label for="password">Введите пароль</label>
+            </div>
+            <button type="submit" class="btn red waves-purple waves-effect right">Войти</button>
+        </form>
+    </div>
+{% endblock %}
