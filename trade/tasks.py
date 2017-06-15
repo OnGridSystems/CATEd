@@ -238,7 +238,7 @@ def get_eth_wallet_history():
 def get_btc_wallet_history():
     wallet = Wallets.objects.get(name='BTC')
     while True:
-        time.sleep(5)
+        time.sleep(120)
         btc_uw = UserWallet.objects.filter(wallet=wallet)
         if len(btc_uw) > 0:
             for uw in btc_uw:
@@ -260,7 +260,6 @@ def get_btc_wallet_history():
                                 wallet_history.number = tx_his['data']['block']
                                 wallet_history.date = tx_his['data']['time_utc']
                                 if float(item['amount']) > 0:
-                                    # t_from = tx_his['data']['trade']['vins'][0]['address']
                                     t_from = ''
                                     for item_from in tx_his['data']['trade']['vins']:
                                         t_from += item_from['address'] + '<br/>'
@@ -270,7 +269,6 @@ def get_btc_wallet_history():
                                     t_to = ''
                                     for item_to in tx_his['data']['trade']['vouts']:
                                         t_to += item_to['address'] + '<br/>'
-                                    # t_to = tx_his['data']['trade']['vouts'][0]['address']
                                 wallet_history.t_to = t_to
                                 wallet_history.t_from = t_from
                                 if t_to == uw.address:
@@ -280,6 +278,7 @@ def get_btc_wallet_history():
                                 else:
                                     wallet_history.type = 'unknown'
                                 wallet_history.value = item['amount']
+                                print(item['amount'])
                                 wallet_history.hash = item['tx']
                                 wallet_history.block_hash = '-'
                                 wallet_history.save()

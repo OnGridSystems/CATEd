@@ -1,5 +1,5 @@
 {% extends 'trade/base.html' %}
-{% load coins transactions wallet_information value_to_eth %}
+{% load coins transactions wallet_information value_to_cryptotoken %}
 {% block content %}
     <div class="fixed-action-btn">
         <a class="btn-floating btn-large red" href="#modal1">
@@ -139,12 +139,23 @@
                     <table width="100%">
                         <tr>
                             <td rowspan="2" width="20%">
-                                <img src="https://developers.coinbase.com/images/mist-logo.png" width="200" height="200"
-                                     alt="eth-coin">
+                                {% if item.wallet.name == 'ETH' %}
+                                    <img src="https://developers.coinbase.com/images/mist-logo.png" width="100"
+                                         height="100"
+                                         alt="eth-coin">
+                                {% elif item.wallet.name == 'BTC' %}
+                                    <img src="https://cdn3.iconfinder.com/data/icons/inficons-currency-set/512/btc-512.png" width="100"
+                                         height="100"
+                                         alt="btc-coin">
+                                {% elif item.wallet.name == 'Yandex Money' %}
+                                    <img src="https://cdn3.iconfinder.com/data/icons/payment-systems-coins/650/yandex-gold.png" width="100"
+                                         height="100"
+                                         alt="yandex-coin">
+                                {% endif %}
                             </td>
                             <td width="60%">
                                 <h5>{{ item.wallet.name }} Wallet</h5>
-                                <h6>Balance: {{ item.balance | value_to_eth }}</h6>
+                                <h6>Balance: {{ item.balance | value_to_cryptotoken:item }}</h6>
                             </td>
                             <td rowspan="2">{% get_wallet_info item %}</td>
                         </tr>

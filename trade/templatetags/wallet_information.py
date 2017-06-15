@@ -10,13 +10,14 @@ def get_wallet_info(uw):
     if len(transactions) > 0:
         in_trans = list(transactions.filter(type='in'))
         out_trans = transactions.filter(type='out')
-        in_trans_sum = float(0)
-        out_trans_sum = float(0)
+        in_trans_sum = 0
+        out_trans_sum = 0
         for item in in_trans:
             in_trans_sum += item.value
         for item in out_trans:
             out_trans_sum += item.value
-        return {'success': 1,
+        return {'uw': uw,
+                'success': 1,
                 'in_trans': in_trans,
                 'out_trans': out_trans,
                 'in_trans_sum': in_trans_sum,

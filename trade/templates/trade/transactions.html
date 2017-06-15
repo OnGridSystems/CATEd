@@ -1,4 +1,4 @@
-{% load value_to_eth %}
+{% load value_to_cryptotoken %}
 {% if transactions %}
     <table class="transactions-table">
         <thead>
@@ -27,7 +27,7 @@
                         <span class="red white-text transaction-type">{{ transaction.type }}</span>
                     {% endif %}
                 </td>
-                <td>{{ transaction.value | value_to_eth}}</td>
+                <td>{{ transaction.value | value_to_cryptotoken:item}}</td>
 {#                <td>{{ transaction.block_hash }}</td>#}
                 <td>{{ transaction.hash }}</td>
             </tr>
@@ -35,7 +35,7 @@
         </tbody>
     </table>
 {% else %}
-    <table>
+    <table class="transactions-table">
         <thead>
         <tr>
             <th>Block Number</th>

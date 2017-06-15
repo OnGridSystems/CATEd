@@ -94,7 +94,7 @@ class WalletHistory(models.Model):
     t_from = models.TextField()
     t_to = models.TextField()
     type = models.CharField(max_length=255)
-    value = models.BigIntegerField()
+    value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     block_hash = models.CharField(max_length=511)
     hash = models.CharField(max_length=511)
 

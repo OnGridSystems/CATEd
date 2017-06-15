@@ -90,8 +90,11 @@ tr.balances td:last-child {
 }
 
 .transactions-table tbody td {
-    word-break: break-all;
     border-bottom: 1px solid grey;
+}
+
+.transactions-table tbody td:last-child {
+    word-break: break-all;
 }
 
 .transaction-type {

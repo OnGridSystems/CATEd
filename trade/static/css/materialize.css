@@ -4456,19 +4456,19 @@ html {
 
 @media only screen and (min-width: 0) {
     html {
-        font-size: 13px;
+        font-size: 12px;
     }
 }
 
 @media only screen and (min-width: 992px) {
     html {
-        font-size: 13.5px;
+        font-size: 12.5px;
     }
 }
 
 @media only screen and (min-width: 1200px) {
     html {
-        font-size: 14px;
+        font-size: 13px;
     }
 }
 
