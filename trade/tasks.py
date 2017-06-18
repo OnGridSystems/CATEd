@@ -1,5 +1,4 @@
 from __future__ import absolute_import, unicode_literals
-
 import datetime
 from http.client import HTTPException
 from celery import shared_task
@@ -9,6 +8,7 @@ from trade.drivers.btce_driver import APIError
 from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, WalletHistory
 from trade.drivers import btce_trader, bittrex_driver
 from poloniex import Poloniex, PoloniexCommandException
+from yandex_money.api import Wallet, ExternalPayment
 
 
 @shared_task
@@ -202,7 +202,8 @@ def get_eth_wallet_history():
         eth_uw = UserWallet.objects.filter(wallet=wallet)
         if len(eth_uw) > 0:
             for uw in eth_uw:
-                balance = requests.get('https://api.etherscan.io/api?module=account&action=balance&address=' + uw.address + '&tag=latest&apikey=18NX2UFSA1SUX76FFGHAGFBWNNAWK7KDNY').json()
+                balance = requests.get(
+                    'https://api.etherscan.io/api?module=account&action=balance&address=' + uw.address + '&tag=latest&apikey=18NX2UFSA1SUX76FFGHAGFBWNNAWK7KDNY').json()
                 if balance['status'] == str(1):
                     uw.balance = balance['result']
                     uw.save()
@@ -216,7 +217,8 @@ def get_eth_wallet_history():
                             wallet_history = WalletHistory()
                             wallet_history.uw = uw
                             wallet_history.number = item['blockNumber']
-                            wallet_history.date = datetime.datetime.fromtimestamp(int(item['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S')
+                            wallet_history.date = datetime.datetime.fromtimestamp(int(item['timeStamp'])).strftime(
+                                '%Y-%m-%d %H:%M:%S')
                             wallet_history.t_from = item['from']
                             wallet_history.t_to = item['to']
                             if item['to'] == uw.address:
@@ -242,18 +244,18 @@ def get_btc_wallet_history():
         btc_uw = UserWallet.objects.filter(wallet=wallet)
         if len(btc_uw) > 0:
             for uw in btc_uw:
-                balance = requests.get('http://btc.blockr.io/api/v1/address/balance/'+uw.address).json()
+                balance = requests.get('http://btc.blockr.io/api/v1/address/balance/' + uw.address).json()
                 if balance['status'] == 'success':
                     uw.balance = balance['data']['balance']
                     uw.save()
                 history = requests.get(
-                    'http://btc.blockr.io/api/v1/address/txs/'+uw.address).json()
+                    'http://btc.blockr.io/api/v1/address/txs/' + uw.address).json()
                 if history['status'] == 'success':
                     for item in history['data']['txs']:
                         try:
                             wallet_history = WalletHistory.objects.get(uw=uw, hash=item['tx'])
                         except WalletHistory.DoesNotExist:
-                            tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/'+item['tx']).json()
+                            tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/' + item['tx']).json()
                             if tx_his['status'] == 'success':
                                 wallet_history = WalletHistory()
                                 wallet_history.uw = uw
@@ -285,3 +287,53 @@ def get_btc_wallet_history():
             print('ok')
         else:
             print("Кошельки отсутствуют")
+
+
+@shared_task
+def get_yandex_wallet_history():
+    wallet = Wallets.objects.get(name='Yandex Money')
+    while True:
+        time.sleep(10)
+        yandex_uw = UserWallet.objects.filter(wallet=wallet)
+        if len(yandex_uw) > 0:
+            for uw in yandex_uw:
+                access_token = uw.access_token
+                if access_token is not None:
+                    yandex_wallet_object = Wallet(access_token)
+                    get_yandex_records(wallet=yandex_wallet_object, uw=uw)
+            print('ok')
+        else:
+            print("Кошельки отсутствуют")
+        return True
+
+
+def get_yandex_records(wallet=None, uw=None, next_record=0):
+    transactions = wallet.operation_history(
+        {'start_record': int(next_record),
+         'details': 'true',
+         'records': 100})
+    for t in transactions['operations']:
+        try:
+            wallet_history = WalletHistory.objects.get(uw=uw, number=t['operation_id'])
+        except WalletHistory.DoesNotExist:
+            new_wallet_history = WalletHistory()
+            new_wallet_history.uw = uw
+            new_wallet_history.number = t['operation_id']
+            new_wallet_history.date = t['datetime']
+            new_wallet_history.type = t['direction']
+            new_wallet_history.t_from = new_wallet_history.t_to = '-'
+            if 'details' in t:
+                if len(t['details']) > 0:
+                    new_wallet_history.hash = t['details']
+                elif 'title' in t:
+                    new_wallet_history.hash = t['title']
+            elif 'title' in t:
+                new_wallet_history.hash = t['title']
+            new_wallet_history.value = t['amount']
+            new_wallet_history.save()
+    try:
+        next_rec = transactions['next_record']
+    except KeyError:
+        next_rec = None
+    if next_rec is not None:
+        get_yandex_records(wallet, uw=uw, next_record=transactions['next_record'])

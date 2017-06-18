@@ -20,9 +20,8 @@
                     <br/>
                     <h4 class="center">Добавить биржу</h4>
                     <br/>
-                    <form method="post">
+                    <form method="post" action="{% url 'exchange' %}">
                         {% csrf_token %}
-                        <input type="hidden" value="exchange" name="type">
                         {% for f in exchange_form %}
                             <div class="input-field">
                                 {{ f }}
@@ -36,9 +35,8 @@
                     <br/>
                     <h4 class="center">Добавить кошелёк</h4>
                     <br/>
-                    <form method="post">
+                    <form method="post" action="{% url 'wallet' %}">
                         {% csrf_token %}
-                        <input type="hidden" value="wallet" name="type">
                         {% for f in wallet_form %}
                             <div class="input-field">
                                 {{ f }}
@@ -144,11 +142,13 @@
                                          height="100"
                                          alt="eth-coin">
                                 {% elif item.wallet.name == 'BTC' %}
-                                    <img src="https://cdn3.iconfinder.com/data/icons/inficons-currency-set/512/btc-512.png" width="100"
+                                    <img src="https://cdn3.iconfinder.com/data/icons/inficons-currency-set/512/btc-512.png"
+                                         width="100"
                                          height="100"
                                          alt="btc-coin">
                                 {% elif item.wallet.name == 'Yandex Money' %}
-                                    <img src="https://cdn3.iconfinder.com/data/icons/payment-systems-coins/650/yandex-gold.png" width="100"
+                                    <img src="https://cdn3.iconfinder.com/data/icons/payment-systems-coins/650/yandex-gold.png"
+                                         width="100"
                                          height="100"
                                          alt="yandex-coin">
                                 {% endif %}

@@ -77,6 +77,7 @@ class UserWallet(models.Model):
     user = models.ForeignKey(User)
     wallet = models.ForeignKey(Wallets)
     address = models.CharField(max_length=511)
+    access_token = models.CharField(max_length=511, blank=True, default=None, null=True)
     balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
 
     def __str__(self):
@@ -89,7 +90,7 @@ class UserWallet(models.Model):
 
 class WalletHistory(models.Model):
     uw = models.ForeignKey(UserWallet)
-    number = models.IntegerField(blank=False, null=False)
+    number = models.BigIntegerField(blank=False, null=False)
     date = models.DateTimeField(blank=False)
     t_from = models.TextField()
     t_to = models.TextField()
@@ -97,6 +98,9 @@ class WalletHistory(models.Model):
     value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     block_hash = models.CharField(max_length=511)
     hash = models.CharField(max_length=511)
+    comment = models.TextField(default='')
+    title = models.CharField(max_length=1000, default='')
+    details = models.CharField(max_length=1000, default='')
 
     def __str__(self):
         return '<' + self.uw.user.username + ' ' + self.type + ' ' + str(self.value) + '>'

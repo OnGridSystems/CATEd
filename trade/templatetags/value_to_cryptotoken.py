@@ -9,5 +9,5 @@ def value_to_cryptotoken(value, item):
         return str(round(float(value / (10 ** 18)), 8)) + ' ETH'
     elif item.wallet.name == 'BTC':
         return str(round(float(value), 8)) + ' BTC'
-    else:
-        return '0 RUR'
+    elif item.wallet.name == 'Yandex Money':
+        return str(round(float(value), 2)) + ' RUR'

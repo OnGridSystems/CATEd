@@ -2,10 +2,11 @@ import requests
 import re
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from trade.forms import UserExchangesForm, UserWalletForm
 from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets
+from yandex_money.api import Wallet, ExternalPayment
 
 
 @login_required
@@ -14,26 +15,7 @@ def index(request):
             'wallet_form': UserWalletForm(),
             'ue': UserExchanges.objects.filter(user=request.user),
             'uw': UserWallet.objects.filter(user=request.user)}
-    if request.method == 'POST':
-        re_type = request.POST.get('type')
-        if re_type == 'exchange':
-            ue = UserExchanges()
-            ue.user = request.user
-            ue.exchange = Exchanges.objects.get(pk=request.POST.get('exchange'))
-            ue.apikey = request.POST.get('apikey')
-            ue.apisecret = request.POST.get('apisecret')
-            ue.total_btc = float(0)
-            ue.save()
-            get_exchange_coins(ue=ue)
-        elif re_type == 'wallet':
-            uw = UserWallet()
-            uw.user = request.user
-            uw.address = request.POST.get('address')
-            uw.wallet = Wallets.objects.get(pk=request.POST.get('wallet'))
-            uw.save()
-        return render(request, 'trade/index.html', args)
-    else:
-        return render(request, 'trade/index.html', args)
+    return render(request, 'trade/index.html', args)
 
 
 def change_status(request):
@@ -87,3 +69,54 @@ def get_exchange_coins(ue=None):
                     new_user_coin.ue = ue
                     new_user_coin.coin = coin_two_name.lower()
                     new_user_coin.save()
+
+
+@login_required
+def exchange(request):
+    if request.method == 'POST':
+        ue = UserExchanges()
+        ue.user = request.user
+        ue.exchange = Exchanges.objects.get(pk=request.POST.get('exchange'))
+        ue.apikey = request.POST.get('apikey')
+        ue.apisecret = request.POST.get('apisecret')
+        ue.total_btc = float(0)
+        ue.save()
+        get_exchange_coins(ue=ue)
+    return redirect(index)
+
+
+@login_required
+def wallet(request):
+    if request.method == 'POST':
+        wallet = Wallets.objects.get(pk=request.POST.get('wallet'))
+        if wallet.name == 'Yandex Money':
+            scope = ['account-info', 'operation-history', 'operation-details']
+            auth_url = Wallet.build_obtain_token_url(
+                client_id='BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF',
+                redirect_uri='http://78.155.218.16:8000/wallet/',
+                scope=scope) + '&response_type=code'
+            return redirect(auth_url)
+        else:
+            uw = UserWallet()
+            uw.user = request.user
+            uw.address = request.POST.get('address')
+            uw.wallet = wallet
+            uw.save()
+    elif request.method == 'GET':
+        access_token = Wallet.get_access_token(
+            client_id='BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF',
+            redirect_uri='http://78.155.218.16:8000/wallet/',
+            code=request.GET.get('code'),
+            client_secret='211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69FEC67630EA304A4831D7813BDEC90A866ABED2C30B9F8578EFF29962B13B70187429034EA3BF59'
+        )
+        access_token = access_token['access_token']
+        wallet = Wallet(access_token)
+        account_info = wallet.account_info()
+        uw = UserWallet()
+        uw.wallet = Wallets.objects.get(name='Yandex Money')
+        uw.access_token = access_token
+        uw.user = request.user
+        uw.address = account_info['account']
+        uw.balance = account_info['balance']
+        uw.save()
+    return redirect(index)
