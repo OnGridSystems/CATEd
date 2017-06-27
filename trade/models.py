@@ -2,6 +2,7 @@ import datetime
 from django.contrib.auth.models import User
 from django.db import models
 from pytz import utc
+import time
 
 
 class Exchanges(models.Model):
@@ -80,6 +81,7 @@ class UserWallet(models.Model):
     address = models.CharField(max_length=511)
     access_token = models.CharField(max_length=511, blank=True, default=None, null=True)
     balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    total_btc = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     last_update = models.DateTimeField(auto_now=True)
 
@@ -113,3 +115,24 @@ class WalletHistory(models.Model):
     class Meta:
         verbose_name = 'Транзакциии кошелька'
         verbose_name_plural = 'Транзакции кошельков'
+
+
+class UserHoldings(models.Model):
+    user = models.ForeignKey(User)
+    type = models.CharField(max_length=255)
+    total_btc = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    date_time = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return '<' + self.user.username + ' - ' + self.type + ': ' + str(self.total_btc) + '>'
+
+    class Meta:
+        verbose_name_plural = 'Истории балансов'
+        verbose_name = 'История баланса'
+
+    def as_list(self):
+        return [
+            int(time.mktime(self.date_time.timetuple()) * 1000),
+            float(self.total_btc)
+        ]

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    {% block style %}{% endblock %}
 </head>
 <body>
 <nav>
@@ -27,9 +28,8 @@
 </nav>
 {% block content %}{% endblock %}
 </body>
-<script src="https://code.jquery.com/jquery-2.2.4.min.js"
-        integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script type="text/javascript" src="{% static 'js/materialize.js' %}"></script>
-{% block script %}{% endblock %}
 <script type="text/javascript" src="{% static 'js/script.js' %}"></script>
+{% block script %}{% endblock %}
 </html>

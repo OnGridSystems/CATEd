@@ -1,5 +1,8 @@
 {% extends 'trade/base.html' %}
-{% load coins transactions wallet_information value_to_cryptotoken humanize summary_balance %}
+{% load coins transactions wallet_information value_to_cryptotoken humanize summary_balance static %}
+{% block style %}
+    <link rel="stylesheet" href="{% static 'css/highcharts.css' %}">
+{% endblock %}
 {% block content %}
     <div class="row">
 
@@ -56,27 +59,7 @@
                                 </table>
                             </div>
                             <div class="collapsible-body">
-                                {% if item.is_correct %}
-                                    {% get_coins item %}
-                                {% else %}
-                                    <table class="exchange user_coins" id="user_coins">
-                                        <thead>
-                                        <tr>
-                                            <th width="5%">Coin</th>
-                                            <th width="10%">Name</th>
-                                            <th width="15%">Available</th>
-                                            <th></th>
-                                            <th width="15%">Btc value</th>
-                                            <th width="15%">Last update</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody class="scale-transition scale-out">
-                                        <tr>
-                                            <td colspan="6">Указаны неверные ключи для подключения к бирже.</td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                {% endif %}
+                                {% get_coins item %}
                             </div>
                         </li>
                     {% endfor %}
@@ -121,6 +104,10 @@
                     {% endfor %}
                 {% endif %}
             </ul>
+        </div>
+        <div class="col s12 m12 l10 push-l1">
+            <h2 class="center">Holdings Chart</h2>
+            <div id="gra" style="height: 400px; min-width: 310px"></div>
         </div>
         <div class="col s12 m12 l10 push-l1">
             {% if trans %}
@@ -222,5 +209,68 @@
     </div>
 {% endblock %}
 {% block script %}
-    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript" src="{% static 'js/highstock.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/exporting.js' %}"></script>
+    <script type="text/javascript">
+
+        var seriesOptions = [],
+            seriesCounter = 0,
+            names = ['Wallet@Yandex Money', 'Wallet@BTC', 'Wallet@ETH', 'Exchange@btc-e', 'Exchange@bittrex', 'Exchange@poloniex'];
+
+        /**
+         * Create the chart when all data is loaded
+         * @returns {undefined}
+         */
+        function createChart() {
+
+            Highcharts.stockChart('gra', {
+
+                rangeSelector: {
+                    selected: 4
+                },
+
+                yAxis: {
+                    labels: {
+                        formatter: function () {
+                            return (this.value > 0 ? ' + ' : '') + this.value + '%';
+                        }
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 2,
+                        color: 'silver'
+                    }]
+                },
+
+                plotOptions: {
+                    series: {
+                        compare: 'percent',
+                        showInNavigator: true
+                    }
+                },
+
+                tooltip: {
+                    pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+                    valueDecimals: 8,
+                    split: true
+                },
+
+                series: seriesOptions
+            });
+        }
+        $.each(names, function (i, name) {
+            $.getJSON('{% url "get_holding" %}?type=' + name, function (data) {
+                console.log(name +' '+data);
+                seriesOptions[i] = {
+                    name: name,
+                    data: data
+                };
+                seriesCounter += 1;
+
+                if (seriesCounter === names.length) {
+                    createChart();
+                }
+            });
+        });
+    </script>
 {% endblock %}

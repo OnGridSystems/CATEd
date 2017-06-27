@@ -7,8 +7,10 @@ from http.client import HTTPException
 from celery import shared_task
 import time
 import requests
+from django.contrib.auth.models import User
+
 from trade.drivers.btce_driver import APIError
-from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, WalletHistory
+from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, WalletHistory, UserHoldings
 from trade.drivers import btce_trader, bittrex_driver
 from poloniex import Poloniex, PoloniexCommandException
 from yandex_money.api import Wallet, ExternalPayment
@@ -219,6 +221,7 @@ def get_eth_wallet_history():
             if balance['status'] == str(1):
                 uw.balance = balance['result']
                 uw.total_usd = get_usd_value('eth', round(float(float(balance['result']) / (10 ** 18)), 8))
+                uw.total_btc = get_btc_value('eth', round(float(float(balance['result']) / (10 ** 18)), 8))
                 uw.save()
             history = requests.get(
                 'https://api.etherscan.io/api?module=account&action=txlist&address=' + uw.address + '&startblock=0&endblock=99999999&sort=desc&apikey=18NX2UFSA1SUX76FFGHAGFBWNNAWK7KDNY').json()
@@ -264,6 +267,7 @@ def get_btc_wallet_history():
             if balance['status'] == 'success':
                 uw.balance = balance['data']['balance']
                 uw.total_usd = get_usd_value('btc', balance['data']['balance'])
+                uw.total_btc = balance['data']['balance']
                 uw.save()
             history = requests.get(
                 'http://btc.blockr.io/api/v1/address/txs/' + uw.address).json()
@@ -354,3 +358,28 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
         next_rec = None
     if next_rec is not None:
         get_yandex_records(wallet, uw=uw, next_record=transactions['next_record'])
+
+
+@periodic_task(run_every=crontab(minute='*/1'))
+def calculate_holdings_history():
+    users = User.objects.all()
+    for user in users:
+        wallets = UserWallet.objects.filter(user=user)
+        if len(wallets) > 0:
+            for wallet in wallets:
+                holdings = UserHoldings()
+                holdings.user = user
+                holdings.type = 'Wallet@' + wallet.wallet.name
+                holdings.total_btc = wallet.total_btc
+                holdings.total_usd = wallet.total_usd
+                holdings.save()
+        exchanges = UserExchanges.objects.filter(user=user)
+        if len(exchanges) > 0:
+            for exchange in exchanges:
+                holdings = UserHoldings()
+                holdings.user = user
+                holdings.type = 'Exchange@' + exchange.exchange.exchange
+                holdings.total_btc = exchange.total_btc
+                holdings.total_usd = exchange.total_usd
+                holdings.save()
+    return True

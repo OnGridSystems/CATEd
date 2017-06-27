@@ -1,11 +1,15 @@
+import json
+
 import requests
 import re
+
+from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from trade.forms import UserExchangesForm, UserWalletForm
-from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, WalletHistory
+from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, WalletHistory, UserHoldings
 from yandex_money.api import Wallet, ExternalPayment
 
 
@@ -121,3 +125,14 @@ def wallet(request):
         uw.balance = account_info['balance']
         uw.save()
     return redirect(index)
+
+
+def get_holding(request):
+    type = request.GET.get('type')
+    if request.is_ajax():
+        user = request.user
+        holdings = UserHoldings.objects.filter(user=user, type=type)
+        dict_holdings = [obj.as_list() for obj in holdings]
+        if len(dict_holdings) < 1:
+            print(type + ' пустой')
+        return HttpResponse(json.dumps(dict_holdings), status=200)
