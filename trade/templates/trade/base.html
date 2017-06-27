@@ -20,7 +20,8 @@
                 <li><a href="{% url 'account_login' %}"><i class="material-icons left tiny">input</i>Вход</a></li>
             {% endif %}
 
-            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a></li>
+            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a>
+            </li>
         </ul>
     </div>
 </nav>
@@ -29,5 +30,6 @@
 <script src="https://code.jquery.com/jquery-2.2.4.min.js"
         integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
 <script type="text/javascript" src="{% static 'js/materialize.js' %}"></script>
+{% block script %}{% endblock %}
 <script type="text/javascript" src="{% static 'js/script.js' %}"></script>
 </html>

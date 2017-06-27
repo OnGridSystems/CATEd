@@ -18,4 +18,6 @@
             <td>{{ out_trans_sum | value_to_cryptotoken:uw }}</td>
         </tr>
     </table>
+{% else %}
+    <span class="alert-block">Информация по данному кошельку отсутствует.</span>
 {% endif %}

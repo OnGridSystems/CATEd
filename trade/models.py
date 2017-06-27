@@ -25,6 +25,7 @@ class UserExchanges(models.Model):
     is_active = models.BooleanField(default=False)
     is_correct = models.BooleanField(default=True)
     total_btc = models.DecimalField(max_digits=30, decimal_places=8)
+    total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     error = models.CharField(max_length=1000, blank=True)
 
     def __str__(self):
@@ -79,6 +80,8 @@ class UserWallet(models.Model):
     address = models.CharField(max_length=511)
     access_token = models.CharField(max_length=511, blank=True, default=None, null=True)
     balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    last_update = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return '<' + self.user.username + ' ' + self.wallet.name + ': ' + str(self.balance) + '>'
@@ -101,10 +104,12 @@ class WalletHistory(models.Model):
     comment = models.TextField(default='')
     title = models.CharField(max_length=1000, default='')
     details = models.CharField(max_length=1000, default='')
+    usd_value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    user_comment = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     def __str__(self):
         return '<' + self.uw.user.username + ' ' + self.type + ' ' + str(self.value) + '>'
 
     class Meta:
-        verbose_name = 'История кошелька'
-        verbose_name_plural = 'Истории кошельков'
+        verbose_name = 'Транзакциии кошелька'
+        verbose_name_plural = 'Транзакции кошельков'

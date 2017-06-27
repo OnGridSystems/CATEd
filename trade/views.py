@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from trade.forms import UserExchangesForm, UserWalletForm
-from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets
+from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, WalletHistory
 from yandex_money.api import Wallet, ExternalPayment
 
 
@@ -14,8 +14,9 @@ def index(request):
     args = {'exchange_form': UserExchangesForm(),
             'wallet_form': UserWalletForm(),
             'ue': UserExchanges.objects.filter(user=request.user),
-            'uw': UserWallet.objects.filter(user=request.user)}
-    return render(request, 'trade/index.html', args)
+            'uw': UserWallet.objects.filter(user=request.user),
+            'trans': WalletHistory.objects.filter(uw__in=UserWallet.objects.filter(user=request.user)).order_by('-date')}
+    return render(request, 'trade/home.html', args)
 
 
 def change_status(request):

@@ -1,14 +1,14 @@
-{% load coin_full_name %}
+{% load coin_full_name humanize %}
 {% if coins %}
     <table class="exchange user_coins">
         <thead>
         <tr>
-            <th width="5%">Coin</th>
+            <th width="5%" style="text-align: left">Coin</th>
             <th width="10%">Name</th>
             <th width="15%">Available</th>
             <th></th>
             <th width="15%">Btc value</th>
-            <th width="15%">Last update</th>
+            <th width="15%" style="text-align: right">Last update</th>
         </tr>
         </thead>
         <tbody>
@@ -19,7 +19,7 @@
                 <td class="balance">{{ coin.balance }}</td>
                 <td></td>
                 <td>{{ coin.btc_value }}</td>
-                <td>{{ coin.last_update | date:"o.m.d H:i:s" }}</td>
+                <td>{{ coin.last_update | naturaltime }}</td>
             </tr>
         {% endfor %}
         </tbody>
