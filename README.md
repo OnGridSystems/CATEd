@@ -25,12 +25,15 @@
       имя пользователя
       email пользователя
       пароль 2 раза
+
+
 Установка celery как демона
   1) sudo wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
   2) sudo wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
   3) sudo chmod +x /etc/init.d/celeryd
      sudo chmod +x /etc/init.d/celerybeat
   4) sudo nano /etc/default/celeryd
+
       CELERY_BIN="/home/projects/ongrid-portal/env/bin/python -m celery" #путь к celery в виртуальном окружении
       CELERY_APP="djangoTrade" #Название приложения
       CELERYD_CHDIR="/home/projects/ongrid-portal/ongrid_portal" #Папка с проектом
