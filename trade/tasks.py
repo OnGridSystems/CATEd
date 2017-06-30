@@ -209,6 +209,7 @@ def get_all_coins():
 
 
 def get_btc_value(coin_name=None, count=None):
+    time.sleep(0.5)
     if not coin_name or not count:
         return 0
     else:
@@ -222,6 +223,7 @@ def get_btc_value(coin_name=None, count=None):
 
 
 def get_usd_value(coin_name=None, count=None):
+    time.sleep(0.5)
     if not coin_name or not count:
         return 0
     else:

@@ -102,7 +102,7 @@ class WalletHistory(models.Model):
     type = models.CharField(max_length=255)
     value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     block_hash = models.CharField(max_length=511, default=None, null=True)
-    hash = models.CharField(max_length=511)
+    hash = models.CharField(max_length=200)
     comment = models.TextField(default='', null=True)
     title = models.CharField(max_length=1000, default='', null=True)
     details = models.CharField(max_length=1000, default='', null=True)
@@ -115,7 +115,7 @@ class WalletHistory(models.Model):
     class Meta:
         verbose_name = 'Транзакциии кошелька'
         verbose_name_plural = 'Транзакции кошельков'
-        unique_together = ('uw', 'number')
+        unique_together = ('uw', 'hash')
 
 
 class UserHoldings(models.Model):
