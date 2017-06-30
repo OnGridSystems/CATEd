@@ -74,8 +74,8 @@ class BTCEConnection(object):
         """Calculation of the SHA-512 authentication signature.
        @param apikey: API-key dict {'Key': '...', 'Secret': '...'}
        @param msg: method and parameters (Trade API)"""
-        apikey['Secret'] = apikey['Secret'].encode('utf-8')
-        sign = newhash(apikey['Secret'], msg=msg.encode('utf-8'), digestmod=_sha512)
+        encoded_key = apikey['Secret'].encode('utf-8')
+        sign = newhash(encoded_key, msg=msg.encode('utf-8'), digestmod=_sha512)
         cls._post_headers['Key'] = apikey['Key']
         cls._post_headers['Sign'] = sign.hexdigest()
 

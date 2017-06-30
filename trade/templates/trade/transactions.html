@@ -1,39 +1,74 @@
 {% load value_to_cryptotoken %}
 {% if transactions %}
-    <table class="transactions-table">
-        <thead>
-        <tr>
-            <th>Block Number</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Value</th>
-{#            <th width="15%">BlockHash</th>#}
-            <th width="30%">Hash</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for transaction in transactions %}
+    {% if item.wallet.name != 'Yandex Money' %}
+        <table class="transactions-table">
+            <thead>
             <tr>
-                <td>{{ transaction.number }}</td>
-                <td>{% if transaction.t_from == item.address %}<b>This Wallet</b>{% else %}{{ transaction.t_from | safe}}{% endif %}</td>
-                <td>{% if transaction.t_to == item.address %}<b>This Wallet</b>{% else %}{{ transaction.t_to | safe }}{% endif %}</td>
-                <td>{{ transaction.date }}</td>
-                <td class="center">
-                    {% if transaction.type == 'in' %}
-                        <span class="green white-text transaction-type">{{ transaction.type }}</span>
-                    {% elif transaction.type == 'out' %}
-                        <span class="red white-text transaction-type">{{ transaction.type }}</span>
-                    {% endif %}
-                </td>
-                <td>{{ transaction.value | value_to_cryptotoken:item}}</td>
-{#                <td>{{ transaction.block_hash }}</td>#}
-                <td>{{ transaction.hash }}</td>
+                <th>Block Number</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Value</th>
+                <th width="30%">Hash</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.number }}</td>
+                    <td>{% if transaction.t_from == item.address %}<b>This Wallet</b>{% else %}
+                        {{ transaction.t_from | safe }}{% endif %}</td>
+                    <td>{% if transaction.t_to == item.address %}<b>This Wallet</b>{% else %}
+                        {{ transaction.t_to | safe }}{% endif %}</td>
+                    <td>{{ transaction.date }}</td>
+                    <td class="center">
+                        {% if transaction.type == 'in' %}
+                            <span class="green white-text transaction-type">{{ transaction.type }}</span>
+                        {% elif transaction.type == 'out' %}
+                            <span class="red white-text transaction-type">{{ transaction.type }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ transaction.value | value_to_cryptotoken:item }}</td>
+                    <td>{{ transaction.hash }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <table class="transactions-table">
+            <thead>
+            <tr>
+                <th>Operation ID</th>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th width="15%">Details</th>
+                <th width="15%">Title</th>
+                <th width="15%">Comment</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.number }}</td>
+                    <td>{{ transaction.date }}</td>
+                    <td class="center">
+                        {% if transaction.type == 'in' %}
+                            <span class="green white-text transaction-type">{{ transaction.type }}</span>
+                        {% elif transaction.type == 'out' %}
+                            <span class="red white-text transaction-type">{{ transaction.type }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ transaction.value | value_to_cryptotoken:item }}</td>
+                    <td>{{ transaction.details }}</td>
+                    <td>{{ transaction.title }}</td>
+                    <td>{{ transaction.comment }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 {% else %}
     <table class="transactions-table">
         <thead>

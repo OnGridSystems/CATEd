@@ -26,7 +26,11 @@ urlpatterns = [
     url(r'^accounts/', include(allauth_urls)),
     url(r'^profile/$', user_profile_views.profile, name='user_profile'),
     url(r'^change_status/$', tradeViews.change_status, name='change_status'),
-    url(r'^index/$', tradeViews.index, name='index'),
+    url(r'^$', tradeViews.index, name='index'),
+    url(r'^exchange/$', tradeViews.exchange, name='exchange'),
+    url(r'^wallet/$', tradeViews.wallet, name='wallet'),
+    url(r'^api/$', tradeViews.get_holding, name='get_holding'),
+    url(r'^transaction/new_comment/$', tradeViews.add_new_transaction_comment, name='new_comment'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 
