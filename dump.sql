@@ -264,7 +264,7 @@ CREATE TABLE `django_admin_log` (
   KEY `django_admin_log_user_id_c564eba6_fk_auth_user_id` (`user_id`),
   CONSTRAINT `django_admin_log_content_type_id_c4bce8eb_fk_django_co` FOREIGN KEY (`content_type_id`) REFERENCES `django_content_type` (`id`),
   CONSTRAINT `django_admin_log_user_id_c564eba6_fk_auth_user_id` FOREIGN KEY (`user_id`) REFERENCES `auth_user` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -273,7 +273,7 @@ CREATE TABLE `django_admin_log` (
 
 LOCK TABLES `django_admin_log` WRITE;
 /*!40000 ALTER TABLE `django_admin_log` DISABLE KEYS */;
-INSERT INTO `django_admin_log` VALUES (1,'2017-06-30 10:10:57.158147','1','<btc-e>',1,'[{\"added\": {}}]',13,1),(2,'2017-06-30 10:11:12.539173','2','<bittrex>',1,'[{\"added\": {}}]',13,1),(3,'2017-06-30 10:11:24.177797','3','<poloniex>',1,'[{\"added\": {}}]',13,1),(4,'2017-06-30 10:11:40.061400','1','Yandex Money',1,'[{\"added\": {}}]',14,1),(5,'2017-06-30 10:11:47.078118','2','ETH',1,'[{\"added\": {}}]',14,1),(6,'2017-06-30 10:11:51.193279','3','BTC',1,'[{\"added\": {}}]',14,1);
+INSERT INTO `django_admin_log` VALUES (1,'2017-06-30 10:10:57.158147','1','<btc-e>',1,'[{\"added\": {}}]',13,1),(2,'2017-06-30 10:11:12.539173','2','<bittrex>',1,'[{\"added\": {}}]',13,1),(3,'2017-06-30 10:11:24.177797','3','<poloniex>',1,'[{\"added\": {}}]',13,1),(4,'2017-06-30 10:11:40.061400','1','Yandex Money',1,'[{\"added\": {}}]',14,1),(5,'2017-06-30 10:11:47.078118','2','ETH',1,'[{\"added\": {}}]',14,1),(6,'2017-06-30 10:11:51.193279','3','BTC',1,'[{\"added\": {}}]',14,1),(7,'2017-06-30 11:49:52.591526','1','<proofx Yandex Money: 0E-8>',3,'',9,1);
 /*!40000 ALTER TABLE `django_admin_log` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -626,7 +626,7 @@ CREATE TABLE `trade_coin` (
   `short_name` varchar(20) NOT NULL,
   `full_name` varchar(40) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=286 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -635,6 +635,7 @@ CREATE TABLE `trade_coin` (
 
 LOCK TABLES `trade_coin` WRITE;
 /*!40000 ALTER TABLE `trade_coin` DISABLE KEYS */;
+INSERT INTO `trade_coin` VALUES (1,'ARDR','Ardor'),(2,'DCR','Decred'),(3,'RIC','Riecoin'),(4,'NXTI','NXTInspect'),(5,'SOC','SocialCoin'),(6,'XHC','Honorcoin'),(7,'DVK','DvoraKoin'),(8,'NOBL','NobleCoin'),(9,'CYC','Conspiracy Coin'),(10,'CNMT','Coinomat1'),(11,'VRC','VeriCoin'),(12,'ABY','ArtByte'),(13,'PINK','Pinkcoin'),(14,'BOST','BoostCoin'),(15,'HYP','HyperStake'),(16,'EXE','Execoin'),(17,'DAO','The DAO'),(18,'GEMZ','GetGems'),(19,'LBC','LBRY Credits'),(20,'COMM','CommunityCoin'),(21,'ACH','Altcoin Herald'),(22,'EXP','Expanse'),(23,'MEC','Megacoin'),(24,'SRG','Surge'),(25,'WOLF','InsanityCoin'),(26,'UIS','Unitus'),(27,'SUM','SummerCoin'),(28,'NAS','NAS'),(29,'SJCX','Storjcoin X'),(30,'XXC','CREDS'),(31,'PASC','PascalCoin'),(32,'CHA','Chancecoin'),(33,'JUG','JuggaloCoin'),(34,'GML','GameleagueCoin'),(35,'HIRO','Hirocoin'),(36,'PPC','Peercoin'),(37,'MNTA','Moneta'),(38,'PRT','Particle'),(39,'BCY','BitCrystals'),(40,'SC','Siacoin'),(41,'GIAR','Giarcoin'),(42,'PTS','BitShares PTS'),(43,'DGB','DigiByte'),(44,'LGC','Logicoin'),(45,'CNOTE','C-Note'),(46,'SDC','Shadow'),(47,'MMNXT','MMNXT'),(48,'GAP','Gapcoin'),(49,'MIL','Millennium Coin'),(50,'CORG','CorgiCoin'),(51,'RDD','Reddcoin'),(52,'SRCC','SourceCoin'),(53,'XLB','Libertycoin'),(54,'LCL','Limecoin Lite'),(55,'CACH','CACHeCoin'),(56,'WIKI','Wikicoin'),(57,'CLAM','CLAMS'),(58,'FAC','Faircoin'),(59,'FCT','Factom'),(60,'FRK','Franko'),(61,'XAI','Sapience AIFX'),(62,'NXC','Nexium'),(63,'PLX','ParallaxCoin'),(64,'XAP','API Coin'),(65,'DNS','BitShares DNS'),(66,'QORA','Qora'),(67,'NAV','NAVCoin'),(68,'EMC2','Einsteinium'),(69,'AUR','Auroracoin'),(70,'CCN','Cannacoin'),(71,'C2','Coin2.0'),(72,'SUN','Suncoin'),(73,'FIBRE','Fibrecoin'),(74,'VOOT','VootCoin'),(75,'XSI','Stability Shares'),(76,'IOC','IO Digital Currency'),(77,'NBT','NuBits'),(78,'CINNI','CinniCoin'),(79,'MAX','MaxCoin'),(80,'XCP','Counterparty'),(81,'HOT','Hotcoin'),(82,'HUGE','BIGcoin'),(83,'QBK','Qibuck'),(84,'BTM','Bitmark'),(85,'GUE','Guerillacoin'),(86,'HUC','Huntercoin'),(87,'SQL','Squallcoin'),(88,'BBL','BitBlock'),(89,'USDE','USDE'),(90,'VOX','Voxels'),(91,'XSV','Silicon Valley Coin'),(92,'URO','Uro'),(93,'UNITY','SuperNET'),(94,'CC','Colbert Coin'),(95,'NOTE','DNotes'),(96,'KDC','KlondikeCoin'),(97,'GRC','Gridcoin Research'),(98,'STEEM','STEEM'),(99,'ITC','Information Coin'),(100,'1CR','1CRedit'),(101,'BDG','Badgercoin'),(102,'SWARM','SWARM'),(103,'MAST','MastiffCoin'),(104,'USDT','Tether USD'),(105,'XC','XCurrency'),(106,'GPC','GROUPCoin'),(107,'AIR','AIRcoin'),(108,'GNT','Golem'),(109,'STR','Stellar'),(110,'FZN','Fuzon'),(111,'YIN','Yincoin'),(112,'XST','StealthCoin'),(113,'SLR','SolarCoin'),(114,'LQD','LIQUID'),(115,'FRQ','FairQuark'),(116,'AC','AsiaCoin'),(117,'BITCNY','BitCNY'),(118,'PMC','Premine'),(119,'MRC','microCoin'),(120,'TAC','Talkcoin'),(121,'XVC','Vcash'),(122,'ETC','Ethereum Classic'),(123,'ECC','ECCoin'),(124,'ADN','Aiden'),(125,'XRP','Ripple'),(126,'JPC','JackpotCoin'),(127,'KEY','KeyCoin'),(128,'TWE','Twecoin'),(129,'METH','CryptoMETH'),(130,'BALLS','Snowballs'),(131,'MMXIV','Maieuticoin'),(132,'FLT','FlutterCoin'),(133,'XEM','NEM'),(134,'XCH','ClearingHouse'),(135,'DIS','DistroCoin'),(136,'BBR','Boolberry'),(137,'NRS','NoirShares'),(138,'XBC','BitcoinPlus'),(139,'XPM','Primecoin'),(140,'DIEM','Diem'),(141,'MCN','Moneta Verde'),(142,'EMO','EmotiCoin'),(143,'IXC','iXcoin'),(144,'GOLD','GoldEagles'),(145,'SMC','SmartCoin'),(146,'FVZ','FVZCoin'),(147,'NEOS','Neoscoin'),(148,'MYR','Myriadcoin'),(149,'PIGGY','New Piggycoin'),(150,'MUN','Muniti'),(151,'WDC','Worldcoin'),(152,'YANG','Yangcoin'),(153,'VIA','Viacoin'),(154,'DRKC','DarkCash'),(155,'AXIS','Axis'),(156,'EAC','EarthCoin'),(157,'SILK','Silkcoin'),(158,'XCN','Cryptonite'),(159,'CRYPT','CryptCoin'),(160,'BELA','Belacoin'),(161,'NSR','NuShares'),(162,'UTC','UltraCoin'),(163,'MIN','Minerals'),(164,'FLAP','FlappyCoin'),(165,'DICE','NeoDICE'),(166,'BITUSD','BitUSD'),(167,'XUSD','CoinoUSD'),(168,'QCN','QuazarCoin'),(169,'HZ','Horizon'),(170,'ARCH','ARCHcoin'),(171,'XDN','DigitalNote'),(172,'PAWN','Pawncoin'),(173,'FZ','Frozen'),(174,'BLOCK','Blocknet'),(175,'CON','Coino'),(176,'NXT','NXT'),(177,'SPA','Spaincoin'),(178,'LOL','LeagueCoin'),(179,'TOR','TorCoin'),(180,'CAI','CaiShen'),(181,'BLU','BlueCoin'),(182,'POT','PotCoin'),(183,'GAME','GameCredits'),(184,'PAND','PandaCoin'),(185,'SYNC','Sync'),(186,'YACC','YACCoin'),(187,'AEON','AEON Coin'),(188,'YC','YellowCoin'),(189,'AMP','Synereo AMP'),(190,'FLDC','FoldingCoin'),(191,'DRM','Dreamcoin'),(192,'LOVE','LOVEcoin'),(193,'BTCS','Bitcoin-sCrypt'),(194,'GNS','GenesisCoin'),(195,'RZR','Razor'),(196,'UTIL','UtilityCoin'),(197,'ENC','Entropycoin'),(198,'APH','AphroditeCoin'),(199,'H2O','H2O Coin'),(200,'STRAT','Stratis'),(201,'XPB','Pebblecoin'),(202,'DOGE','Dogecoin'),(203,'MINT','Mintcoin'),(204,'CURE','Curecoin'),(205,'BURST','Burst'),(206,'GLB','Globe'),(207,'SHIBE','ShibeCoin'),(208,'ZEC','Zcash'),(209,'RBY','Rubycoin'),(210,'SXC','Sexcoin'),(211,'NTX','NTX'),(212,'CGA','Cryptographic Anomaly'),(213,'XCR','Crypti'),(214,'X13','X13Coin'),(215,'IFC','Infinitecoin'),(216,'LSK','Lisk'),(217,'NMC','Namecoin'),(218,'SSD','Sonic'),(219,'EFL','Electronic Gulden'),(220,'WC','WhiteCoin'),(221,'MAID','MaidSafeCoin'),(222,'LTBC','LTBCoin'),(223,'MTS','Metiscoin'),(224,'Q2C','QubitCoin'),(225,'GPUC','GPU Coin'),(226,'NOXT','NobleNXT'),(227,'BTCD','BitcoinDark'),(228,'GDN','Global Denomination'),(229,'BCC','BTCtalkcoin'),(230,'FCN','Fantomcoin'),(231,'ULTC','Umbrella-LTC'),(232,'BITS','Bitstar'),(233,'eTOK','eToken'),(234,'SHOPX','ShopX'),(235,'BNS','BonusCoin'),(236,'RADS','Radium'),(237,'INDEX','CoinoIndex'),(238,'MMC','MemoryCoin'),(239,'UVC','UniversityCoin'),(240,'XMR','Monero'),(241,'DIME','Dimecoin'),(242,'PRC','ProsperCoin'),(243,'CNL','ConcealCoin'),(244,'LEAF','Leafcoin'),(245,'HVC','Heavycoin'),(246,'VTC','Vertcoin'),(247,'XDP','Dogeparty'),(248,'REP','Augur'),(249,'LTCX','LiteCoinX'),(250,'OPAL','Opal'),(251,'SBD','Steem Dollars'),(252,'EBT','EBTcoin'),(253,'QTL','Quatloo'),(254,'GRCX','Gridcoin'),(255,'MON','Monocle'),(256,'JLH','jl777hodl'),(257,'BTC','Bitcoin'),(258,'SYS','Syscoin'),(259,'MZC','MazaCoin'),(260,'BCN','Bytecoin'),(261,'AERO','Aerocoin'),(262,'FOX','FoxCoin'),(263,'FLO','Florincoin'),(264,'BANK','BankCoin'),(265,'XMG','Magi'),(266,'DASH','Dash'),(267,'N5X','N5coin'),(268,'TRUST','TrustPlus'),(269,'FRAC','Fractalcoin'),(270,'LTC','Litecoin'),(271,'LC','Limecoin'),(272,'NL','Nanolite'),(273,'NAUT','Nautiluscoin'),(274,'OMNI','Omni'),(275,'GRS','Groestlcoin'),(276,'DSH','Dashcoin'),(277,'BURN','BurnerCoin'),(278,'BTS','BitShares'),(279,'MRS','Marscoin'),(280,'BDC','Black Dragon Coin'),(281,'ETH','Ethereum'),(282,'GEO','GeoCoin'),(283,'BLK','BlackCoin'),(284,'GNO','Gnosis'),(285,'BONES','Bones');
 /*!40000 ALTER TABLE `trade_coin` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -779,7 +780,7 @@ CREATE TABLE `trade_userwallet` (
   KEY `trade_userwallet_wallet_id_640ae669_fk_trade_wallets_id` (`wallet_id`),
   CONSTRAINT `trade_userwallet_user_id_ff95ccb0_fk_auth_user_id` FOREIGN KEY (`user_id`) REFERENCES `auth_user` (`id`),
   CONSTRAINT `trade_userwallet_wallet_id_640ae669_fk_trade_wallets_id` FOREIGN KEY (`wallet_id`) REFERENCES `trade_wallets` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -862,4 +863,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-06-30 13:15:12
+-- Dump completed on 2017-06-30 14:52:33
