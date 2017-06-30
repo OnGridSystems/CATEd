@@ -12,7 +12,7 @@
 </head>
 <body>
 <nav>
-    <div class="nav-wrapper main-nav">
+    <div class="nav-wrapper main-nav" >
         <ul id="nav-mobile" class="right hide-on-med-and-down">
             <li><a href="{% url 'index' %}"><b>Главная</b></a></li>
             {% if user.is_authenticated %}
@@ -30,6 +30,6 @@
 </body>
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script type="text/javascript" src="{% static 'js/materialize.js' %}"></script>
-<script type="text/javascript" src="{% static 'js/script.js' %}"></script>
 {% block script %}{% endblock %}
+<script type="text/javascript" src="{% static 'js/script.js' %}"></script>
 </html>

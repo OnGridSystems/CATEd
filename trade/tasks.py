@@ -1,5 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 import os
+import re
+
 from celery.schedules import crontab
 from celery.task import periodic_task
 import datetime
@@ -7,6 +9,7 @@ from http.client import HTTPException
 from celery import shared_task
 import time
 import requests
+from decimal import Decimal
 from django.contrib.auth.models import User
 
 from trade.drivers.btce_driver import APIError
@@ -43,26 +46,53 @@ def start_trade_btce():
                                 totalBtc += btc_value
                                 new_user_coin.save()
                             else:
-                                user_coin.balance = balances['funds'][item]
-                                btc_value = get_btc_value(coin_name=item, count=balances['funds'][item])
-                                user_coin.btc_value = btc_value
-                                totalBtc += btc_value
+                                if user_coin.balance != balances['funds'][item]:
+                                    user_coin.balance = balances['funds'][item]
+                                    btc_value = get_btc_value(coin_name=item, count=balances['funds'][item])
+                                    user_coin.btc_value = btc_value
+                                    totalBtc += btc_value
+                                else:
+                                    totalBtc += float(user_coin.btc_value)
                                 user_coin.save()
+                        if 'orders' in balances:
+                            on_orders_in_btc = add_money_on_orders(driver, ue)
+                        else:
+                            on_orders_in_btc = 0
+                        ue.total_btc = totalBtc + on_orders_in_btc
+                        ue.total_usd = get_usd_value('btc', totalBtc+on_orders_in_btc)
+                        ue.save()
                 except APIError as error:
-                    print("Убираю накуй, неверно че-то")
-                    ue.error = error
-                    ue.is_active = False
-                    ue.is_correct = False
-                    ue.save()
-                ue.total_btc = totalBtc
-                ue.total_usd = get_usd_value('btc', totalBtc)
-                ue.save()
+                    pass
+                    # print("Убираю накуй, неверно че-то")
+                    # ue.error = error
+                    # ue.is_active = False
+                    # ue.is_correct = False
+                    # ue.save()
             except HTTPException:
                 print('Ошибка, начинаем заново')
 
     else:
         print("Никто не включил скрипт")
     return True
+
+
+def add_money_on_orders(driver, ue):
+    orders = driver.pull_orders()
+    on_orders_in_btc = float(0)
+    for item in orders:
+        amount = orders[item]['amount'] * orders[item]['rate']
+        m = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', orders[item]['pair'])
+        coin_name = m.group(2)
+        coin_on_orders_in_btc = get_btc_value(coin_name, amount)
+        try:
+            user_coin = UserBalance.objects.get(ue=ue, coin=coin_name.lower())
+            user_coin.balance += Decimal(amount)
+            user_coin.btc_value += Decimal(coin_on_orders_in_btc)
+            user_coin.save()
+        except UserBalance.DoesNotExist:
+            pass
+        on_orders_in_btc += coin_on_orders_in_btc
+    return on_orders_in_btc
 
 
 @periodic_task(run_every=crontab(minute='*/5'))
@@ -96,15 +126,16 @@ def start_trade_poloniex():
                                 user_coin.btc_value = float(balances[c]['btcValue'])
                                 totalBtc += float(balances[c]['btcValue'])
                                 user_coin.save()
-                except PoloniexCommandException as error:
-                    print("Убираю накуй, неверно че-то")
-                    ue.error = error
-                    ue.is_active = False
-                    ue.is_correct = False
+                    ue.total_btc = totalBtc
+                    ue.total_usd = get_usd_value('btc', totalBtc)
                     ue.save()
-                ue.total_btc = totalBtc
-                ue.total_usd = get_usd_value('btc', totalBtc)
-                ue.save()
+                except PoloniexCommandException as error:
+                    pass
+                    # if error != 'Connection timed out. Please try again.':
+                    #     ue.error = error
+                    #     ue.is_active = False
+                    #     ue.is_correct = False
+                    #     ue.save()
             except HTTPException:
                 print('Ошибка, начинаем заново')
 
@@ -146,15 +177,16 @@ def start_trade_bittrex():
                                 user_coin.btc_value = btc_value
                                 totalBtc += btc_value
                                 user_coin.save()
-                except Exception as error:
-                    print("Убираю накуй, неверно че-то")
-                    ue.error = error
-                    ue.is_active = False
-                    ue.is_correct = False
+                    ue.total_btc = totalBtc
+                    ue.total_usd = get_usd_value('btc', totalBtc)
                     ue.save()
-                ue.total_btc = totalBtc
-                ue.total_usd = get_usd_value('btc', totalBtc)
-                ue.save()
+                except Exception as error:
+                    pass
+                    # print("Убираю накуй, неверно че-то")
+                    # ue.error = error
+                    # ue.is_active = False
+                    # ue.is_correct = False
+                    # ue.save()
             except HTTPException:
                 print('Ошибка, начинаем заново')
     else:
@@ -180,6 +212,8 @@ def get_btc_value(coin_name=None, count=None):
     if not coin_name or not count:
         return 0
     else:
+        if coin_name == 'dsh' or coin_name == 'DSH':
+            coin_name = 'dash'
         response = requests.get('https://api.cryptonator.com/api/ticker/btc-' + coin_name.lower()).json()
         if response['success']:
             return float(count) / float(response['ticker']['price'])
@@ -320,6 +354,11 @@ def get_yandex_wallet_history():
             access_token = uw.access_token
             if access_token is not None:
                 yandex_wallet_object = Wallet(access_token)
+                account_info = yandex_wallet_object.account_info()
+                uw.balance = account_info['balance']
+                uw.total_btc = get_btc_value('rur', account_info['balance'])
+                uw.total_usd = get_usd_value('rur', account_info['balance'])
+                uw.save()
                 get_yandex_records(wallet=yandex_wallet_object, uw=uw)
         print('ok')
     else:
@@ -360,7 +399,7 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
         get_yandex_records(wallet, uw=uw, next_record=transactions['next_record'])
 
 
-@periodic_task(run_every=crontab(minute='*/1'))
+@periodic_task(run_every=crontab(minute='*/30'))
 def calculate_holdings_history():
     users = User.objects.all()
     for user in users:
@@ -369,7 +408,7 @@ def calculate_holdings_history():
             for wallet in wallets:
                 holdings = UserHoldings()
                 holdings.user = user
-                holdings.type = 'Wallet@' + wallet.wallet.name
+                holdings.type = 'Wallet@' + wallet.wallet.name + '(' + str(wallet.pk) + ')'
                 holdings.total_btc = wallet.total_btc
                 holdings.total_usd = wallet.total_usd
                 holdings.save()
@@ -378,7 +417,7 @@ def calculate_holdings_history():
             for exchange in exchanges:
                 holdings = UserHoldings()
                 holdings.user = user
-                holdings.type = 'Exchange@' + exchange.exchange.exchange
+                holdings.type = 'Exchange@' + exchange.exchange.exchange + '(' + str(exchange.pk) + ')'
                 holdings.total_btc = exchange.total_btc
                 holdings.total_usd = exchange.total_usd
                 holdings.save()

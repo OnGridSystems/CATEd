@@ -30,6 +30,7 @@ urlpatterns = [
     url(r'^exchange/$', tradeViews.exchange, name='exchange'),
     url(r'^wallet/$', tradeViews.wallet, name='wallet'),
     url(r'^api/$', tradeViews.get_holding, name='get_holding'),
+    url(r'^transaction/new_comment/$', tradeViews.add_new_transaction_comment, name='new_comment'),
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 

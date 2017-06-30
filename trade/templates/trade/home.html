@@ -68,6 +68,7 @@
                     <br/>
                     {% for item in uw %}
                         <li id="userexchange-{{ item.pk }}">
+                        <a name="{{ item.wallet.name }}{{ item.pk }}"></a>
                             <div class="collapsible-header">
                                 <table class="exchange" width="100%">
                                     <col width="30%">
@@ -98,32 +99,31 @@
                                         {% get_wallet_info item %}
                                     </div>
                                 </div>
-
                             </div>
                         </li>
                     {% endfor %}
                 {% endif %}
             </ul>
         </div>
-        <div class="col s12 m12 l10 push-l1">
+        <div class="col s12 m12 l10 push-l1" id="chart">
             <h2 class="center">Holdings Chart</h2>
             <div id="gra" style="height: 400px; min-width: 310px"></div>
         </div>
-        <div class="col s12 m12 l10 push-l1">
+        <div class="col s12 m12 l10 push-l1" id="transactions">
             {% if trans %}
                 <h2 class="center">Transaction history</h2>
                 <table class="exchange z-depth-2 table-bordered">
-                    <col width="5%">
-                    <col width="10%">
-                    <col width="60%">
                     <col width="10%">
                     <col width="10%">
                     <col width="50%">
+                    <col width="10%">
+                    <col width="10%">
+                    <col width="10%">
                     <thead>
                     <tr>
                         <th>Wallet</th>
                         <th>Date</th>
-                        <th></th>
+                        <th>User comment</th>
                         <th>Value</th>
                         <th>USD Value</th>
                         <th>Direction</th>
@@ -133,16 +133,26 @@
                     {% for item in trans %}
                         <tr>
                             <td>
-                                {% if item.uw.wallet.name == 'BTC' %}
-                                    <i class="fa fa-btc" aria-hidden="true"></i>
-                                {% elif item.uw.wallet.name == 'ETH' %}
-                                    <i class="fa fa-ils" aria-hidden="true"></i>
-                                {% elif item.uw.wallet.name == 'Yandex Money' %}
-                                    <i class="fa fa-rub" aria-hidden="true"></i>
-                                {% endif %}
-                                <b>{{ item.uw.wallet.name }}</b></td>
+                                <a class="scrollto" href="#{{ item.uw.wallet.name }}{{ item.uw.pk }}">
+                                    {% if item.uw.wallet.name == 'BTC' %}
+                                        <i class="fa fa-btc" aria-hidden="true"></i>
+                                    {% elif item.uw.wallet.name == 'ETH' %}
+                                        <i class="fa fa-ils" aria-hidden="true"></i>
+                                    {% elif item.uw.wallet.name == 'Yandex Money' %}
+                                        <i class="fa fa-rub" aria-hidden="true"></i>
+                                    {% endif %}
+                                    <b>{{ item.uw.wallet.name }}</b>
+                                </a>
+                            </td>
                             <td>{{ item.date }}</td>
-                            <td></td>
+                            <td style="text-align: left">
+                                {% if item.user_comment is not None %}
+                                    {{ item.user_comment }}
+                                {% else %}
+                                    <i data-id="{{ item.pk }}" id="trans{{ item.pk }}" class="fa fa-commenting fa-2x"
+                                       aria-hidden="true"></i>
+                                {% endif %}
+                            </td>
                             <td>{{ item.value|value_to_cryptotoken:item.uw }}</td>
                             <td>{{ item.usd_value|floatformat:"-2" }} Usd</td>
                             <td>{% if item.type == 'in' %}
@@ -178,6 +188,9 @@
                     <br/>
                     <h4 class="center">Добавить биржу</h4>
                     <br/>
+                    <p class="alert-new orange lighten-2 white-text center">Для корректной работы, добавляйте только
+                        новые ключи для бирж. Создать новые ключи можно на сайте
+                        нужной биржи.</p>
                     <form method="post" action="{% url 'exchange' %}">
                         {% csrf_token %}
                         {% for f in exchange_form %}
@@ -207,70 +220,131 @@
             </div>
         </div>
     </div>
+    <div id="user_comment_modal" class="modal">
+        <form id="comment-form">
+            <div class="modal-content">
+                <h4>New user comment</h4>
+                {% csrf_token %}
+                <input type="hidden" name="tr_id">
+                <div class="input-field">
+                    <i class="material-icons prefix">mode_edit</i>
+                    <textarea class="materialize-textarea" name="comment" id="comment" cols="30" rows="10"
+                              required></textarea>
+                    <label for="comment">Commenting here, please</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="modal-action waves-effect waves-green btn-flat">Agree</button>
+            </div>
+        </form>
+    </div>
 {% endblock %}
 {% block script %}
     <script type="text/javascript" src="{% static 'js/highstock.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/exporting.js' %}"></script>
-    <script type="text/javascript">
-
+    <script>
         var seriesOptions = [],
-            seriesCounter = 0,
-            names = ['Wallet@Yandex Money', 'Wallet@BTC', 'Wallet@ETH', 'Exchange@btc-e', 'Exchange@bittrex', 'Exchange@poloniex'];
+            seriesCounter = 0;
+        get_holdings();
 
-        /**
-         * Create the chart when all data is loaded
-         * @returns {undefined}
-         */
+        function get_holdings() {
+            $.ajax({
+                url: '{% url "get_holding" %}?type=names',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.length > 0) {
+                        $.each(data, function (i, name) {
+                            $.ajax({
+                                url: '{% url "get_holding" %}?type=' + name,
+                                dataType: 'json',
+                                async: !1,
+                                success: function (hold) {
+                                    seriesOptions[i] = {
+                                        name: name,
+                                        data: hold
+                                    };
+                                    seriesCounter += 1;
+                                    if (seriesCounter === data.length) {
+                                        createChart();
+                                    }
+                                }
+                            });
+                        });
+                    }
+                },
+                complete: function (data) {
+                    if ('none' === data.responseText) {
+                        $('#chart').hide();
+                    } else {
+                        $('#chart').show();
+                    }
+                }
+            })
+        }
+        Highcharts.setOptions({
+            global: {
+                useUTC: false
+            },
+            lang: {
+                weekdays: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+                loading: "Загрузка...",
+                months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
+                numericSymbolMagnitude: 1000,
+                numericSymbols: ["k", "M", "G", "T", "P", "E"],
+                rangeSelectorFrom: "От",
+                rangeSelectorTo: "До",
+                rangeSelectorZoom: "Масштаб",
+                resetZoom: "Сбросить масштаб",
+                resetZoomTitle: "Установить масштаб 1:1",
+                shortMonths: ["Янв", "Фев", "Март", "Апр", "Май", "Июнь", "Июль", "Авг", "Сен", "Окт", "Ноя", "Дек"],
+                shortWeekdays: ["Вc", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+                thousandsSep: " "
+            }
+        });
         function createChart() {
 
             Highcharts.stockChart('gra', {
-
-                rangeSelector: {
-                    selected: 4
+                title: {
+                    text: '{% get_user_summaries user %}'
                 },
-
-                yAxis: {
-                    labels: {
-                        formatter: function () {
-                            return (this.value > 0 ? ' + ' : '') + this.value + '%';
-                        }
-                    },
-                    plotLines: [{
-                        value: 0,
-                        width: 2,
-                        color: 'silver'
-                    }]
-                },
-
-                plotOptions: {
-                    series: {
-                        compare: 'percent',
-                        showInNavigator: true
+                xAxis: {
+                    type: 'datetime',
+                    tickInterval: 5000,
+                    tickWidth: 0,
+                    tickPixelInterval: 150,
+                    tickmarkPlacement: 'on',
+                    title: {
+                        enabled: false
                     }
                 },
-
-                tooltip: {
-                    pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
-                    valueDecimals: 8,
-                    split: true
+                chart: {
+                    type: 'area',
+                    animation: Highcharts.svg
                 },
-
+                yAxis: {
+                    tickInterval: 0.001
+                },
+                legend: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: true
+                },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineWidth: 1,
+                        marker: {
+                            lineWidth: 1
+                        }
+                    }
+                },
+                tooltip: {
+                    split: false,
+                    valueSuffix: ' BTC'
+                },
                 series: seriesOptions
             });
         }
-        $.each(names, function (i, name) {
-            $.getJSON('{% url "get_holding" %}?type=' + name, function (data) {
-                console.log(name +' '+data);
-                seriesOptions[i] = {
-                    name: name,
-                    data: data
-                };
-                seriesCounter += 1;
-
-                if (seriesCounter === names.length) {
-                    createChart();
-                }
-            });
-        });
     </script>
 {% endblock %}

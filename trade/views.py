@@ -19,7 +19,8 @@ def index(request):
             'wallet_form': UserWalletForm(),
             'ue': UserExchanges.objects.filter(user=request.user),
             'uw': UserWallet.objects.filter(user=request.user),
-            'trans': WalletHistory.objects.filter(uw__in=UserWallet.objects.filter(user=request.user)).order_by('-date')}
+            'trans': WalletHistory.objects.filter(uw__in=UserWallet.objects.filter(user=request.user)).order_by(
+                '-date')}
     return render(request, 'trade/home.html', args)
 
 
@@ -127,12 +128,34 @@ def wallet(request):
     return redirect(index)
 
 
+@login_required
 def get_holding(request):
-    type = request.GET.get('type')
+    type_r = request.GET.get('type')
     if request.is_ajax():
-        user = request.user
-        holdings = UserHoldings.objects.filter(user=user, type=type)
-        dict_holdings = [obj.as_list() for obj in holdings]
-        if len(dict_holdings) < 1:
-            print(type + ' пустой')
-        return HttpResponse(json.dumps(dict_holdings), status=200)
+        if type_r == 'names':
+            names = []
+            user_hold_names = UserHoldings.objects.values('type').distinct()
+            if len(user_hold_names) > 0:
+                for name in user_hold_names:
+                    names.append(name['type'])
+                return HttpResponse(json.dumps(names), status=200)
+            else:
+                return HttpResponse('none', status=200)
+        else:
+            user = request.user
+            holdings = UserHoldings.objects.filter(user=user, type=type_r).order_by('date_time')[:100]
+            list_hold = [obj.as_list() for obj in holdings]
+            return HttpResponse(json.dumps(list_hold), status=200)
+
+
+def add_new_transaction_comment(request):
+    if request.POST:
+        tr_id = request.POST.get('tr_id')
+        comment = request.POST.get('comment')
+        try:
+            trans = WalletHistory.objects.get(pk=tr_id)
+            trans.user_comment = comment
+            trans.save()
+        except WalletHistory.DoesNotExist:
+            return HttpResponse('none', status=200)
+        return HttpResponse('ok', status=200)

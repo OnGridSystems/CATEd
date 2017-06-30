@@ -101,11 +101,11 @@ class WalletHistory(models.Model):
     t_to = models.TextField()
     type = models.CharField(max_length=255)
     value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
-    block_hash = models.CharField(max_length=511)
+    block_hash = models.CharField(max_length=511, default=None, null=True)
     hash = models.CharField(max_length=511)
-    comment = models.TextField(default='')
-    title = models.CharField(max_length=1000, default='')
-    details = models.CharField(max_length=1000, default='')
+    comment = models.TextField(default='', null=True)
+    title = models.CharField(max_length=1000, default='', null=True)
+    details = models.CharField(max_length=1000, default='', null=True)
     usd_value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     user_comment = models.CharField(max_length=255, blank=True, default=None, null=True)
 
@@ -115,6 +115,7 @@ class WalletHistory(models.Model):
     class Meta:
         verbose_name = 'Транзакциии кошелька'
         verbose_name_plural = 'Транзакции кошельков'
+        unique_together = ('uw', 'number')
 
 
 class UserHoldings(models.Model):

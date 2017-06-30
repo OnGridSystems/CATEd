@@ -115,3 +115,15 @@ tr.balances td:last-child {
 .table-bordered td {
     border-bottom: 1px solid #c7ecb8;
 }
+
+.fa-commenting {
+    cursor: pointer;
+}
+
+.alert-new {
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    margin: 0 0 2em 0;
+}

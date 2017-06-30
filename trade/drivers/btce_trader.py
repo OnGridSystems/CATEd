@@ -47,9 +47,8 @@ class BtceTrader:
         return balances
 
     def pull_orders(self):
-        for exch in self.exchanges:
-            orders = self.trade_api.call('ActiveOrders', pair=exch.name)
-#           возвращает ошибку т.к. нет ордеров
+        orders = self.trade_api.call('ActiveOrders')
+        return orders
 
     def sell(self, pair, rate, amount):
         sell = self.trade_api.call('Trade', type='sell', pair=pair, rate=rate, amount=amount)
