@@ -42,7 +42,7 @@ $(document).ready(function () {
     }
 
     $('#wallet').find('select').on('change', function () {
-        if ($(this).val() == 3) {
+        if ($(this).val() == 1) {
             $('#wallet').find('input#id_address').attr('disabled', true);
         } else {
             $('#wallet').find('input#id_address').attr('disabled', false);
