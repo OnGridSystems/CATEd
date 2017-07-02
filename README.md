@@ -88,7 +88,7 @@ Host github.com
     LogLevel QUIET
 EOF
 echo "$SSHCFG" >> /etc/ssh/ssh_config
-#
+
 ```
 
 Install python virtualenv, clone project from git and apply some patches
@@ -127,7 +127,7 @@ read -d "" PATCH <<"EOF"
 >             signature = _hmac.new(self._secret, request.body.encode(), _hashlib.sha512)
 EOF
 echo "$PATCH" | patch /opt/env/lib/python3.5/site-packages/poloniex/poloniex.py
-#
+
 ```
 
 set databases and mocks
@@ -137,7 +137,7 @@ echo "create database trade character set utf8" | mysql -u root
 mysql -u root trade < dump.sql
 #
 # Migrate
-/opt/env/bin/python3 manage.py makimigrations
+/opt/env/bin/python3 manage.py makemigrations
 /opt/env/bin/python3 manage.py migrate
 #
 # Add users
