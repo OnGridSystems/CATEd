@@ -177,10 +177,12 @@ make all components start on boot in screens
 ```sh
 read -d "" RCLOCAL <<"EOF"
 #!/bin/bash
-screen -dmS ongrid_portal -t django_server bash -c '/opt/env/bin/python3 manage.py runserver 0.0.0.0:80'
-screen -S ongrid_portal -x -X screen -t django_shell bash -c '/opt/env/bin/python3 manage.py shell'
-screen -S ongrid_portal -x -X screen -t celery_worker bash -c 'cd /opt; source ./env/bin/activate; cd ongrid_portal; celery worker -A djangoTrade -l=INFO'
-screen -S ongrid_portal -x -X screen -t celery_beat bash -c 'cd /opt; source ./env/bin/activate; cd ongrid_portal; celery beat -A djangoTrade -l=INFO'
+cd /opt
+source ./env/bin/activate
+screen -dmS ongrid_portal -t django_server bash -c 'cd ongrid_portal; /opt/env/bin/python3 manage.py runserver 0.0.0.0:80'
+screen -S ongrid_portal -x -X screen -t django_shell bash -c 'cd ongrid_portal; /opt/env/bin/python3 manage.py shell'
+screen -S ongrid_portal -x -X screen -t celery_worker bash -c 'cd ongrid_portal; celery worker -A djangoTrade -l=INFO'
+screen -S ongrid_portal -x -X screen -t celery_beat bash -c 'cd ongrid_portal; celery beat -A djangoTrade -l=INFO'
 exit 0
 EOF
 echo "$RCLOCAL" > /etc/rc.local
