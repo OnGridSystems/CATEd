@@ -170,6 +170,9 @@ CELERY_CREATE_DIRS=1
 SECRET_KEY="ada#qadaa2d#1232%!^&#*(&@(!&Y!&#*T!@(^F#!@&#F!@&#F!(@"
 EOF
 echo "$CELERYD_CFG" > /etc/default/celeryd
+/etc/init.d/celeryd create-paths
+/etc/init.d/celeryd start
+/etc/init.d/celeryd stop
 ```
 
 make all components start on boot in screens
