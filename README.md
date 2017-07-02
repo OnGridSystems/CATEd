@@ -1,7 +1,7 @@
 # OnGrid portal
 
 # Installation
-Start from cleau Ubuntu 16 LTS installation
+Start from clean Ubuntu 16 LTS installation
 
 If your system has no swap partition you should make swap file to avoid low memory conditions
 
@@ -137,6 +137,7 @@ echo "create database trade character set utf8" | mysql -u root
 mysql -u root trade < dump.sql
 #
 # Migrate
+/opt/env/bin/python3 manage.py makimigrations
 /opt/env/bin/python3 manage.py migrate
 #
 # Add users
