@@ -21,13 +21,13 @@ class Exchanges(models.Model):
 class UserExchanges(models.Model):
     user = models.ForeignKey(User)
     exchange = models.ForeignKey(Exchanges)
-    apikey = models.CharField(max_length=255)
+    apikey = models.CharField(max_length=127)
     apisecret = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
     is_correct = models.BooleanField(default=True)
     total_btc = models.DecimalField(max_digits=30, decimal_places=8)
     total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
-    error = models.CharField(max_length=1000, blank=True)
+    error = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.user.username + ': ' + self.exchange.exchange
@@ -93,29 +93,32 @@ class UserWallet(models.Model):
         verbose_name_plural = 'Кошельки пользователей'
 
 
-class WalletHistory(models.Model):
-    uw = models.ForeignKey(UserWallet)
+class Transaction(models.Model):
+    name = models.CharField(max_length=50)
+    t_type = models.CharField(max_length=20)
     number = models.BigIntegerField(blank=False, null=False)
     date = models.DateTimeField(blank=False)
     t_from = models.TextField()
     t_to = models.TextField()
-    type = models.CharField(max_length=255)
+    type = models.CharField(max_length=10)
     value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
-    block_hash = models.CharField(max_length=511, default=None, null=True)
-    hash = models.CharField(max_length=200)
+    block_hash = models.CharField(max_length=127, default=None, null=True)
+    hash = models.CharField(max_length=127)
     comment = models.TextField(default='', null=True)
-    title = models.CharField(max_length=1000, default='', null=True)
-    details = models.CharField(max_length=1000, default='', null=True)
+    title = models.CharField(max_length=255, default='', null=True)
+    details = models.CharField(max_length=255, default='', null=True)
     usd_value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     user_comment = models.CharField(max_length=255, blank=True, default=None, null=True)
+    currency = models.CharField(max_length=10, blank=True, default=None, null=True)
+
 
     def __str__(self):
-        return '<' + self.uw.user.username + ' ' + self.type + ' ' + str(self.value) + '>'
+        return '<' + self.name + ' ' + self.type + ' ' + str(self.value) + '>'
 
     class Meta:
-        verbose_name = 'Транзакциии кошелька'
-        verbose_name_plural = 'Транзакции кошельков'
-        unique_together = ('uw', 'hash')
+        verbose_name = 'Транзакциия'
+        verbose_name_plural = 'Транзакции'
+        unique_together = ('name', 't_type', 'hash')
 
 
 class UserHoldings(models.Model):
@@ -123,7 +126,7 @@ class UserHoldings(models.Model):
     type = models.CharField(max_length=255)
     total_btc = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
-    date_time = models.DateTimeField(auto_now=True)
+    date_time = models.DateTimeField(blank=False)
 
     def __str__(self):
         return '<' + self.user.username + ' - ' + self.type + ': ' + str(self.total_btc) + '>'

@@ -13,7 +13,7 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 
 from trade.drivers.btce_driver import APIError
-from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, WalletHistory, UserHoldings
+from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, Transaction, UserHoldings
 from trade.drivers import btce_trader, bittrex_driver
 from poloniex import Poloniex, PoloniexCommandException
 from yandex_money.api import Wallet, ExternalPayment
@@ -54,14 +54,18 @@ def start_trade_btce():
                                 else:
                                     totalBtc += float(user_coin.btc_value)
                                 user_coin.save()
-                        if 'orders' in balances:
-                            on_orders_in_btc = add_money_on_orders(driver, ue)
+                        if 'open_orders' in balances:
+                            if balances['open_orders'] > 1:
+                                on_orders_in_btc = add_money_on_orders(driver, ue)
+                            else:
+                                on_orders_in_btc = 0
                         else:
                             on_orders_in_btc = 0
                         ue.total_btc = totalBtc + on_orders_in_btc
-                        ue.total_usd = get_usd_value('btc', totalBtc+on_orders_in_btc)
+                        ue.total_usd = get_usd_value('btc', totalBtc + on_orders_in_btc)
                         ue.save()
                 except APIError as error:
+                    print(error)
                     pass
                     # print("Убираю накуй, неверно че-то")
                     # ue.error = error
@@ -136,9 +140,60 @@ def start_trade_poloniex():
                     #     ue.is_active = False
                     #     ue.is_correct = False
                     #     ue.save()
+                try:
+                    deposits_and_withdrawals = driver.returnDepositsWithdrawals()
+                    if len(deposits_and_withdrawals) > 0:
+                        deposits = deposits_and_withdrawals['deposits']
+                        if len(deposits) > 0:
+                            for item in deposits:
+                                try:
+                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
+                                                                          hash=item['txid'])
+                                except Transaction.MultipleObjectsReturned:
+                                    pass
+                                except Transaction.DoesNotExist:
+                                    new_trans = Transaction()
+                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
+                                    new_trans.t_type = 'exchange'
+                                    new_trans.number = item['confirmations']
+                                    new_trans.hash = item['txid']
+                                    new_trans.date = datetime.datetime.fromtimestamp(int(item['timestamp'])).strftime(
+                                        '%Y-%m-%d %H:%M:%S')
+                                    new_trans.t_from = '-'
+                                    new_trans.t_to = item['address']
+                                    new_trans.type = 'in'
+                                    new_trans.value = item['amount']
+                                    new_trans.currency = item['currency']
+                                    new_trans.usd_value = get_usd_value(item['currency'], item['amount'])
+                                    new_trans.save()
+                        withdrawals = deposits_and_withdrawals['withdrawals']
+                        if len(withdrawals) > 0:
+                            for item in withdrawals:
+                                try:
+                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
+                                                                          hash=item['withdrawalNumber'])
+                                except Transaction.MultipleObjectsReturned:
+                                    pass
+                                except Transaction.DoesNotExist:
+                                    new_trans = Transaction()
+                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
+                                    new_trans.t_type = 'exchange'
+                                    new_trans.number = item['confirmations']
+                                    new_trans.hash = item['withdrawalNumber']
+                                    new_trans.date = datetime.datetime.fromtimestamp(int(item['timestamp'])).strftime(
+                                        '%Y-%m-%d %H:%M:%S')
+                                    new_trans.t_from = item['address']
+                                    new_trans.t_to = '-'
+                                    new_trans.type = 'out'
+                                    new_trans.value = item['amount']
+                                    new_trans.currency = item['currency']
+                                    new_trans.usd_value = get_usd_value(item['currency'], item['amount'])
+                                    new_trans.save()
+                except Exception as error:
+                    print(error)
+
             except HTTPException:
                 print('Ошибка, начинаем заново')
-
     else:
         print("Никто не включил скрипт")
     return True
@@ -152,8 +207,7 @@ def start_trade_bittrex():
         for ue in bittrex_ue:
             totalBtc = float(0)
             try:
-                ue_apisecret = ue.apisecret.encode()
-                driver = bittrex_driver.Bittrex(api_secret=ue_apisecret, api_key=ue.apikey)
+                driver = bittrex_driver.Bittrex(api_secret=ue.apisecret, api_key=ue.apikey)
                 try:
                     balances = driver.get_balances()
                     if balances['result'] is not None:
@@ -181,12 +235,61 @@ def start_trade_bittrex():
                     ue.total_usd = get_usd_value('btc', totalBtc)
                     ue.save()
                 except Exception as error:
+                    print(error)
                     pass
                     # print("Убираю накуй, неверно че-то")
                     # ue.error = error
                     # ue.is_active = False
                     # ue.is_correct = False
                     # ue.save()
+                try:
+                    deposits = driver.get_deposithistory()
+                    for item in deposits['result']:
+                        try:
+                            transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
+                                                                  hash=item['TxId'])
+                        except Transaction.MultipleObjectsReturned:
+                            pass
+                        except Transaction.DoesNotExist:
+                            new_trans = Transaction()
+                            new_trans.name = ue.exchange.exchange + str(ue.pk)
+                            new_trans.t_type = 'exchange'
+                            new_trans.number = item['Confirmations']
+                            new_trans.hash = item['TxId']
+                            new_trans.date = item['LastUpdated']
+                            new_trans.t_from = '-'
+                            new_trans.t_to = item['CryptoAddress']
+                            new_trans.type = 'in'
+                            new_trans.value = item['Amount']
+                            new_trans.currency = item['Currency']
+                            new_trans.usd_value = get_usd_value(item['Currency'], item['Amount'])
+                            new_trans.save()
+                except Exception as error:
+                    print(error)
+                try:
+                    withdrawals = driver.get_withdrawalhistory()
+                    for item in withdrawals['result']:
+                        try:
+                            transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
+                                                                  hash=item['TxId'])
+                        except Transaction.MultipleObjectsReturned:
+                            pass
+                        except Transaction.DoesNotExist:
+                            new_trans = Transaction()
+                            new_trans.name = ue.exchange.exchange + str(ue.pk)
+                            new_trans.t_type = 'exchange'
+                            new_trans.number = item['Confirmations']
+                            new_trans.hash = item['TxId']
+                            new_trans.date = item['LastUpdated']
+                            new_trans.t_from = '-'
+                            new_trans.t_to = item['CryptoAddress']
+                            new_trans.type = 'in'
+                            new_trans.value = item['Amount']
+                            new_trans.currency = item['Currency']
+                            new_trans.usd_value = get_usd_value(item['Currency'], item['Amount'])
+                            new_trans.save()
+                except Exception as error:
+                    print(error)
             except HTTPException:
                 print('Ошибка, начинаем заново')
     else:
@@ -208,85 +311,50 @@ def get_all_coins():
     return True
 
 
-def get_btc_value(coin_name=None, count=None):
-    time.sleep(0.5)
-    if not coin_name or not count:
-        return 0
-    else:
-        if coin_name == 'dsh' or coin_name == 'DSH':
-            coin_name = 'dash'
-        response = requests.get('https://api.cryptonator.com/api/ticker/btc-' + coin_name.lower()).json()
-        if response['success']:
-            return float(count) / float(response['ticker']['price'])
-        else:
-            return 0
-
-
-def get_usd_value(coin_name=None, count=None):
-    time.sleep(0.5)
-    if not coin_name or not count:
-        return 0
-    else:
-        response = requests.get('https://api.cryptonator.com/api/ticker/usd-' + coin_name.lower()).json()
-        if response['success']:
-            return float(count) / float(response['ticker']['price'])
-        else:
-            return 0
-
-
-def get_btc_value_from_btce(coin_name=None, count=None):
-    if not coin_name or not count:
-        return 0
-    else:
-        response = requests.get('https://btc-e.nz/api/3/ticker/btc_' + coin_name.lower()).json()
-        if response:
-            print(float(count) / float(response['btc_' + coin_name.lower()]['last']))
-            return float(count) / float(response['btc_' + coin_name.lower()]['last'])
-        else:
-            return 0
-
-
 @periodic_task(run_every=crontab(minute='*/2'))
 def get_eth_wallet_history():
     wallet = Wallets.objects.get(name='ETH')
     eth_uw = UserWallet.objects.filter(wallet=wallet)
+    eth_to_btc = CryptoConvert('btc', 'eth')
+    eth_to_usd = CryptoConvert('usd', 'eth')
     if len(eth_uw) > 0:
         for uw in eth_uw:
             balance = requests.get(
                 'https://api.etherscan.io/api?module=account&action=balance&address=' + uw.address + '&tag=latest&apikey=18NX2UFSA1SUX76FFGHAGFBWNNAWK7KDNY').json()
             if balance['status'] == str(1):
                 uw.balance = balance['result']
-                uw.total_usd = get_usd_value('eth', round(float(float(balance['result']) / (10 ** 18)), 8))
-                uw.total_btc = get_btc_value('eth', round(float(float(balance['result']) / (10 ** 18)), 8))
+                uw.total_usd = eth_to_usd.convert('usd', 'eth', round(float(float(balance['result']) / (10 ** 18)), 8))
+                uw.total_btc = eth_to_btc.convert('btc', 'eth', round(float(float(balance['result']) / (10 ** 18)), 8))
                 uw.save()
             history = requests.get(
                 'https://api.etherscan.io/api?module=account&action=txlist&address=' + uw.address + '&startblock=0&endblock=99999999&sort=desc&apikey=18NX2UFSA1SUX76FFGHAGFBWNNAWK7KDNY').json()
             if history['status'] == str(1):
                 for item in history['result']:
                     try:
-                        wallet_history = WalletHistory.objects.get(hash=item['hash'], uw=uw)
-                    except WalletHistory.MultipleObjectsReturned:
+                        transaction = Transaction.objects.get(hash=item['hash'], name=uw.wallet.name + str(uw.pk))
+                    except Transaction.MultipleObjectsReturned:
                         pass
-                    except WalletHistory.DoesNotExist:
-                        wallet_history = WalletHistory()
-                        wallet_history.uw = uw
-                        wallet_history.number = item['blockNumber']
-                        wallet_history.date = datetime.datetime.fromtimestamp(int(item['timeStamp'])).strftime(
+                    except Transaction.DoesNotExist:
+                        transaction = Transaction()
+                        transaction.name = uw.wallet.name + str(uw.pk)
+                        transaction.t_type = 'wallet'
+                        transaction.number = item['blockNumber']
+                        transaction.date = datetime.datetime.fromtimestamp(int(item['timeStamp'])).strftime(
                             '%Y-%m-%d %H:%M:%S')
-                        wallet_history.t_from = item['from']
-                        wallet_history.t_to = item['to']
+                        transaction.t_from = item['from']
+                        transaction.t_to = item['to']
                         if item['to'] == uw.address:
-                            wallet_history.type = 'in'
+                            transaction.type = 'in'
                         elif item['from'] == uw.address:
-                            wallet_history.type = 'out'
+                            transaction.type = 'out'
                         else:
-                            wallet_history.type = 'unknown'
-                        wallet_history.value = item['value']
-                        wallet_history.usd_value = get_usd_value('eth',
-                                                                 round(float(float(item['value']) / (10 ** 18)), 8))
-                        wallet_history.hash = item['hash']
-                        wallet_history.block_hash = item['blockHash']
-                        wallet_history.save()
+                            transaction.type = 'unknown'
+                        transaction.value = item['value']
+                        transaction.usd_value = eth_to_usd.convert('usd', 'eth',
+                                                                   round(float(float(item['value']) / (10 ** 18)), 8))
+                        transaction.hash = item['hash']
+                        transaction.block_hash = item['blockHash']
+                        transaction.save()
         print('ok')
     else:
         print("Кошельки отсутствуют")
@@ -299,10 +367,12 @@ def get_btc_wallet_history():
     btc_uw = UserWallet.objects.filter(wallet=wallet)
     if len(btc_uw) > 0:
         for uw in btc_uw:
+            btc_to_usd = CryptoConvert('usd', 'btc')
             balance = requests.get('http://btc.blockr.io/api/v1/address/balance/' + uw.address).json()
             if balance['status'] == 'success':
                 uw.balance = balance['data']['balance']
-                uw.total_usd = get_usd_value('btc', balance['data']['balance'])
+                # uw.total_usd = get_usd_value('btc', balance['data']['balance'])
+                uw.total_usd = btc_to_usd.convert('usd', 'btc', balance['data']['balance'])
                 uw.total_btc = balance['data']['balance']
                 uw.save()
             history = requests.get(
@@ -310,14 +380,17 @@ def get_btc_wallet_history():
             if history['status'] == 'success':
                 for item in history['data']['txs']:
                     try:
-                        wallet_history = WalletHistory.objects.get(uw=uw, hash=item['tx'])
-                    except WalletHistory.DoesNotExist:
+                        transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), hash=item['tx'])
+                    except Transaction.MultipleObjectsReturned:
+                        pass
+                    except Transaction.DoesNotExist:
                         tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/' + item['tx']).json()
                         if tx_his['status'] == 'success':
-                            wallet_history = WalletHistory()
-                            wallet_history.uw = uw
-                            wallet_history.number = tx_his['data']['block']
-                            wallet_history.date = tx_his['data']['time_utc']
+                            transaction = Transaction()
+                            transaction.name = uw.wallet.name + str(uw.pk)
+                            transaction.t_type = 'wallet'
+                            transaction.number = tx_his['data']['block']
+                            transaction.date = tx_his['data']['time_utc']
                             if float(item['amount']) > 0:
                                 t_from = ''
                                 for item_from in tx_his['data']['trade']['vins']:
@@ -328,19 +401,20 @@ def get_btc_wallet_history():
                                 t_to = ''
                                 for item_to in tx_his['data']['trade']['vouts']:
                                     t_to += item_to['address'] + '<br/>'
-                            wallet_history.t_to = t_to
-                            wallet_history.t_from = t_from
+                            transaction.t_to = t_to
+                            transaction.t_from = t_from
                             if t_to == uw.address:
-                                wallet_history.type = 'in'
+                                transaction.type = 'in'
                             elif t_from == uw.address:
-                                wallet_history.type = 'out'
+                                transaction.type = 'out'
                             else:
-                                wallet_history.type = 'unknown'
-                            wallet_history.value = item['amount']
-                            wallet_history.usd_value = get_usd_value('btc', float(item['amount']))
-                            wallet_history.hash = item['tx']
-                            wallet_history.block_hash = '-'
-                            wallet_history.save()
+                                transaction.type = 'unknown'
+                            transaction.value = item['amount']
+                            # transaction.usd_value = get_usd_value('btc', float(item['amount']))
+                            transaction.usd_value = btc_to_usd.convert('usd', 'btc', float(item['amount']))
+                            transaction.hash = item['tx']
+                            transaction.block_hash = '-'
+                            transaction.save()
         print('ok')
     else:
         print("Кошельки отсутствуют")
@@ -373,26 +447,30 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
         {'start_record': int(next_record),
          'details': 'true',
          'records': 100})
+    rur_to_usd = CryptoConvert('usd', 'rur')
     for t in transactions['operations']:
         try:
-            wallet_history = WalletHistory.objects.get(uw=uw, number=t['operation_id'])
-        except WalletHistory.DoesNotExist:
-            new_wallet_history = WalletHistory()
-            new_wallet_history.uw = uw
-            new_wallet_history.number = t['operation_id']
-            new_wallet_history.date = t['datetime']
-            new_wallet_history.type = t['direction']
-            new_wallet_history.t_from = new_wallet_history.t_to = '-'
+            transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), number=t['operation_id'])
+        except Transaction.MultipleObjectsReturned:
+            pass
+        except Transaction.DoesNotExist:
+            new_transaction = Transaction()
+            new_transaction.name = uw.wallet.name + str(uw.pk)
+            new_transaction.t_type = 'wallet'
+            new_transaction.number = new_transaction.hash = t['operation_id']
+            new_transaction.date = t['datetime']
+            new_transaction.type = t['direction']
+            new_transaction.t_from = new_transaction.t_to = '-'
             if 'details' in t:
                 if len(t['details']) > 0:
-                    new_wallet_history.hash = t['details']
-                elif 'title' in t:
-                    new_wallet_history.hash = t['title']
-            elif 'title' in t:
-                new_wallet_history.hash = t['title']
-            new_wallet_history.value = t['amount']
-            new_wallet_history.usd_value = get_usd_value('rur', float(t['amount']))
-            new_wallet_history.save()
+                    new_transaction.details = t['details']
+            if 'title' in t:
+                if len(t['title']) > 0:
+                    new_transaction.title = t['title']
+            new_transaction.value = t['amount']
+            new_transaction.usd_value = rur_to_usd.convert('usd', 'rur', float(t['amount']))
+            # new_transaction.usd_value = get_usd_value('rur', float(t['amount']))
+            new_transaction.save()
     try:
         next_rec = transactions['next_record']
     except KeyError:
@@ -401,8 +479,9 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
         get_yandex_records(wallet, uw=uw, next_record=transactions['next_record'])
 
 
-@periodic_task(run_every=crontab(minute='*/30'))
+@periodic_task(run_every=crontab(minute='*/1'))
 def calculate_holdings_history():
+    date = datetime.datetime.fromtimestamp(int(time.time())).strftime('%Y-%m-%d %H:%M:%S')
     users = User.objects.all()
     for user in users:
         wallets = UserWallet.objects.filter(user=user)
@@ -413,6 +492,7 @@ def calculate_holdings_history():
                 holdings.type = 'Wallet@' + wallet.wallet.name + '(' + str(wallet.pk) + ')'
                 holdings.total_btc = wallet.total_btc
                 holdings.total_usd = wallet.total_usd
+                holdings.date_time = date
                 holdings.save()
         exchanges = UserExchanges.objects.filter(user=user)
         if len(exchanges) > 0:
@@ -422,5 +502,69 @@ def calculate_holdings_history():
                 holdings.type = 'Exchange@' + exchange.exchange.exchange + '(' + str(exchange.pk) + ')'
                 holdings.total_btc = exchange.total_btc
                 holdings.total_usd = exchange.total_usd
+                holdings.date_time = date
                 holdings.save()
     return True
+
+
+def get_btc_value(coin_name=None, count=None):
+    time.sleep(0.1)
+    if not coin_name or not count:
+        return 0
+    else:
+        if coin_name == 'dsh' or coin_name == 'DSH':
+            coin_name = 'dash'
+        response = requests.get('https://api.cryptonator.com/api/ticker/btc-' + coin_name.lower()).json()
+        if response['success']:
+            return float(count) / float(response['ticker']['price'])
+        else:
+            return 0
+
+
+def get_usd_value(coin_name=None, count=None):
+    time.sleep(0.1)
+    if not coin_name or not count:
+        return 0
+    else:
+        response = requests.get('https://api.cryptonator.com/api/ticker/usd-' + coin_name.lower()).json()
+        if response['success']:
+            return float(count) / float(response['ticker']['price'])
+        else:
+            return 0
+
+
+def get_btc_value_from_btce(coin_name=None, count=None):
+    if not coin_name or not count:
+        return 0
+    else:
+        response = requests.get('https://btc-e.nz/api/3/ticker/btc_' + coin_name.lower()).json()
+        if response:
+            print(float(count) / float(response['btc_' + coin_name.lower()]['last']))
+            return float(count) / float(response['btc_' + coin_name.lower()]['last'])
+        else:
+            return 0
+
+
+class CryptoConvert:
+    def __init__(self, coin_one_name, coin_two_name):
+        self.coin_one_name = coin_one_name
+        self.coin_two_name = coin_two_name
+        self.price = None
+
+    def get_price(self):
+        if self.price is None:
+            response = requests.get(
+                'https://api.cryptonator.com/api/ticker/' + self.coin_one_name.lower() + '-' + self.coin_two_name.lower()).json()
+            if response['success']:
+                self.price = response['ticker']['price']
+        return self.price
+
+    def convert(self, coin_one_name, coin_two_name, count):
+        if coin_one_name == self.coin_one_name and coin_two_name == self.coin_two_name:
+            self.get_price()
+        else:
+            self.coin_one_name = coin_one_name
+            self.coin_two_name = coin_two_name
+            self.price = None
+            self.get_price()
+        return float(count) / float(self.price)

@@ -1,6 +1,7 @@
 $(document).ready(function () {
     $('select').material_select();
     $('.modal').modal();
+    $('#yandex-wallet-add').hide();
 
     $('.change_status').on('click', function () {
         var ue = $(this).parent('form').find('input[name="user-exchange"]').val();
@@ -42,10 +43,15 @@ $(document).ready(function () {
     }
 
     $('#wallet').find('select').on('change', function () {
-        if ($(this).val() == 1) {
+        var wallet = $("#wallet").find("select option:selected").text();
+        if (wallet === 'Yandex Money') {
             $('#wallet').find('input#id_address').attr('disabled', true);
+            $('#yandex-wallet-add').show();
+            $('#add-wallet-but').text('Продолжить')
         } else {
+            $('#yandex-wallet-add').hide();
             $('#wallet').find('input#id_address').attr('disabled', false);
+            $('#add-wallet-but').text('Отправить')
         }
     });
 
@@ -75,6 +81,6 @@ $(document).ready(function () {
     });
     $('a.scrollto').on('click', function () {
         var name = $(this).attr('href').slice(1);
-        $('.collapsible').collapsible('open', $('a[name="'+name+'"]').parent('li').index() - 1);
+        $('.collapsible').collapsible('open', $('a[name="'+name+'"]').parent('li').index() - 3);
     });
 });

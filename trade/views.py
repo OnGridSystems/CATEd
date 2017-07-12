@@ -2,25 +2,34 @@ import json
 
 import requests
 import re
-
+import djangoTrade.settings as settings
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from trade.forms import UserExchangesForm, UserWalletForm
-from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, WalletHistory, UserHoldings
+from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, Transaction, UserHoldings
 from yandex_money.api import Wallet, ExternalPayment
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 @login_required
 def index(request):
+    transaction = Transaction.objects.all()
+    paginator = Paginator(transaction, 100)
+    page = request.GET.get('page')
+    try:
+        transactions = paginator.page(page)
+    except PageNotAnInteger:
+        transactions = paginator.page(1)
+    except EmptyPage:
+        transactions = paginator.page(paginator.num_pages)
     args = {'exchange_form': UserExchangesForm(),
             'wallet_form': UserWalletForm(),
-            'ue': UserExchanges.objects.filter(user=request.user),
-            'uw': UserWallet.objects.filter(user=request.user),
-            'trans': WalletHistory.objects.filter(uw__in=UserWallet.objects.filter(user=request.user)).order_by(
-                '-date')}
+            'ue': UserExchanges.objects.all(),
+            'uw': UserWallet.objects.all(),
+            'trans': transactions}
     return render(request, 'trade/home.html', args)
 
 
@@ -98,8 +107,8 @@ def wallet(request):
         if wallet.name == 'Yandex Money':
             scope = ['account-info', 'operation-history', 'operation-details']
             auth_url = Wallet.build_obtain_token_url(
-                client_id='BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF',
-                redirect_uri='http://78.155.218.16:8000/wallet/',
+                client_id=settings.YANDEX_MONEY_CLIENT_ID,
+                redirect_uri=settings.YANDEX_MONEY_REDIRECT_URI,
                 scope=scope) + '&response_type=code'
             return redirect(auth_url)
         else:
@@ -110,10 +119,10 @@ def wallet(request):
             uw.save()
     elif request.method == 'GET':
         access_token = Wallet.get_access_token(
-            client_id='BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF',
-            redirect_uri='http://78.155.218.16:8000/wallet/',
+            client_id=settings.YANDEX_MONEY_CLIENT_ID,
+            redirect_uri=settings.YANDEX_MONEY_REDIRECT_URI,
             code=request.GET.get('code'),
-            client_secret='211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69FEC67630EA304A4831D7813BDEC90A866ABED2C30B9F8578EFF29962B13B70187429034EA3BF59'
+            client_secret=settings.YANDEX_MONEY_CLIENT_SECRET
         )
         access_token = access_token['access_token']
         wallet = Wallet(access_token)
@@ -143,7 +152,7 @@ def get_holding(request):
                 return HttpResponse('none', status=200)
         else:
             user = request.user
-            holdings = UserHoldings.objects.filter(user=user, type=type_r).order_by('date_time')[:100]
+            holdings = UserHoldings.objects.filter(user=user, type=type_r).order_by('date_time')
             list_hold = [obj.as_list() for obj in holdings]
             return HttpResponse(json.dumps(list_hold), status=200)
 
@@ -153,9 +162,9 @@ def add_new_transaction_comment(request):
         tr_id = request.POST.get('tr_id')
         comment = request.POST.get('comment')
         try:
-            trans = WalletHistory.objects.get(pk=tr_id)
+            trans = Transaction.objects.get(pk=tr_id)
             trans.user_comment = comment
             trans.save()
-        except WalletHistory.DoesNotExist:
+        except Transaction.DoesNotExist:
             return HttpResponse('none', status=200)
         return HttpResponse('ok', status=200)
