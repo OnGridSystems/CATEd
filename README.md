@@ -15,7 +15,7 @@ echo "/swapfile   none    swap    sw    0   0" >> /etc/fstab
 
 Upgrade packages and grub
 
-```sh
+```
 echo -e "LC_ALL=en_US.UTF-8\nLANG=en_US.UTF-8" >> /etc/environment
 read -d "" UPGRADESCRIPT <<"EOF"
 export DEBIAN_FRONTEND=noninteractive
@@ -91,33 +91,141 @@ echo "$SSHCFG" >> /etc/ssh/ssh_config
 
 ```
 
-Install python virtualenv, clone project from git and apply some patches
+Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
 pip3 install --upgrade pip setuptools wheel
 cd /opt
+mkdir portal_ongrid
+cd portal_ongrid
+mkdir logs static media configs
 python3 -m venv env
+cd /opt/portal_ongrid/configs
+touch supervisor.conf
+touch nginx.conf
+touch djangoTrade
+
+#
+#set config for gunicorn
+read -d "" DJTRD<<"EOF"
+#!/bin/sh
+
+NAME="djangoTrade"                                  
+DJANGODIR=/opt/portal_ongrid/ongrid_portal/             
+USER=root                                        
+GROUP=root                                     
+NUM_WORKERS=2                                    
+DJANGO_SETTINGS_MODULE=djangoTrade.settings            
+DJANGO_WSGI_MODULE=djangoTrade.wsgi                     
+echo "Starting $NAME as `whoami`"
+cd $DJANGODIR
+source ../env/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+RUNDIR=$(dirname $SOCKFILE)
+test -d $RUNDIR || mkdir -p $RUNDIR
+exec ../env/bin/gunicorn ${DJANGO_WSGI_MODULE}:application \
+  --name $NAME \
+  --workers $NUM_WORKERS \
+  --user=$USER --group=$GROUP \
+  --bind="127.0.0.1:9023" \
+  --log-level=debug \
+  --log-file=-
+EOF
+echo "$DJTRD" > /opt/portal_ongrid/configs/djangoTrade
+chmod u+x /opt/portal_ongrid/configs/djangoTrade
+
+#
+#set config for nginx
+read -d "" NGINX <<"EOF"
+server {
+    listen 80;
+    server_name 127.0.0.1 portal.ongrid.pro www.portal.ongrid.pro;
+    access_log  /opt/portal_ongrid/logs/nginx_access.log;
+    client_max_body_size 100M;
+
+    location /media  {
+        alias /opt/portal_ongrid/media;
+        expires 30d;
+        add_header Pragma public;
+        add_header Cache-Control "public";
+    }
+    location /static {
+        alias /opt/portal_ongrid/static;
+        expires 30d;
+        add_header Pragma public;
+        add_header Cache-Control "public";
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:9023;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_connect_timeout       600;
+        proxy_send_timeout          600;
+        proxy_read_timeout          600;
+        send_timeout                600;
+    }
+
+  }
+EOF
+echo "$NGINX" > /opt/portal_ongrid/configs/nginx.conf
+
+#
+#set config for supervisor
+read -d "" VISOR <<"EOF"
+[program:djangoTrade_web]
+command = /opt/portal_ongrid/configs/djangoTrade
+user = root
+stdout_logfile = /opt/portal_ongrid/logs/gunicorn_supervisor.log
+redirect_stderr = true
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
+EOF
+echo "$VISOR" > /opt/portal_ongrid/configs/supervisor.conf
+
+cd /opt/portal_ongrid
+source /opt/portal_ongrid/env/bin/activate
+pip install --upgrade pip setuptools wheel
 git clone git@github.com:ongrid/ongrid_portal.git
 cd ongrid_portal
+pip install gunicorn==19.6.0
+pip install -r requirements.txt
+
 #
 #patching configuration
 read -d "" PATCH <<"EOF"
-53c53
+50c50
+< DEBUG = True
+---
+> DEBUG = False
+52c52
 < ALLOWED_HOSTS = ['127.0.0.1']
 ---
-> ALLOWED_HOSTS = ['test.portal.ongrid.pro']
-128c128
+> ALLOWED_HOSTS = ['portal.ongrid.pro', 'www.portal.ongrid.pro']
+127c127
 <         'NAME': 'tradenew',
 ---
 >         'NAME': 'trade',
-130c130
+129c129
 <         'PASSWORD': '123',
 ---
 >         'PASSWORD': '',
+170c170
+< YANDEX_MONEY_CLIENT_ID = 'BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF'
+---
+> YANDEX_MONEY_CLIENT_ID = '1EB2214C53CF879A9BD8606934B804F93BE9C82604DD9A1ED967F8635CBCD04B'
+172c172
+< YANDEX_MONEY_REDIRECT_URI = 'http://78.155.218.16:8000/wallet/'
+---
+> YANDEX_MONEY_REDIRECT_URI = 'http://portal.ongrid.pro/wallet/'
+174c174
+< YANDEX_MONEY_CLIENT_SECRET = '211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69FEC67630EA304A4831D7813BDEC90A866ABED2C30B9F8578EFF29962B13B70187429034EA3BF59'
+---
+> YANDEX_MONEY_CLIENT_SECRET = 'DD89A956C22739F77FDA276D64E9DF2E711DAA7645BFA5741872C0DA93DA8240EDDB6FBD2500210891396231AF4FB5B2FD90C7C0BB45F51803EAA36105CE508F'
 EOF
 echo "$PATCH" | patch djangoTrade/settings.py
-#
-/opt/env/bin/pip3 install -r requirements.txt
+
 #
 # patching poloniex library
 read -d "" PATCH <<"EOF"
@@ -157,9 +265,9 @@ wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/ce
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
 chmod +x /etc/init.d/celeryd /etc/init.d/celerybeat
 read -d "" CELERYD_CFG <<"EOF"
-CELERY_BIN="/opt/env/bin/python -m celery"
+CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
 CELERY_APP="djangoTrade"
-CELERYD_CHDIR="/opt/ongrid_portal"
+CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
 CELERYD_OPTS="--time-limit=300 --concurrency=1"
 CELERYD_LOG_FILE="/var/log/celery/%n%I.log"
 CELERYD_PID_FILE="/var/run/celery/%n.pid"
@@ -173,6 +281,7 @@ echo "$CELERYD_CFG" > /etc/default/celeryd
 /etc/init.d/celeryd create-paths
 /etc/init.d/celeryd start
 /etc/init.d/celeryd stop
+sudo update-rc.d celeryd defaults
 ```
 
 make all components start on boot in screens
@@ -180,12 +289,9 @@ make all components start on boot in screens
 ```sh
 read -d "" RCLOCAL <<"EOF"
 #!/bin/bash
-cd /opt
+cd /opt/portal_ongrid
 source ./env/bin/activate
-screen -dmS ongrid_portal -t django_server bash -c 'cd ongrid_portal; /opt/env/bin/python3 manage.py runserver 0.0.0.0:80'
-screen -S ongrid_portal -x -X screen -t django_shell bash -c 'cd ongrid_portal; /opt/env/bin/python3 manage.py shell'
-screen -S ongrid_portal -x -X screen -t celery_worker bash -c 'cd ongrid_portal; celery worker -A djangoTrade -l=INFO'
-screen -S ongrid_portal -x -X screen -t celery_beat bash -c 'cd ongrid_portal; celery beat -A djangoTrade -l=INFO'
+screen -dmS ongrid_portal bash -c 'cd ongrid_portal; celery beat -A djangoTrade -l=INFO'
 exit 0
 EOF
 echo "$RCLOCAL" > /etc/rc.local
