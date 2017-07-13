@@ -151,8 +151,7 @@ def get_holding(request):
             else:
                 return HttpResponse('none', status=200)
         else:
-            user = request.user
-            holdings = UserHoldings.objects.filter(user=user, type=type_r).order_by('date_time')
+            holdings = UserHoldings.objects.filter(type=type_r).order_by('date_time')
             list_hold = [obj.as_list() for obj in holdings]
             return HttpResponse(json.dumps(list_hold), status=200)
 

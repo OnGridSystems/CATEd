@@ -9,8 +9,8 @@ register = template.Library()
 def get_user_summaries_btc(user):
     btc_total = float(0)
     usd_total = float(0)
-    wallets = UserWallet.objects.filter(user=user)
-    exchanges = UserExchanges.objects.filter(user=user)
+    wallets = UserWallet.objects.all()
+    exchanges = UserExchanges.objects.all()
     if wallets is not None:
         for wallet in wallets:
             usd_total += float(wallet.total_usd)
@@ -26,8 +26,8 @@ def get_user_summaries_btc(user):
 @register.filter
 def get_user_summaries_usd(user):
     usd_total = float(0)
-    wallets = UserWallet.objects.filter(user=user)
-    exchanges = UserExchanges.objects.filter(user=user)
+    wallets = UserWallet.objects.all()
+    exchanges = UserExchanges.objects.all()
     if wallets is not None:
         for wallet in wallets:
             usd_total += float(wallet.total_usd)
