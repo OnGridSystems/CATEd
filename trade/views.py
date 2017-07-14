@@ -16,15 +16,18 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 @login_required
 def index(request):
-    transaction = Transaction.objects.all()
-    paginator = Paginator(transaction, 100)
-    page = request.GET.get('page')
-    try:
-        transactions = paginator.page(page)
-    except PageNotAnInteger:
-        transactions = paginator.page(1)
-    except EmptyPage:
-        transactions = paginator.page(paginator.num_pages)
+    transaction = Transaction.objects.all().order_by('-date')
+    if len(transaction) > 0:
+        paginator = Paginator(transaction, 100)
+        page = request.GET.get('page')
+        try:
+            transactions = paginator.page(page)
+        except PageNotAnInteger:
+            transactions = paginator.page(1)
+        except EmptyPage:
+            transactions = paginator.page(paginator.num_pages)
+    else:
+        transactions = None
     args = {'exchange_form': UserExchangesForm(),
             'wallet_form': UserWalletForm(),
             'ue': UserExchanges.objects.all(),
