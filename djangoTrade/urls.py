@@ -20,17 +20,17 @@ from django.contrib import admin
 from trade import views as tradeViews
 from allauth import urls as allauth_urls
 from user_profile import views as user_profile_views
+from django.contrib.auth.decorators import permission_required
 
 urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-    url(r'^accounts/', include(allauth_urls)),
-    url(r'^profile/$', user_profile_views.profile, name='user_profile'),
-    url(r'^change_status/$', tradeViews.change_status, name='change_status'),
-    url(r'^$', tradeViews.index, name='index'),
-    url(r'^exchange/$', tradeViews.exchange, name='exchange'),
-    url(r'^wallet/$', tradeViews.wallet, name='wallet'),
-    url(r'^api/$', tradeViews.get_holding, name='get_holding'),
-    url(r'^transaction/new_comment/$', tradeViews.add_new_transaction_comment, name='new_comment'),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
-
+                  url(r'^admin/', admin.site.urls),
+                  url(r'^accounts/', include(allauth_urls)),
+                  url(r'^profile/$', user_profile_views.profile, name='user_profile'),
+                  url(r'^change_status/$', permission_required('is_superuser')(tradeViews.change_status), name='change_status'),
+                  url(r'^$', tradeViews.index, name='index'),
+                  url(r'^exchange/$', permission_required('is_superuser')(tradeViews.exchange), name='exchange'),
+                  url(r'^wallet/$', permission_required('is_superuser')(tradeViews.wallet), name='wallet'),
+                  url(r'^api/$', tradeViews.get_holding, name='get_holding'),
+                  url(r'^transaction/new_comment/$',
+                      permission_required('is_superuser')(tradeViews.add_new_transaction_comment), name='new_comment'),
+              ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

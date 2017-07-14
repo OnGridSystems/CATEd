@@ -177,7 +177,7 @@
                             <td style="text-align: left">
                                 {% if item.user_comment is not None %}
                                     {{ item.user_comment }}
-                                {% else %}
+                                {% elif user.is_superuser %}
                                     <i data-id="{{ item.pk }}" id="trans{{ item.pk }}" class="fa fa-commenting fa-2x"
                                        aria-hidden="true"></i>
                                 {% endif %}
@@ -201,13 +201,13 @@
                     <li><a href="?page={{ trans.previous_page_number }}"><i class="material-icons">chevron_left</i></a>
                     </li>
                 {% endif %}
-{#                {% for num in trans.paginator.page_range %}#}
-{#                    {% if num == trans.number %}#}
-                        <li class="active green lighten-1"><a href="#!">{{ trans.number }}</a></li>
-{#                    {% else %}#}
-{#                        <li class="waves-effect"><a href="?page={{ num }}"> {{ num }}</a></li>#}
-{#                    {% endif %}#}
-{#                {% endfor %}#}
+                {#                {% for num in trans.paginator.page_range %}#}
+                {#                    {% if num == trans.number %}#}
+                <li class="active green lighten-1"><a href="#!">{{ trans.number }}</a></li>
+                {#                    {% else %}#}
+                {#                        <li class="waves-effect"><a href="?page={{ num }}"> {{ num }}</a></li>#}
+                {#                    {% endif %}#}
+                {#                {% endfor %}#}
                 {% if trans.has_next %}
                     <li class="waves-effect">
                     <a href="?page={{ trans.next_page_number }}"><i class="material-icons">chevron_right</i></a>
@@ -215,78 +215,81 @@
             </ul>
         </div>
     </div>
-    <div class="fixed-action-btn">
-        <a class="btn-floating btn-large red" href="#modal1">
-            <i class="large material-icons">playlist_add</i>
-        </a>
-    </div>
-    <div id="modal1" class="modal">
-        <div class="modal-content">
-            <div class="row">
-                <div class="col s12">
-                    <ul class="tabs">
-                        <li class="tab col s3 active"><a class="active" href="#exchange">Биржа</a></li>
-                        <li class="tab col s3"><a href="#wallet">Кошелёк</a></li>
-                    </ul>
-                </div>
-                <div id="exchange" class="col s12 m12 l12">
-                    <br/>
-                    <h4 class="center">Добавить биржу</h4>
-                    <br/>
-                    <p class="alert-new orange lighten-2 white-text center">Для корректной работы, добавляйте только
-                        новые ключи для бирж. Создать новые ключи можно на сайте
-                        нужной биржи.</p>
-                    <form method="post" action="{% url 'exchange' %}">
-                        {% csrf_token %}
-                        {% for f in exchange_form %}
-                            <div class="input-field">
-                                {{ f }}
-                                {{ f.label_tag }}
-                            </div>
-                        {% endfor %}
-                        <button type="submit" class="btn waves-effect waves-purple red right">Отправить</button>
-                    </form>
-                </div>
-                <div id="wallet" class="col s12 m12 l12">
-                    <br/>
-                    <h4 class="center">Добавить кошелёк</h4>
-                    <br/>
-                    <p id="yandex-wallet-add" class="alert-new orange lighten-2 white-text center">При добавлении Yandex
-                        кошелька нет необходимости в его номере.</p>
-                    <form method="post" action="{% url 'wallet' %}">
-                        {% csrf_token %}
-                        {% for f in wallet_form %}
-                            <div class="input-field">
-                                {{ f }}
-                                {{ f.label_tag }}
-                            </div>
-                        {% endfor %}
-                        <button id="add-wallet-but" type="submit" class="btn waves-effect waves-purple red right">
-                            Отправить
-                        </button>
-                    </form>
+    {% if user.is_superuser %}
+        <div class="fixed-action-btn">
+            <a class="btn-floating btn-large red" href="#modal1">
+                <i class="large material-icons">playlist_add</i>
+            </a>
+        </div>
+        <div id="modal1" class="modal">
+            <div class="modal-content">
+                <div class="row">
+                    <div class="col s12">
+                        <ul class="tabs">
+                            <li class="tab col s3 active"><a class="active" href="#exchange">Биржа</a></li>
+                            <li class="tab col s3"><a href="#wallet">Кошелёк</a></li>
+                        </ul>
+                    </div>
+                    <div id="exchange" class="col s12 m12 l12">
+                        <br/>
+                        <h4 class="center">Добавить биржу</h4>
+                        <br/>
+                        <p class="alert-new orange lighten-2 white-text center">Для корректной работы, добавляйте только
+                            новые ключи для бирж. Создать новые ключи можно на сайте
+                            нужной биржи.</p>
+                        <form method="post" action="{% url 'exchange' %}">
+                            {% csrf_token %}
+                            {% for f in exchange_form %}
+                                <div class="input-field">
+                                    {{ f }}
+                                    {{ f.label_tag }}
+                                </div>
+                            {% endfor %}
+                            <button type="submit" class="btn waves-effect waves-purple red right">Отправить</button>
+                        </form>
+                    </div>
+                    <div id="wallet" class="col s12 m12 l12">
+                        <br/>
+                        <h4 class="center">Добавить кошелёк</h4>
+                        <br/>
+                        <p id="yandex-wallet-add" class="alert-new orange lighten-2 white-text center">При добавлении
+                            Yandex
+                            кошелька нет необходимости в его номере.</p>
+                        <form method="post" action="{% url 'wallet' %}">
+                            {% csrf_token %}
+                            {% for f in wallet_form %}
+                                <div class="input-field">
+                                    {{ f }}
+                                    {{ f.label_tag }}
+                                </div>
+                            {% endfor %}
+                            <button id="add-wallet-but" type="submit" class="btn waves-effect waves-purple red right">
+                                Отправить
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div id="user_comment_modal" class="modal">
-        <form id="comment-form">
-            <div class="modal-content">
-                <h4>New user comment</h4>
-                {% csrf_token %}
-                <input type="hidden" name="tr_id">
-                <div class="input-field">
-                    <i class="material-icons prefix">mode_edit</i>
-                    <textarea class="materialize-textarea" name="comment" id="comment" cols="30" rows="10"
-                              required></textarea>
-                    <label for="comment">Commenting here, please</label>
+        <div id="user_comment_modal" class="modal">
+            <form id="comment-form">
+                <div class="modal-content">
+                    <h4>New user comment</h4>
+                    {% csrf_token %}
+                    <input type="hidden" name="tr_id">
+                    <div class="input-field">
+                        <i class="material-icons prefix">mode_edit</i>
+                        <textarea class="materialize-textarea" name="comment" id="comment" cols="30" rows="10"
+                                  required></textarea>
+                        <label for="comment">Commenting here, please</label>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="modal-action waves-effect waves-green btn-flat">Agree</button>
-            </div>
-        </form>
-    </div>
+                <div class="modal-footer">
+                    <button type="submit" class="modal-action waves-effect waves-green btn-flat">Agree</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
 {% endblock %}
 {% block script %}
     <script type="text/javascript" src="{% static 'js/highstock.js' %}"></script>

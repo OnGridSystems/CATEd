@@ -16,7 +16,7 @@ $(document).ready(function () {
                 csrfmiddlewaretoken: csrf
             },
             success: function (data) {
-                data === 'ok' ? location.reload() : Materialize.toast('Не удалось включить API');
+                data === 'ok' ? location.reload() : data === '{"location": "/change_status/"}' ? Materialize.toast('У Вас недостаточно прав', 2000) : Materialize.toast('Не удалось изменить статус', 2000);
             }
         });
         return false;
@@ -81,6 +81,6 @@ $(document).ready(function () {
     });
     $('a.scrollto').on('click', function () {
         var name = $(this).attr('href').slice(1);
-        $('.collapsible').collapsible('open', $('a[name="'+name+'"]').parent('li').index() - 3);
+        $('.collapsible').collapsible('open', $('a[name="' + name + '"]').parent('li').index() - 3);
     });
 });
