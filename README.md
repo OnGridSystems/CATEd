@@ -24,7 +24,8 @@ apt autoremove -y
 rm -rf /etc/grub.d/
 apt -y update
 apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 
-apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv
+apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx smem supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links
+service supervisor restart  
 apt install -y grub-pc grub-common
 grub-install /dev/vda
 update-grub
@@ -139,11 +140,25 @@ chmod u+x /opt/portal_ongrid/configs/djangoTrade
 #set config for nginx
 read -d "" NGINX <<"EOF"
 server {
-    listen 80;
+  listen 80;
+  server_name  portal.ongrid.pro www.portal.ongrid.pro;
+  rewrite  ^(.*) https://$server_name$1 permanent;
+}
+server {
+    listen 443 ssl;
     server_name 127.0.0.1 portal.ongrid.pro www.portal.ongrid.pro;
     access_log  /opt/portal_ongrid/logs/nginx_access.log;
     client_max_body_size 100M;
-
+    keepalive_timeout    60;
+    ssl_certificate      /etc/letsencrypt/ongrid.crt;
+    ssl_certificate_key  /etc/letsencrypt/private.key;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers  "HIGH:!RC4:!aNULL:!MD5:!kEDH";
+    add_header Strict-Transport-Security 'max-age=604800';
+   
+    location /.well-known {
+        alias /.well-known;
+    }
     location /media  {
         alias /opt/portal_ongrid/media;
         expires 30d;
@@ -167,7 +182,6 @@ server {
         proxy_read_timeout          600;
         send_timeout                600;
     }
-
   }
 EOF
 echo "$NGINX" > /opt/portal_ongrid/configs/nginx.conf
@@ -256,6 +270,13 @@ user = User.objects.create_user(username='kirill',
                                  password='kirill')
 EOF
 echo "$PYCODE" | /opt/env/bin/python3 manage.py shell
+ln -s /opt/portal_ongrid/configs/supervisor.conf /etc/supervisor/conf.d/djangoTrade.conf
+ln -s /opt/portal_ongrid/configs/nginx.conf /etc/nginx/sites-enabled/portal_ongrid.conf
+service nginx reload
+supervisorctl update
+supervisorctl restart djangoTrade_web
+cd /opt/portal_ongrid/ongrid_portal/
+python manage.py collectstatic --noinput
 ```
 
 install and configure celery
@@ -298,82 +319,11 @@ echo "$RCLOCAL" > /etc/rc.local
 #
 ```
 
+Get SSL certificate from https://www.sslforfree.com/
+```sh
+unzip sslfofree.zip
+(cat certificate.crt; echo; cat ca_bundle.crt) > ongrid.crt
+```
+Загрузить файлы ongrid.crt и private.key на сервер, в папку /etc/letsencrypt/
+
 reboot and have fun!
-
-# Old installation manual
-
-Развернуть проект на встроенном сервере Django:
-  1) Заходим на сервер, в папку где будет лежать проект.
-  2) mkdir projectname
-  Если надо виртуальное пространствj:
-    3) sudo apt-get install python3-venv
-    4) python3 -m venv env
-    5) . env/bin/activate
-  6) git clone https://github.com/ongrid/ongrid_portal.git
-  7) cd ongrid_portal
-  8) pip install -r requirements.txt
-  9) sudo apt-get rabbitmq-server
-  Далее создаем базу данных, например MySQL:
-  10) sudo apt-get install mysql-server
-  11) mysql -u root
-    12) create database trade character set utf8;
-    13) exit;
-  Производим необходимые настройки проекта:
-    14) sudo nano djangoTrade/settings.py
-      В блоке DATABASES необходимо указать имя пользователя и пароль от базы данных, и имя самой базы.
-      Переменной ALLOWED_HOSTS присвоить значение: ['ip.адрес.сервера']
-      CTRL+O -> Enter ->CTRL+X
-    15) python manage.py migrate
-    16) mysql -u root < dump.sql
-    17) python manage.py createsuperuser
-      имя пользователя
-      email пользователя
-      пароль 2 раза
-
-
-Установка celery как демона
-  1) sudo wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
-  2) sudo wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
-  3) sudo chmod +x /etc/init.d/celeryd
-     sudo chmod +x /etc/init.d/celerybeat
-  4) sudo nano /etc/default/celeryd
-
-      CELERY_BIN="/home/projects/ongrid-portal/env/bin/python -m celery" #путь к celery в виртуальном окружении
-      CELERY_APP="djangoTrade" #Название приложения
-      CELERYD_CHDIR="/home/projects/ongrid-portal/ongrid_portal" #Папка с проектом
-      CELERYD_OPTS="--time-limit=300 --concurrency=1" #Параметры запуска celery (--concurrency устанавливает количество воркеров)
-      CELERYD_LOG_FILE="/var/log/celery/%n%I.log" #Путь для логов воркеров
-      CELERYD_PID_FILE="/var/run/celery/%n.pid" #--
-      CELERYD_USER="root" #от кого запускать celery
-      CELERYD_GROUP="root" #--
-      export DJANGO_SETTINGS_MODULE="djangoTrade.settings" #Модуль настроек django
-      CELERY_CREATE_DIRS=1
-      export SECRET_KEY="ada#qadaa2d#1232%!^&#*(&@(!&Y!&#*T!@(^F#!@&#F!@&#F!(@"
-   5) reboot now
-   6) sudo /etc/init.d/celeryd start
-   7) cd /path/to/project/
-   8) . env/bin/activate
-   9) cd ongrid_portal
-   10) celery beat -A djangoTrade -l=INFO
-   
-   
-Проверка отдельных заданий для celery:
-В папке с проектом:
-  1) python manage.py shell
-  2) from trade import tasks
-  3) var = tasks.start_trade_btce
-                 start_trade_poloniex
-                 start_trade_bittrex
-                 get_eth_wallet_history
-                 get_btc_wallet_history
-                 get_yandex_wallet_history
-                 calculate_holdings_history.delay() - отправит задание в очередь заданий
-  Желательно в отдельном окне, в папке с проектом и активированным виртуальным окружением
-  celery worker -A djangoTrade -l=INFO
-  worker должен получить отправленое задание и начать его выполнять.
-   
-  
-  Запуск сервера:
-    В папке с проектом и активированным виртуальным окружением:
-    python manage.py runserver 0.0.0.0:8000 - запустит сервер по адресу сервера на 8000 порте.
-    
