@@ -72,9 +72,44 @@ def start_trade_btce():
                     # ue.is_active = False
                     # ue.is_correct = False
                     # ue.save()
+                try:
+                    transactions = driver.trade_api.call('TransHistory')
+                    print(transactions)
+                    if len(transactions) > 0:
+                        for item in transactions:
+                            if int(transactions[item]['type']) == 1 or int(transactions[item]['type']) == 2:
+                                try:
+                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
+                                                                          hash=item)
+                                except Transaction.MultipleObjectsReturned:
+                                    pass
+                                except Transaction.DoesNotExist:
+                                    new_trans = Transaction()
+                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
+                                    new_trans.t_type = 'exchange'
+                                    new_trans.number = item
+                                    new_trans.hash = item
+                                    new_trans.details = transactions[item]['desc']
+                                    new_trans.date = datetime.datetime.fromtimestamp(
+                                        int(transactions[item]['timestamp'])).strftime(
+                                        '%Y-%m-%d %H:%M:%S')
+                                    new_trans.t_from = '-'
+                                    new_trans.t_to = '-'
+                                    if int(transactions[item]['type']) == 1:
+                                        new_trans.type = 'in'
+                                    elif int(transactions[item]['type']) == 2:
+                                        new_trans.type = 'out'
+                                    else:
+                                        new_trans.type = 'unknown'
+                                    new_trans.value = transactions[item]['amount']
+                                    new_trans.currency = transactions[item]['currency']
+                                    new_trans.usd_value = get_usd_value(transactions[item]['currency'],
+                                                                        transactions[item]['amount'])
+                                    new_trans.save()
+                except Exception as error:
+                    print(error)
             except HTTPException:
                 print('Ошибка, начинаем заново')
-
     else:
         print("Никто не включил скрипт")
     return True
@@ -256,7 +291,9 @@ def start_trade_bittrex():
                             new_trans.t_type = 'exchange'
                             new_trans.number = item['Confirmations']
                             new_trans.hash = item['TxId']
-                            new_trans.date = item['LastUpdated']
+                            trans_time = int(time.mktime(datetime.datetime.strptime(item['LastUpdated'],
+                                                                                    "%Y-%m-%dT%H:%M:%S.%f").timetuple())) + 10800
+                            new_trans.date = datetime.datetime.fromtimestamp(trans_time).strftime('%Y-%m-%d %H:%M:%S')
                             new_trans.t_from = '-'
                             new_trans.t_to = item['CryptoAddress']
                             new_trans.type = 'in'
@@ -343,6 +380,7 @@ def get_eth_wallet_history():
                             '%Y-%m-%d %H:%M:%S')
                         transaction.t_from = item['from']
                         transaction.t_to = item['to']
+                        transaction.currency = 'ETH'
                         if item['to'] == uw.address:
                             transaction.type = 'in'
                         elif item['from'] == uw.address:
@@ -391,6 +429,7 @@ def get_btc_wallet_history():
                             transaction.t_type = 'wallet'
                             transaction.number = tx_his['data']['block']
                             transaction.date = tx_his['data']['time_utc']
+                            transaction.currency = 'BTC'
                             if float(item['amount']) > 0:
                                 t_from = ''
                                 for item_from in tx_his['data']['trade']['vins']:
@@ -460,6 +499,7 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
             new_transaction.number = new_transaction.hash = t['operation_id']
             new_transaction.date = t['datetime']
             new_transaction.type = t['direction']
+            new_transaction.currency = 'RUR'
             new_transaction.t_from = new_transaction.t_to = '-'
             if 'details' in t:
                 if len(t['details']) > 0:
@@ -526,6 +566,8 @@ def get_usd_value(coin_name=None, count=None):
     if not coin_name or not count:
         return 0
     else:
+        if coin_name == 'dsh' or coin_name == 'DSH':
+            coin_name = 'dash'
         response = requests.get('https://api.cryptonator.com/api/ticker/usd-' + coin_name.lower()).json()
         if response['success']:
             return float(count) / float(response['ticker']['price'])
@@ -547,6 +589,10 @@ def get_btc_value_from_btce(coin_name=None, count=None):
 
 class CryptoConvert:
     def __init__(self, coin_one_name, coin_two_name):
+        if coin_two_name == 'dsh' or coin_two_name == 'DSH':
+            coin_two_name = 'dash'
+        if coin_one_name == 'dsh' or coin_one_name == 'DSH':
+            coin_one_name = 'dash'
         self.coin_one_name = coin_one_name
         self.coin_two_name = coin_two_name
         self.price = None

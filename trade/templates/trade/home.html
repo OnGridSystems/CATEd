@@ -1,5 +1,5 @@
 {% extends 'trade/base.html' %}
-{% load coins transactions wallet_information value_to_cryptotoken humanize summary_balance static %}
+{% load coins transactions wallet_information value_to_cryptotoken humanize summary_balance static tz %}
 {% block style %}
     <link rel="stylesheet" href="{% static 'css/highcharts.css' %}">
 {% endblock %}
@@ -139,80 +139,143 @@
             <div id="gra" style="height: 400px; min-width: 310px"></div>
         </div>
         <div class="col s12 m12 l10 push-l1" id="transactions">
-            {% if trans %}
-                <h2 class="center">Transaction history</h2>
-                <table class="exchange z-depth-2 table-bordered">
-                    <col width="10%">
-                    <col width="10%">
-                    <col width="50%">
-                    <col width="10%">
-                    <col width="10%">
-                    <col width="10%">
-                    <thead>
-                    <tr>
-                        <th>Wallet</th>
-                        <th>Date</th>
-                        <th>User comment</th>
-                        <th>Value</th>
-                        <th>USD Value</th>
-                        <th>Direction</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for item in trans %}
+            {% timezone 'Europe/Moscow' %}
+                {% if trans %}
+                    <h2 class="center">Transaction history</h2>
+                    <table class="exchange z-depth-2 table-bordered">
+                        <col width="10%">
+                        <col width="10%">
+                        <col width="50%">
+                        <col width="10%">
+                        <col width="10%">
+                        <col width="10%">
+                        <thead>
                         <tr>
-                            <td>
-                                <a class="scrollto" href="#{{ item.name }}">
-                                    {% if item.name|first == 'B' %}
-                                        <i class="fa fa-btc" aria-hidden="true"></i>
-                                    {% elif item.name|first == 'E' %}
-                                        <i class="fa fa-ils" aria-hidden="true"></i>
-                                    {% elif item.name|first == 'Y' %}
-                                        <i class="fa fa-rub" aria-hidden="true"></i>
-                                    {% endif %}
-                                    <b>{{ item.name }}</b>
-                                </a>
-                            </td>
-                            <td>{{ item.date }}</td>
-                            <td style="text-align: left">
-                                {% if item.user_comment is not None %}
-                                    {{ item.user_comment }}
-                                {% elif user.is_superuser %}
-                                    <i data-id="{{ item.pk }}" id="trans{{ item.pk }}" class="fa fa-commenting fa-2x"
-                                       aria-hidden="true"></i>
-                                {% endif %}
-                            </td>
-                            <td>{{ item.value|value_to_cryptotoken:item }}</td>
-                            <td>{{ item.usd_value|floatformat:"-2" }} Usd</td>
-                            <td>{% if item.type == 'in' %}
-                                <i class="fa fa-chevron-right green-text" aria-hidden="true"></i>
-                                <span class="green white-text transaction-type">{{ item.type }}</span>
-                            {% elif item.type == 'out' %}
-                                <span class="red white-text transaction-type">{{ item.type }}</span>
-                                <i class="fa fa-chevron-right red-text" aria-hidden="true"></i>
-                            {% endif %}</td>
+                            <th>Wallet</th>
+                            <th>Date</th>
+                            <th>User comment</th>
+                            <th>Value</th>
+                            <th>USD Value</th>
+                            <th>Direction</th>
                         </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        {% for item in trans %}
+                            <tr>
+                                <td>
+                                    <a class="scrollto" href="#{{ item.name }}">
+                                        {% if item.name|first == 'B' %}
+                                            <i class="fa fa-btc" aria-hidden="true"></i>
+                                        {% elif item.name|first == 'E' %}
+                                            <i class="fa fa-ils" aria-hidden="true"></i>
+                                        {% elif item.name|first == 'Y' %}
+                                            <i class="fa fa-rub" aria-hidden="true"></i>
+                                        {% endif %}
+                                        <b class="tooltipped" data-position="right" data-delay="50" data-tooltip="
+                                                    <table class='transaction-info'>
+                                                        <thead>
+                                                        <tr>
+                                                            <th colspan=2 style='text-align: center;'>Информация о транзакции</th>
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        <tr>
+                                                            <td>Name</td>
+                                                            <td>{{ item.name }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Date</td>
+                                                            <td>{{ item.date }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>From</td>
+                                                            <td>{{ item.t_from }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>To</td>
+                                                            <td>{{ item.t_to }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Type</td>
+                                                            <td>{{ item.type }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Amount</td>
+                                                            <td>{{ item.value|value_to_cryptotoken:item }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Currency</td>
+                                                            <td>{{ item.currency }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Block Hash</td>
+                                                            <td>{{ item.block_hash }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>TxId</td>
+                                                            <td>{{ item.hash }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Comment</td>
+                                                            <td>{{ item.comment }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Details</td>
+                                                            <td>{{ item.details }}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Title</td>
+                                                            <td>{{ item.title }}</td>
+                                                        </tr>
+                                                        </tbody>
+                                                    </table>
+                                    ">{{ item.name }}</b>
+                                    </a>
+                                </td>
+                                <td>{{ item.date }}</td>
+                                <td style="text-align: left">
+                                    {% if item.user_comment is not None %}
+                                        {{ item.user_comment }}
+                                    {% elif user.is_superuser %}
+                                        <i data-id="{{ item.pk }}" id="trans{{ item.pk }}"
+                                           class="fa fa-commenting fa-2x"
+                                           aria-hidden="true"></i>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.value|value_to_cryptotoken:item }}</td>
+                                <td>{{ item.usd_value|floatformat:"-2" }} Usd</td>
+                                <td>{% if item.type == 'in' %}
+                                    <i class="fa fa-chevron-right green-text" aria-hidden="true"></i>
+                                    <span class="green white-text transaction-type">{{ item.type }}</span>
+                                {% elif item.type == 'out' %}
+                                    <span class="red white-text transaction-type">{{ item.type }}</span>
+                                    <i class="fa fa-chevron-right red-text" aria-hidden="true"></i>
+                                {% endif %}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            {% endtimezone %}
+            {% if trans.paginator %}
+                <ul class="pagination center">
+                    {% if trans.has_previous %}
+                        <li><a href="?page={{ trans.previous_page_number }}"><i class="material-icons">chevron_left</i></a>
+                        </li>
+                    {% endif %}
+                    {#                {% for num in trans.paginator.page_range %}#}
+                    {#                    {% if num == trans.number %}#}
+                    <li class="active green lighten-1"><a href="#!">{{ trans.number }}</a></li>
+                    {#                    {% else %}#}
+                    {#                        <li class="waves-effect"><a href="?page={{ num }}"> {{ num }}</a></li>#}
+                    {#                    {% endif %}#}
+                    {#                {% endfor %}#}
+                    {% if trans.has_next %}
+                        <li class="waves-effect">
+                        <a href="?page={{ trans.next_page_number }}"><i class="material-icons">chevron_right</i></a>
+                    {% endif %}
+                </ul>
             {% endif %}
-            <ul class="pagination center">
-                {% if trans.has_previous %}
-                    <li><a href="?page={{ trans.previous_page_number }}"><i class="material-icons">chevron_left</i></a>
-                    </li>
-                {% endif %}
-                {#                {% for num in trans.paginator.page_range %}#}
-                {#                    {% if num == trans.number %}#}
-                <li class="active green lighten-1"><a href="#!">{{ trans.number }}</a></li>
-                {#                    {% else %}#}
-                {#                        <li class="waves-effect"><a href="?page={{ num }}"> {{ num }}</a></li>#}
-                {#                    {% endif %}#}
-                {#                {% endfor %}#}
-                {% if trans.has_next %}
-                    <li class="waves-effect">
-                    <a href="?page={{ trans.next_page_number }}"><i class="material-icons">chevron_right</i></a>
-                {% endif %}
-            </ul>
         </div>
     </div>
     {% if user.is_superuser %}

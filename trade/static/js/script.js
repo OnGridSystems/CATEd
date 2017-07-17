@@ -83,4 +83,8 @@ $(document).ready(function () {
         var name = $(this).attr('href').slice(1);
         $('.collapsible').collapsible('open', $('a[name="' + name + '"]').parent('li').index() - 3);
     });
+     $('.tooltipped').tooltip({
+         delay: 50,
+         html: true
+     });
 });

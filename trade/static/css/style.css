@@ -127,3 +127,15 @@ tr.balances td:last-child {
     font-size: 1.1rem;
     margin: 0 0 2em 0;
 }
+
+.transaction-info td {
+    border-bottom: 1px solid grey;
+}
+
+.transaction-info {
+    color: black;
+    background: white;
+    border: 1px solid white;
+    text-align: left !important;
+}
+
