@@ -5773,12 +5773,12 @@ button.btn-floating {
 
 .chip {
     display: inline-block;
-    height: 32px;
+    height: 20px;
     font-size: 13px;
     font-weight: 500;
     color: rgba(0, 0, 0, 0.6);
-    line-height: 32px;
-    padding: 0 12px;
+    line-height: 20px;
+    padding: 0 6px;
     border-radius: 16px;
     background-color: #e4e4e4;
     margin-bottom: 5px;
@@ -5941,7 +5941,7 @@ label {
 
 /* Text inputs */
 input:not([type]),
-input[type=text]:not(.highcharts-range-selector),
+input[type=text]:not(.highcharts-range-selector, .pair-share),
 input[type=password],
 input[type=email],
 input[type=url],
@@ -6024,6 +6024,7 @@ textarea.materialize-textarea[readonly="readonly"] + label {
     color: rgba(0, 0, 0, 0.26);
 }
 input[type=text]:focus:not([readonly].highcharts-range-selector),
+input[type=text]:focus:not([readonly].pair-share),
 input:not([type]):focus:not([readonly]),
 input[type=text]:focus:not([readonly]),
 input[type=password]:focus:not([readonly]),

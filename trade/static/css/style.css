@@ -139,3 +139,40 @@ tr.balances td:last-child {
     text-align: left !important;
 }
 
+.second-nav {
+    height: 26px;
+    line-height: 26px;
+}
+
+.exchange-coins {
+    border: 1px solid grey;
+    width: 80%;
+    border-spacing: 0;
+}
+
+.exchange-coins td {
+    height: 30px;
+    line-height: 30px;
+    border-bottom: 1px solid grey
+}
+
+.exchange-coins td i {
+    cursor: pointer;
+}
+
+.rank-up, .rank-down {
+    padding: 3px 5px;
+    color: white;
+}
+
+.pair {
+    background: #4caf50;
+}
+
+.unactive {
+    background: #f44336 !important;
+}
+
+.pair-share {
+    width: 20%;
+}

@@ -1,0 +1,10 @@
+{% extends 'trade/base.html' %}
+{% load relations %}
+{% block content %}
+    <div class="container">
+        {% for exchange in exchanges %}
+            <h4 class="center">{{ exchange.exchange }}</h4>
+            {% exchange_primary_coins exchange %}
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -13,17 +13,17 @@
 </head>
 <body>
 <nav>
-    <div class="nav-wrapper main-nav" >
+    <div class="nav-wrapper main-nav">
         <ul id="nav-mobile" class="right hide-on-med-and-down">
-            <li><a href="{% url 'index' %}"><b>Главная</b></a></li>
-            {% if user.is_authenticated %}
-                <li><a href="{% url 'account_logout' %}"><i class="material-icons left tiny">input</i>Выход</a></li>
-            {% else %}
-                <li><a href="{% url 'account_login' %}"><i class="material-icons left tiny">input</i>Вход</a></li>
-            {% endif %}
+            <li><a href="{% url 'index' %}"><b>Home</b></a></li>
+{#            <li><a href="{% url 'tradeBotMain' %}">Trade Bot</a></li>#}
+                {% if user.is_authenticated %}
+                    <li><a href="{% url 'account_logout' %}"><i class="material-icons left tiny">input</i>LogOut</a></li>
+                {% else %}
+                    <li><a href="{% url 'account_login' %}"><i class="material-icons left tiny">input</i>LogIn</a></li>
+                {% endif %}
+{#            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a>#}
 
-            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a>
-            </li>
         </ul>
     </div>
 </nav>

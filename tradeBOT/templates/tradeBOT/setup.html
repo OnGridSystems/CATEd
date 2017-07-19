@@ -1,0 +1,84 @@
+{% extends 'trade/base.html' %}
+{% load static humanize get_exchange_coins get_coin_pairs get_coin_info tradeBot_filters %}
+{% block content %}
+    <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
+    <div class="container">
+        <div class="row">
+            <div class="col s6 m6 l6">
+                <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
+                <table class="exchange-coins">
+                    <thead>
+                    <tr>
+                        <th>Coin name</th>
+                        <th>Is active</th>
+                        <th>Add to trade</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for coin in coins %}
+                        <tr>
+                            <td><b>{{ coin.name }} ({{ coin.symbol }})</b> (Your hold: {{ coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }})</td>
+                            <td>{{ coin.is_active }}</td>
+                            <td class="center">
+                                <form action="{% url 'add_user_coin' %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
+                                    <input type="hidden" name="coin" value="{{ coin.pk }}">
+                                    <i class="add_coin fa fa-plus-square-o fa-1x" aria-hidden="true"></i>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="green lighten-4">
+                                {% coin_info coin.symbol %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col s6 m6 l6 push-l1">
+                <table class="exchange-coins">
+                    <thead>
+                    <tr>
+                        <th>Coin name</th>
+                        <th>Share (%)</th>
+                        <th>Rank</th>
+                        <th>Del</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for coin in user_coins %}
+                        <tr data-coin-id="{{ coin.pk }}">
+                            <td><b>{{ coin.coin.name }} ({{ coin.coin.symbol }})</b></td>
+                            <td class="center">
+                                <input class="pair-share" type="number" name="share"
+                                       value="{{ coin.share | floatformat:'-1' }}" placeholder="Coin share">%
+                            </td>
+                            <td>
+                                {{ coin.rank }}
+                                <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
+                                <i class="fa rank-down fa-long-arrow-down red" aria-hidden="true"></i>
+                            </td>
+                            <td class="center">
+                                <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="green lighten-4">
+                                {% coin_pairs coin user user_exchange.pk %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4">
+                                You ne nastraivali script
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

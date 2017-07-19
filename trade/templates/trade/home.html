@@ -21,7 +21,8 @@
                         <col width="15%">
                         <col width="15%">
                         <col width="10%">
-                        <col width="20%">
+                        <col width="10%">
+                        <col width="10%">
                         <thead>
                         <tr class="exchange-header">
                             <th>Exchange</th>
@@ -29,6 +30,7 @@
                             <th>USD Value</th>
                             <th>Percent of total</th>
                             <th>Is Correct</th>
+                            <th>Actions</th>
                             <th>Is Active</th>
                         </tr>
                         </thead>
@@ -42,7 +44,8 @@
                                     <col width="15%">
                                     <col width="15%">
                                     <col width="10%">
-                                    <col width="20%">
+                                    <col width="10%">
+                                    <col width="10%">
                                     <tbody>
                                     <tr>
                                         <td>{{ item.exchange.exchange }}</td>
@@ -51,13 +54,9 @@
                                         {% with user|get_user_summaries_usd as total_usd %}
                                             <td>{{ item.total_usd|as_percent_of:total_usd | floatformat:"-2" }}%</td>
                                         {% endwith %}
-                                        <td>
-                                            {% if item.is_correct == True %}
-                                                Yes
-                                            {% else %}
-                                                No
-                                            {% endif %}
+                                        <td>{{ item.is_correct|yesno:"Yes,No" }}
                                         </td>
+                                    <td><a href="{% url 'tradeBotSetup' pk=item.pk %}"><i class="fa fa-cog green-text fa-1x" aria-hidden="true"></i></a></td>
                                         <td>
                                             <form>
                                                 {% csrf_token %}
@@ -163,19 +162,21 @@
                         {% for item in trans %}
                             <tr>
                                 <td>
-                                    <a class="scrollto" href="#{{ item.name }}">
+                                    <a class="scrollto black-text" href="#{{ item.name }}">
                                         {% if item.name|first == 'B' %}
-                                            <i class="fa fa-btc" aria-hidden="true"></i>
+                                            <i class="fa fa-btc blue-text" aria-hidden="true"></i>
                                         {% elif item.name|first == 'E' %}
-                                            <i class="fa fa-ils" aria-hidden="true"></i>
+                                            <i class="fa fa-ils blue-text" aria-hidden="true"></i>
                                         {% elif item.name|first == 'Y' %}
-                                            <i class="fa fa-rub" aria-hidden="true"></i>
+                                            <i class="fa fa-rub blue-text" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="fa fa-ils red-text" aria-hidden="true"></i>
                                         {% endif %}
                                         <b class="tooltipped" data-position="right" data-delay="50" data-tooltip="
                                                     <table class='transaction-info'>
                                                         <thead>
                                                         <tr>
-                                                            <th colspan=2 style='text-align: center;'>Информация о транзакции</th>
+                                                            <th colspan=2 style='text-align: center;'>Transaction info</th>
                                                         </tr>
                                                         </thead>
                                                         <tbody>

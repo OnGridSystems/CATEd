@@ -1,0 +1,9 @@
+{% load relations %}
+{% for pc in primary_coins %}
+    <div class="pc">
+        <h5>{{ pc.coin.name }} ({{ pc.coin.symbol }})</h5>
+        {% primary_coin_pairs pc %}
+    </div>
+{% empty %}
+    Netu primary coins
+{% endfor %}

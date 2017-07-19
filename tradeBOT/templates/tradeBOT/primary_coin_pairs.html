@@ -1,0 +1,5 @@
+{% for pair in pairs %}
+    <div class="chip waves-effect waves-light green white-text">{{ pair.main_coin.symbol }}-{{ pair.second_coin.symbol }}</div>
+{% empty %}
+    Netu pairs
+{% endfor %}
