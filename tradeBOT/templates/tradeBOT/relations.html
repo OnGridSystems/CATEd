@@ -1,0 +1,15 @@
+{% extends 'trade/base.html' %}
+{% load relations %}
+{% block content %}
+    <div class="container">
+        {% for exchange in exchanges %}
+            <ul class="collapsible" data-collapsible="accordion">
+                <li>
+                    <div class="collapsible-header">{{ exchange.exchange }}
+                    </div>
+                    <div class="collapsible-body"><span>{% exchange_primary_coins exchange %}</span></div>
+                </li>
+            </ul>
+        {% endfor %}
+    </div>
+{% endblock %}

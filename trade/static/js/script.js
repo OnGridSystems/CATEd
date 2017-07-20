@@ -1,11 +1,26 @@
 $(document).ready(function () {
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = jQuery.trim(cookies[i]);
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     $('select').material_select();
     $('.modal').modal();
     $('#yandex-wallet-add').hide();
 
     $('.change_status').on('click', function () {
         var ue = $(this).parent('form').find('input[name="user-exchange"]').val();
-        var csrf = $('input[name="csrfmiddlewaretoken"]').val();
+        var csrf = getCookie('csrftoken');
         $.ajax({
             url: '/change_status/',
             type: 'post',
@@ -83,8 +98,90 @@ $(document).ready(function () {
         var name = $(this).attr('href').slice(1);
         $('.collapsible').collapsible('open', $('a[name="' + name + '"]').parent('li').index() - 3);
     });
-     $('.tooltipped').tooltip({
-         delay: 50,
-         html: true
-     });
+    $('.tooltipped').tooltip({
+        delay: 50,
+        html: true
+    });
+    $('.add_coin').on('click', function () {
+        $(this).parent('form').submit();
+    });
+    $('.rank-up').on('click', function () {
+        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
+        change_rank(user_coin_id, 'up');
+    });
+    $('.rank-down').on('click', function () {
+        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
+        change_rank(user_coin_id, 'down');
+    });
+
+    function change_rank(coin_id, type) {
+        $.ajax({
+            url: '/trade/changerank/',
+            dataType: 'html',
+            type: 'post',
+            data: {
+                coin_id: coin_id,
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                type: type
+            },
+            success: function (data) {
+                if ('false' === data) {
+                    Materialize.toast('Error while changing rank', 1000)
+                } else if ('ok' === data) {
+                    location.reload();
+                }
+            }
+        })
+    }
+
+    $('.pair').on('click', function () {
+        var pair_id = $(this).attr('data-pair-id');
+
+        if (!$(this).hasClass('unactive')) {
+            if (confirm('Are you really want to deactivate pair ' + $(this).text())) {
+                toggle_pair(pair_id)
+            }
+        } else {
+            toggle_pair(pair_id)
+        }
+    });
+
+    function toggle_pair(pair_id) {
+        var user_exch = $('#exchange').val();
+        $.post('/trade/toggle_pair/', {
+            pair_id: pair_id,
+            user_exch: user_exch,
+            csrfmiddlewaretoken: getCookie('csrftoken')
+        }, function (data) {
+            'ok' === data ? location.reload() : Materialize.toast(data, 1500)
+        });
+    }
+
+    $('.pair-share').keypress(function (e) {
+        if (e.which === 13) {
+            var share = $(this).val();
+            var user_exch = $('#exchange').val();
+            if ('' !== share) {
+                var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
+                $.post('/trade/set_share/', {
+                        coin_id: user_coin_id,
+                        share: share,
+                        user_exch: user_exch,
+                        csrfmiddlewaretoken: getCookie('csrftoken')
+                    },
+                    function (data) {
+                        'ok' === data ? location.reload() : Materialize.toast(data, 1000);
+                    });
+            }
+        }
+    });
+    $('.delete-user-coin').on('click', function () {
+        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
+        $.post('/trade/delete_user_coin/', {
+            coin_id: user_coin_id,
+            csrfmiddlewaretoken: getCookie('csrftoken')
+        }, function (data) {
+            'ok' === data ? location.reload() : Materialize.toast(data, 1000);
+        })
+    })
 });
