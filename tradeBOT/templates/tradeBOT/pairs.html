@@ -1,0 +1,7 @@
+{% load tradeBot_filters %}
+Available pairs:
+{% for pair in pairs %}
+    <span data-pair-id="{{ pair.pk }}" class="chip waves-effect pair white-text {{ pair|is_active_pair:user_exchange }}">{{ pair.main_coin.symbol }}-{{ pair.second_coin.symbol }}</span>
+{% empty %}
+    None
+{% endfor %}

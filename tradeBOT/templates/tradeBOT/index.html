@@ -1,0 +1,17 @@
+{% extends 'trade/base.html' %}
+{% block content %}
+    <nav class="second-nav green lighten-2">
+        <div class="nav-wrapper ">
+            <ul class="left hide-on-med-and-down">
+                <li><a href="{% url 'tradeBotSetup' %}">Setup</a></li>
+                <li><a href="badges.html">Components</a></li>
+                <li><a href="collapsible.html">JavaScript</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <h3 class="center">Your trade coins</h3>
+    {% for coin in user_coins %}
+        {{ coin }}
+    {% endfor %}
+{% endblock %}

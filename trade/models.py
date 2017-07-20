@@ -111,7 +111,6 @@ class Transaction(models.Model):
     user_comment = models.CharField(max_length=255, blank=True, default=None, null=True)
     currency = models.CharField(max_length=10, blank=True, default=None, null=True)
 
-
     def __str__(self):
         return '<' + self.name + ' ' + self.type + ' ' + str(self.value) + '>'
 

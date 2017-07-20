@@ -1,0 +1,17 @@
+{% load get_coin_info %}
+{% for pair in pairs %}
+    <ul class="collapsible" data-collapsible="accordion">
+        <li>
+            <div class="collapsible-header">{{ pair.main_coin.symbol }}-{{ pair.second_coin.symbol }}
+            </div>
+            <div class="collapsible-body">
+                <h5><b>{{ pair.main_coin.name }} {{ pair.main_coin.symbol }}</b></h5>
+                {% coin_info pair.main_coin.symbol %}
+                <h5><b>{{ pair.second_coin.name }} {{ pair.second_coin.symbol }}</b></h5>
+                {% coin_info pair.second_coin.symbol %}
+            </div>
+        </li>
+    </ul>
+{% empty %}
+    Netu pairs
+{% endfor %}
