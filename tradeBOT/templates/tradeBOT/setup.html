@@ -17,7 +17,7 @@
                     <tbody>
                     {% for coin in coins %}
                         <tr>
-                            <td><b>{{ coin.name }} ({{ coin.symbol }})</b> (Your hold: {{ coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }})</td>
+                            <td><b style="font-size: 1.2rem">{{ coin.name }} ({{ coin.symbol }})</b> (Your hold: {{ coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }})</td>
                             <td>{{ coin.is_active }}</td>
                             <td class="center">
                                 <form action="{% url 'add_user_coin' %}" method="post">

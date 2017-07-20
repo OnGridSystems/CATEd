@@ -117,6 +117,62 @@ def pull_bittrex():
 
 
 @shared_task
+def pull_btce():
+    exchange = Exchanges.objects.get(exchange='btc-e')
+    coins = requests.get('https://btc-e.nz/api/3/info').json()
+    pairs = list(coins['pairs'].keys())
+    for item in pairs:
+        pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
+        if pair:
+            try:
+                main_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(1))
+                if main_coin_in_top:
+                    try:
+                        main_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+                    except ExchangeCoin.DoesNotExist:
+                        new_coin = ExchangeCoin()
+                        new_coin.exchange = exchange
+                        new_coin.name = main_coin_in_top.name
+                        new_coin.symbol = pair.group(1)
+                        new_coin.is_active = not coins['pairs'][item]['hidden']
+                        new_coin.save()
+                        try:
+                            old_primary_coin = ExchangeMainCoin.objects.get(coin=new_coin)
+                        except ExchangeMainCoin.DoesNotExist:
+                            new_primary_coin = ExchangeMainCoin()
+                            new_primary_coin.coin = new_coin
+                            new_primary_coin.total = 0
+                            new_primary_coin.save()
+                second_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(2))
+                if second_coin_in_top:
+                    try:
+                        second_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+                    except ExchangeCoin.DoesNotExist:
+                        new_coin = ExchangeCoin()
+                        new_coin.exchange = exchange
+                        new_coin.name = second_coin_in_top.name
+                        new_coin.symbol = pair.group(2)
+                        new_coin.is_active = not coins['pairs'][item]['hidden']
+                        new_coin.save()
+            except CoinMarketCupCoin.DoesNotExist:
+                pass
+            try:
+                main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+                second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+                if main_coin and second_coin:
+                    try:
+                        old_pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+                    except Pair.DoesNotExist:
+                        new_pair = Pair()
+                        new_pair.main_coin = main_coin
+                        new_pair.second_coin = second_coin
+                        new_pair.save()
+            except ExchangeCoin.DoesNotExist:
+                pass
+    return True
+
+
+@shared_task
 def pull_coinmarketcup():
     response = requests.get('https://api.coinmarketcap.com/v1/ticker/').json()
     if 'error' not in response:

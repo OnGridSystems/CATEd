@@ -160,11 +160,13 @@ $(document).ready(function () {
     $('.pair-share').keypress(function (e) {
         if (e.which === 13) {
             var share = $(this).val();
+            var user_exch = $('#exchange').val();
             if ('' !== share) {
                 var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
                 $.post('/trade/set_share/', {
                         coin_id: user_coin_id,
                         share: share,
+                        user_exch: user_exch,
                         csrfmiddlewaretoken: getCookie('csrftoken')
                     },
                     function (data) {

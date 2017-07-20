@@ -1,8 +1,13 @@
 {% load relations %}
 {% for pc in primary_coins %}
     <div class="pc">
-        <h5>{{ pc.coin.name }} ({{ pc.coin.symbol }})</h5>
-        {% primary_coin_pairs pc %}
+        <ul class="collapsible" data-collapsible="accordion">
+            <li>
+                <div class="collapsible-header">{{ pc.coin.name }} ({{ pc.coin.symbol }})
+                </div>
+                <div class="collapsible-body"><span>{% primary_coin_pairs pc %}</span></div>
+            </li>
+        </ul>
     </div>
 {% empty %}
     Netu primary coins

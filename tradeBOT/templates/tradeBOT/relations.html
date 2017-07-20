@@ -3,8 +3,13 @@
 {% block content %}
     <div class="container">
         {% for exchange in exchanges %}
-            <h4 class="center">{{ exchange.exchange }}</h4>
-            {% exchange_primary_coins exchange %}
+            <ul class="collapsible" data-collapsible="accordion">
+                <li>
+                    <div class="collapsible-header">{{ exchange.exchange }}
+                    </div>
+                    <div class="collapsible-body"><span>{% exchange_primary_coins exchange %}</span></div>
+                </li>
+            </ul>
         {% endfor %}
     </div>
 {% endblock %}

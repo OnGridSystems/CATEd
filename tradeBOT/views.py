@@ -87,7 +87,18 @@ def set_share(request):
     if request.is_ajax():
         user_coin_id = request.POST.get('coin_id')
         share = request.POST.get('share')
-        user_coins_share_summ = UserCoin.objects.all().exclude(pk=user_coin_id).aggregate(Sum('share'))['share__sum']
+        user_exch = request.POST.get('user_exch')
+        if int(share) == 0:
+            try:
+                user_coin = UserCoin.objects.get(pk=user_coin_id, user=request.user)
+                user_coin.share = share
+                user_coin.save()
+            except UserCoin.DoesNotExist:
+                return HttpResponse('Not your coin', status=200)
+            return HttpResponse('ok', status=200)
+        user_coins_share_summ = UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(Sum('share'))['share__sum']
+        if user_coins_share_summ is None:
+            user_coins_share_summ = 0
         if float(user_coins_share_summ) + float(share) > 100:
             return HttpResponse('Sum shares cant be more than 100', status=200)
         try:
