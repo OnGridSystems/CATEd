@@ -57,12 +57,27 @@ class Pair(models.Model):
         verbose_name_plural = "Пары"
 
 
+class UserMainCoinPriority(models.Model):
+    user_exchange = models.ForeignKey(UserExchanges)
+    main_coin = models.ForeignKey(ExchangeMainCoin)
+    share = models.DecimalField(max_digits=5, decimal_places=2)
+    is_active = models.BooleanField()
+
+    def __str__(self):
+        return '%s %s' % (self.user_exchange.exchange.exchange, self.main_coin)
+
+    class Meta:
+        verbose_name_plural = 'Главные монеты пользовтелей'
+        verbose_name = 'Главная монета пользователя'
+
+
 class UserDeactivatedPairs(models.Model):
     pair = models.ForeignKey(Pair)
     user_exchange = models.ForeignKey(UserExchanges)
 
 
 class CoinMarketCupCoin(models.Model):
+    coin_market_id = models.CharField(max_length=63, verbose_name="Внутренее имя", default='')
     name = models.CharField(max_length=63, verbose_name="Имя", unique=True)
     symbol = models.CharField(max_length=15, verbose_name="Аббр")
     rank = models.PositiveIntegerField()
@@ -77,4 +92,3 @@ class CoinMarketCupCoin(models.Model):
 
     def __str__(self):
         return self.name + ' ' + self.symbol
-
