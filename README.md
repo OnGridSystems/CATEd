@@ -248,7 +248,7 @@ read -d "" PATCH <<"EOF"
 ---
 >             signature = _hmac.new(self._secret, request.body.encode(), _hashlib.sha512)
 EOF
-echo "$PATCH" | patch /opt/env/lib/python3.5/site-packages/poloniex/poloniex.py
+echo "$PATCH" | patch /opt/portal_ongrid/env/lib/python3.5/site-packages/poloniex/poloniex.py
 
 ```
 
@@ -259,8 +259,9 @@ echo "create database trade character set utf8" | mysql -u root
 mysql -u root trade < dump.sql
 #
 # Migrate
-/opt/env/bin/python3 manage.py makemigrations
-/opt/env/bin/python3 manage.py migrate
+./manage.py makemigrations
+./manage.py makemigrations tradeBOT
+./manage.py migrate
 #
 # Add users
 read -d "" PYCODE <<"EOF"
@@ -269,14 +270,12 @@ user = User.objects.create_user(username='kirill',
                                  email='kirill@ongrid.pro',
                                  password='kirill')
 EOF
-echo "$PYCODE" | /opt/env/bin/python3 manage.py shell
+echo "$PYCODE" | ./manage.py shell
 ln -s /opt/portal_ongrid/configs/supervisor.conf /etc/supervisor/conf.d/djangoTrade.conf
 ln -s /opt/portal_ongrid/configs/nginx.conf /etc/nginx/sites-enabled/portal_ongrid.conf
-service nginx reload
 supervisorctl update
 supervisorctl restart djangoTrade_web
-cd /opt/portal_ongrid/ongrid_portal/
-python manage.py collectstatic --noinput
+./manage.py collectstatic --noinput
 ```
 
 install and configure celery
