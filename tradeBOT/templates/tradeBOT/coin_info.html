@@ -1,14 +1,14 @@
-<table class="exchange-coins" style="width:100% !important;">
-    <tr>
-        <td><b>Rank</b></td>
-        <td>{{ coin.rank }}</td>
-        <td><b>Price usd</b></td>
-        <td>{{ coin.price_usd | floatformat:'-2'}}$</td>
-    </tr>
-    <tr>
-        <td><b>Volume usd 24h</b></td>
-        <td>{{ coin.volume_usd_24h | floatformat:'-2'}}</td>
-        <td><b>Available supply</b></td>
-        <td>{{ coin.available_supply | floatformat:'-2'}}</td>
-    </tr>
-</table>
+<ol>
+    <li>
+        <b>Rank:</b> {{ coin.rank }}
+    </li>
+    <li>
+        <b>Price usd:</b> {{ coin.price_usd | floatformat:'-2'}}
+    </li>
+    <li>
+        <b>Volume usd 24h:</b> {{ coin.volume_usd_24h | floatformat:'-2'}}
+    </li>
+    <li>
+        <b>Available supply:</b> {{ coin.available_supply | floatformat:'-2'}}
+    </li>
+</ol>

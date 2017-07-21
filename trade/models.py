@@ -24,6 +24,7 @@ class UserExchanges(models.Model):
     apikey = models.CharField(max_length=127)
     apisecret = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
+    is_active_script = models.BooleanField(default=False)
     is_correct = models.BooleanField(default=True)
     total_btc = models.DecimalField(max_digits=30, decimal_places=8)
     total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)

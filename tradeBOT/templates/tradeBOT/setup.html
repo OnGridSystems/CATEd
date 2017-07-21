@@ -2,83 +2,149 @@
 {% load static humanize get_exchange_coins get_coin_pairs get_coin_info tradeBot_filters %}
 {% block content %}
     <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
-    <div class="container">
-        <div class="row">
-            <div class="col s6 m6 l6">
-                <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
-                <table class="exchange-coins">
-                    <thead>
-                    <tr>
-                        <th>Coin name</th>
-                        <th>Is active</th>
-                        <th>Add to trade</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for coin in coins %}
+    <div class="switch center">
+        <label>
+            Off
+            <input id="disable-script" type="checkbox" {% if user_exchange.is_active_script %}checked{% endif %}>
+            <span class="lever"></span>
+            On
+        </label>
+    </div>
+    <div class="row">
+        <div class="col s12 m12 l10 push-l1">
+            <div class="row">
+                <div class="col s6 m6 l6">
+                    <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
+                    <table width="100%">
+                        <colgroup>
+                            <col width="40%">
+                            <col width="20%">
+                            <col width="20%">
+                            <col width="20%">
+                        </colgroup>
+                        <thead>
                         <tr>
-                            <td><b style="font-size: 1.2rem">{{ coin.name }} ({{ coin.symbol }})</b> (Your hold: {{ coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }})</td>
-                            <td>{{ coin.is_active }}</td>
-                            <td class="center">
-                                <form action="{% url 'add_user_coin' %}" method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
-                                    <input type="hidden" name="coin" value="{{ coin.pk }}">
-                                    <i class="add_coin fa fa-plus-square-o fa-1x" aria-hidden="true"></i>
-                                </form>
-                            </td>
+                            <th>Coin name</th>
+                            <th>Have</th>
+                            <th>Is active</th>
+                            <th>Add to trade</th>
                         </tr>
+                        </thead>
+                    </table>
+                    <ul class="collapsible" data-collapsible="expandable">
+                        {% for coin in coins %}
+                            <li>
+                                <div class="collapsible-header">
+                                    <table class="center" width="100%">
+                                        <colgroup>
+                                            <col width="40%">
+                                            <col width="20%">
+                                            <col width="20%">
+                                            <col width="20%">
+                                        </colgroup>
+                                        <tbody>
+                                        <tr>
+                                            <td><b>{{ coin.name }} ({{ coin.symbol }})</b></td>
+                                            <td>{{ coin.symbol | user_have_coin:user_exchange | floatformat:"-8" }} {{ coin.symbol }}</td>
+                                            <td>{{ coin.is_active }}</td>
+                                            <td class="center">
+                                                <form action="{% url 'add_user_coin' %}" method="post">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="user-exchange"
+                                                           value="{{ user_exchange.pk }}">
+                                                    <input type="hidden" name="coin" value="{{ coin.pk }}">
+                                                    <i class="add_coin fa fa-plus-square-o fa-1x"
+                                                       aria-hidden="true"></i>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="collapsible-body">
+                                    <div class="coinmarketcap-currency-widget" data-secondary="BTC"
+                                         data-currency="{{ coin.symbol | get_coinmarket_id }}"
+                                         data-base="USD"></div>
+                                    {#                                    {% coin_info coin.symbol %}#}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <i class="fa fa-question-circle-o tooltipped"
+                       data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the website www.coinmarketchup.com"
+                       data-position="right"
+                       aria-hidden="true"></i> Where is my coin?
+                </div>
+                <div class="col s6 m6 l6 ">
+
+                    <table class="center" width="100%">
+                        <colgroup>
+                            <col width="40%">
+                            <col width="20%">
+                            <col width="20%">
+                            <col width="20%">
+                        </colgroup>
+                        <thead>
                         <tr>
-                            <td colspan="3" class="green lighten-4">
-                                {% coin_info coin.symbol %}
-                            </td>
+                            <th>Coin name</th>
+                            <th>Share (%)</th>
+                            <th>Priority</th>
+                            <th>Del</th>
                         </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="col s6 m6 l6 push-l1">
-                <table class="exchange-coins">
-                    <thead>
-                    <tr>
-                        <th>Coin name</th>
-                        <th>Share (%)</th>
-                        <th>Rank</th>
-                        <th>Del</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for coin in user_coins %}
-                        <tr data-coin-id="{{ coin.pk }}">
-                            <td><b>{{ coin.coin.name }} ({{ coin.coin.symbol }})</b></td>
-                            <td class="center">
-                                <input class="pair-share" type="number" name="share"
-                                       value="{{ coin.share | floatformat:'-1' }}" placeholder="Coin share">%
-                            </td>
-                            <td>
-                                {{ coin.rank }}
-                                <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
-                                <i class="fa rank-down fa-long-arrow-down red" aria-hidden="true"></i>
-                            </td>
-                            <td class="center">
-                                <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" class="green lighten-4">
-                                {% coin_pairs coin user user_exchange.pk %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="4">
-                                You ne nastraivali script
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                    </table>
+                    <ul class="collapsible" data-collapsible="expandable">
+                        {% for coin in user_coins %}
+                            <li>
+                                <div class="collapsible-header active">
+                                    <table class="center" width="100%">
+                                        <colgroup>
+                                            <col width="40%">
+                                            <col width="20%">
+                                            <col width="20%">
+                                            <col width="20%">
+                                        </colgroup>
+                                        <tbody>
+                                        <tr data-coin-id="{{ coin.pk }}">
+                                            <td>{{ coin.coin.name }} ({{ coin.coin.symbol }})</td>
+                                            <td class="center">
+                                                <input class="pair-share" type="number" name="share"
+                                                       value="{{ coin.share | floatformat:'-1' }}"
+                                                       placeholder="Coin share">
+                                                %
+                                            </td>
+                                            <td>
+                                                {{ coin.rank }}
+                                                <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
+                                                <i class="fa rank-down fa-long-arrow-down red"
+                                                   aria-hidden="true"></i>
+                                            </td>
+                                            <td class="center">
+                                                <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="collapsible-body">
+                                    {% coin_pairs coin user user_exchange.pk %}
+                                </div>
+                            </li>
+                        {% empty %}
+                            <li>
+                                <div class="collapsible-header">
+                                    <h6 class="center">Add coins from the list on the left, set the share, coin
+                                        trade
+                                        priority to start using the script.</h6>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+{% endblock %}
+{% block script %}
+    <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>
 {% endblock %}

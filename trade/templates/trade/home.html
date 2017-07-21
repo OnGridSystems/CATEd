@@ -55,7 +55,9 @@
                                         {% endwith %}
                                         <td>{{ item.is_correct|yesno:"Yes,No" }}
                                         </td>
-                                    <td><a href="{% url 'tradeBotSetup' pk=item.pk %}"><i class="fa fa-cog green-text fa-1x" aria-hidden="true"></i></a></td>
+                                        <td><a href="{% url 'tradeBotSetup' pk=item.pk %}"><i
+                                                class="fa fa-cog fa-1x {{ item.is_active_script|yesno:'green-text,red-text' }}"
+                                                aria-hidden="true"></i></a></td>
                                         <td>
                                             <form>
                                                 {% csrf_token %}

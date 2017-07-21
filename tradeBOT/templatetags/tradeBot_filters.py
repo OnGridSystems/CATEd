@@ -1,5 +1,5 @@
 from django import template
-from tradeBOT.models import UserDeactivatedPairs
+from tradeBOT.models import UserDeactivatedPairs, CoinMarketCupCoin
 from trade.models import UserBalance
 
 register = template.Library()
@@ -21,3 +21,12 @@ def user_holdings(coin_symbol, user_exchange):
         return user_hold.balance
     except UserBalance.DoesNotExist:
         return 0
+
+
+@register.filter(name='get_coinmarket_id')
+def get_coinmarket_id(symbol):
+    try:
+        coin_market_id = CoinMarketCupCoin.objects.get(symbol=symbol)
+        return coin_market_id.coin_market_id
+    except CoinMarketCupCoin.DoesNotExist:
+        return ''

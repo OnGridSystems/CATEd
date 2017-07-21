@@ -102,8 +102,9 @@ $(document).ready(function () {
         delay: 50,
         html: true
     });
-    $('.add_coin').on('click', function () {
+    $('.add_coin').on('click', function (e) {
         $(this).parent('form').submit();
+        return false;
     });
     $('.rank-up').on('click', function () {
         var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
@@ -182,6 +183,16 @@ $(document).ready(function () {
             csrfmiddlewaretoken: getCookie('csrftoken')
         }, function (data) {
             'ok' === data ? location.reload() : Materialize.toast(data, 1000);
+        })
+    });
+    $('#disable-script').on('change', function () {
+        $.post('/trade/exchange_script_activity/', {
+            user_exch: $('#exchange').val(),
+            csrfmiddlewaretoken: getCookie('csrftoken')
+        }, function (data) {
+            if (data) {
+                location.reload()
+            } else Materialize.toast('Error while change script status', 1500)
         })
     })
 });

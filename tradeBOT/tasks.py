@@ -187,6 +187,7 @@ def pull_coinmarketcup():
                     old_coinmarket_coin.save()
                 except CoinMarketCupCoin.DoesNotExist:
                     new_coin = CoinMarketCupCoin()
+                    new_coin.coin_market_id = item['id']
                     new_coin.name = item['name']
                     new_coin.symbol = item['symbol']
                     new_coin.rank = item['rank']

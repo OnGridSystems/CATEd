@@ -14,12 +14,11 @@ def value_to_cryptotoken(value, item):
         elif item.wallet.name == 'Yandex Money':
             return str(round(float(value), 2)) + ' RUR'
     elif type(item) == Transaction:
-        if item.currency is not None:
-            return str(item.value) + ' ' + item.currency
+        if item.name[0] == 'E':
+            return str(round(float(value / (10 ** 18)), 8)) + ' ETH'
+        elif item.name[0] == 'B':
+            return str(round(float(value), 8)) + ' BTC'
+        elif item.name[0] == 'Y':
+            return str(round(float(value), 2)) + ' RUR'
         else:
-            if item.name[0] == 'E':
-                return str(round(float(value / (10 ** 18)), 8)) + ' ETH'
-            elif item.name[0] == 'B':
-                return str(round(float(value), 8)) + ' BTC'
-            elif item.name[0] == 'Y':
-                return str(round(float(value), 2)) + ' RUR'
+            return str(round(float(value), 2)) + ' ' + item.currency
