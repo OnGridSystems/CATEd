@@ -23,12 +23,12 @@ from allauth import urls as allauth_urls
 from user_profile import views as user_profile_views
 from django.contrib.auth.decorators import permission_required
 
-
 urlpatterns = [
                   url(r'^admin/', admin.site.urls),
                   url(r'^accounts/', include(allauth_urls)),
                   url(r'^profile/$', user_profile_views.profile, name='user_profile'),
-                  url(r'^change_status/$', permission_required('is_superuser')(tradeViews.change_status), name='change_status'),
+                  url(r'^change_status/$', permission_required('is_superuser')(tradeViews.change_status),
+                      name='change_status'),
                   url(r'^$', tradeViews.index, name='index'),
                   url(r'^exchange/$', permission_required('is_superuser')(tradeViews.exchange), name='exchange'),
                   url(r'^wallet/$', permission_required('is_superuser')(tradeViews.wallet), name='wallet'),
@@ -43,4 +43,6 @@ urlpatterns = [
                   url(r'^trade/set_share/$', tradeBOTViews.set_share, name='set_share'),
                   url(r'^trade/delete_user_coin/$', tradeBOTViews.delete_user_coin, name='delete_user_coin'),
                   url(r'^trade/relations/$', tradeBOTViews.relations, name='relations'),
+                  url(r'^trade/exchange_script_activity/$', tradeBOTViews.change_user_exchange_script_activity,
+                      name='change_user_exchange_script_activity'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

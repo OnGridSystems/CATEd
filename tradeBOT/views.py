@@ -2,7 +2,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from trade.models import UserExchanges, Exchanges
-from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair
+from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin
 
 
 def main(request):
@@ -17,8 +17,9 @@ def setup(request, pk):
         args['user_exchange'] = UserExchanges.objects.get(pk=pk, user=request.user)
         args['coins'] = ExchangeCoin.objects.filter(exchange=args['user_exchange'].exchange).order_by('-is_active',
                                                                                                       'name')
-        args['user_coins'] = UserCoin.objects.filter(user_exchange=args['user_exchange'], user=request.user).order_by(
+        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by(
             '-rank')
+        args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange)
     except UserExchanges.DoesNotExist:
         return redirect('index')
     return render(request, 'tradeBOT/setup.html', args)
@@ -123,3 +124,15 @@ def delete_user_coin(request):
 def relations(request):
     args = {'exchanges': Exchanges.objects.all()}
     return render(request, 'tradeBOT/relations.html', args)
+
+
+def change_user_exchange_script_activity(request):
+    if request.is_ajax():
+        user_exch_id = request.POST.get('user_exch')
+        try:
+            user_exch = UserExchanges.objects.get(pk=user_exch_id, user=request.user)
+            user_exch.is_active_script = not user_exch.is_active_script
+            user_exch.save()
+            return HttpResponse('true', status=200)
+        except UserExchanges.DoesNotExist:
+            return HttpResponse('false', status=200)
