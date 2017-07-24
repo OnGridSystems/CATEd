@@ -102,9 +102,6 @@ cd portal_ongrid
 mkdir logs static media configs
 python3 -m venv env
 cd /opt/portal_ongrid/configs
-touch supervisor.conf
-touch nginx.conf
-touch djangoTrade
 
 #
 #set config for gunicorn
