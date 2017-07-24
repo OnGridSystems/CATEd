@@ -320,8 +320,6 @@ Set SSL certificate (12.10.2017, 13:00:00)
 cd /etc
 mkdir letsencrypt
 cd letsencrypt
-touch ongrid.crt
-touch private.key
 read -d "" CERT<<"EOF"
 -----BEGIN CERTIFICATE-----
 MIIFBTCCA+2gAwIBAgISA3/inLnXFdE7eV6iZy15zN83MA0GCSqGSIb3DQEBCwUA
