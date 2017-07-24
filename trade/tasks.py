@@ -202,6 +202,7 @@ def start_trade_poloniex():
                                     new_trans.usd_value = get_usd_value(item['currency'], item['amount'])
                                     new_trans.save()
                         withdrawals = deposits_and_withdrawals['withdrawals']
+                        # print(withdrawals)
                         if len(withdrawals) > 0:
                             for item in withdrawals:
                                 try:
@@ -213,12 +214,12 @@ def start_trade_poloniex():
                                     new_trans = Transaction()
                                     new_trans.name = ue.exchange.exchange + str(ue.pk)
                                     new_trans.t_type = 'exchange'
-                                    new_trans.number = item['confirmations']
+                                    new_trans.number = item['withdrawalNumber']
                                     new_trans.hash = item['withdrawalNumber']
                                     new_trans.date = datetime.datetime.fromtimestamp(int(item['timestamp'])).strftime(
                                         '%Y-%m-%d %H:%M:%S')
-                                    new_trans.t_from = item['address']
-                                    new_trans.t_to = '-'
+                                    new_trans.t_from = '-'
+                                    new_trans.t_to = item['address']
                                     new_trans.type = 'out'
                                     new_trans.value = item['amount']
                                     new_trans.currency = item['currency']
