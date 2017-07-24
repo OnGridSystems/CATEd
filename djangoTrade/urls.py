@@ -19,6 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from trade import views as tradeViews
 from tradeBOT import views as tradeBOTViews
+from monitoring import views as monitor_views
 from allauth import urls as allauth_urls
 from user_profile import views as user_profile_views
 from django.contrib.auth.decorators import permission_required
@@ -45,4 +46,6 @@ urlpatterns = [
                   url(r'^trade/relations/$', tradeBOTViews.relations, name='relations'),
                   url(r'^trade/exchange_script_activity/$', tradeBOTViews.change_user_exchange_script_activity,
                       name='change_user_exchange_script_activity'),
+                  url(r'^monitor/$', monitor_views.monitor, name='monitoring'),
+                  url(r'^monitor/api/get_history/', monitor_views.get_holding, name='get_workers_history'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
