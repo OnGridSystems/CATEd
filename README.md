@@ -418,4 +418,19 @@ EOF
 echo "$KEY" > /etc/letsencrypt/private.key
 ```
 
+reboot
+
+```sh
+cd /opt/portal_ongrid/ongrid_portal
+. ../env/bin/activate
+read -d "" PYTASKS <<"EOF"
+from tradeBOT import tasks
+coinmarketcup = tasks.pull_coinmarketcup.delay()
+pbittrex = tasks.pull_bittrex.delay()
+ppoloniex = tasks.pull_poloniex.delay()
+pbtce = tasks.pull_btce.delay()
+EOF
+echo "$PYTASKS" | ./manage.py shell
+```
+
 reboot and have fun!
