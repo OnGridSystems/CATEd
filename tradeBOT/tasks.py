@@ -174,26 +174,27 @@ def pull_btce():
 
 @shared_task
 def pull_coinmarketcup():
-    response = requests.get('https://api.coinmarketcap.com/v1/ticker/').json()
+    response = requests.get('https://api.coinmarketcap.com/v1/ticker/?limit=100').json()
     if 'error' not in response:
         for item in response:
-            if int(item['rank']) <= 100:
-                try:
-                    old_coinmarket_coin = CoinMarketCupCoin.objects.get(name=item['name'])
-                    old_coinmarket_coin.price_usd = item['price_usd']
-                    old_coinmarket_coin.volume_usd_24h = item['24h_volume_usd']
-                    old_coinmarket_coin.available_supply = item['available_supply']
-                    old_coinmarket_coin.total_supply = item['total_supply']
-                    old_coinmarket_coin.save()
-                except CoinMarketCupCoin.DoesNotExist:
-                    new_coin = CoinMarketCupCoin()
-                    new_coin.coin_market_id = item['id']
-                    new_coin.name = item['name']
-                    new_coin.symbol = item['symbol']
-                    new_coin.rank = item['rank']
-                    new_coin.price_usd = item['price_usd']
-                    new_coin.volume_usd_24h = item['24h_volume_usd']
-                    new_coin.available_supply = item['available_supply']
-                    new_coin.total_supply = item['total_supply']
-                    new_coin.save()
+            try:
+                old_coinmarket_coin = CoinMarketCupCoin.objects.get(symbol=item['symbol'])
+                old_coinmarket_coin.coin_market_id = item['id']
+                old_coinmarket_coin.name = item['name']
+                old_coinmarket_coin.price_usd = item['price_usd']
+                old_coinmarket_coin.volume_usd_24h = item['24h_volume_usd']
+                old_coinmarket_coin.available_supply = item['available_supply']
+                old_coinmarket_coin.total_supply = item['total_supply']
+                old_coinmarket_coin.save()
+            except CoinMarketCupCoin.DoesNotExist:
+                new_coin = CoinMarketCupCoin()
+                new_coin.coin_market_id = item['id']
+                new_coin.name = item['name']
+                new_coin.symbol = item['symbol']
+                new_coin.rank = item['rank']
+                new_coin.price_usd = item['price_usd']
+                new_coin.volume_usd_24h = item['24h_volume_usd']
+                new_coin.available_supply = item['available_supply']
+                new_coin.total_supply = item['total_supply']
+                new_coin.save()
     return True

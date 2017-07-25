@@ -194,5 +194,30 @@ $(document).ready(function () {
                 location.reload()
             } else Materialize.toast('Error while change script status', 1500)
         })
-    })
+    });
+    $('.change-primary-coin-status').on('change', function () {
+        var pc = $(this).parent('.primary-coin').data('primary-coin');
+        $.post('/trade/change_primary_coin/', {
+            user_exch: $('#exchange').val(),
+            csrfmiddlewaretoken: getCookie('csrftoken'),
+            coin: pc
+        }, function (data) {
+            'ok' === data ? location.reload() : Materialize.toast('Error while changing status', 1000)
+        })
+    });
+
+    $('.primary-rank').on('click', function () {
+        change_primary_coin($(this).data('type'), $(this).parent('.primary-coin').data('primary-coin'));
+    });
+
+    function change_primary_coin(type, coin) {
+        $.post('/trade/change_primary_coin_rank/', {
+            user_exch: $('#exchange').val(),
+            csrfmiddlewaretoken: getCookie('csrftoken'),
+            coin: coin,
+            type: type
+        }, function (data) {
+            'ok' === data ? location.reload() : Materialize.toast('Error while changing rank', 1000)
+        })
+    }
 });

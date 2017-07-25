@@ -43,7 +43,7 @@
                                             <col width="20%">
                                         </colgroup>
                                         <tbody>
-                                        <tr>
+                                        <tr {% for p_coin in primary_coins %}{% if coin.symbol == p_coin.coin.symbol %} class="green lighten-4" {% endif %}{% endfor %}>
                                             <td><b>{{ coin.name }} ({{ coin.symbol }})</b></td>
                                             <td>{{ coin.symbol | user_have_coin:user_exchange | floatformat:"-8" }} {{ coin.symbol }}</td>
                                             <td>{{ coin.is_active }}</td>
@@ -140,6 +140,17 @@
                             </li>
                         {% endfor %}
                     </ul>
+                    <div class="primary-coins">
+                        {% for pc in primary_coins %}
+                            <div class="primary-coin rank z-depth-1" data-primary-coin="{{ pc.pk }}">
+                                <b>{{ pc.coin.name }}</b>
+                                <br>
+                                <img src="/static/images/cryptotokens/{{ pc.coin.symbol | get_coinmarket_id }}.png"
+                                     alt=""><br>
+                                {% get_user_primary_coins user_exchange pc %}
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

@@ -2,7 +2,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from trade.models import UserExchanges, Exchanges
-from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin
+from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin, UserMainCoinPriority
 
 
 def main(request):
@@ -17,8 +17,7 @@ def setup(request, pk):
         args['user_exchange'] = UserExchanges.objects.get(pk=pk, user=request.user)
         args['coins'] = ExchangeCoin.objects.filter(exchange=args['user_exchange'].exchange).order_by('-is_active',
                                                                                                       'name')
-        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by(
-            '-rank')
+        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by('-rank')
         args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange)
     except UserExchanges.DoesNotExist:
         return redirect('index')
@@ -32,7 +31,7 @@ def add_user_coin(request):
         try:
             user_exchange = UserExchanges.objects.get(pk=user_exchange_pk)
             coin = ExchangeCoin.objects.get(pk=coin_pk)
-            user_coin = UserCoin.objects.get(coin=coin, user_exchange=user_exchange)
+            user_coin = UserCoin.objects.get(coin=coin, user_exchange=user_exchange, user=request.user)
         except ExchangeCoin.DoesNotExist:
             pass
         except UserExchanges.DoesNotExist:
@@ -136,3 +135,51 @@ def change_user_exchange_script_activity(request):
             return HttpResponse('true', status=200)
         except UserExchanges.DoesNotExist:
             return HttpResponse('false', status=200)
+
+
+def change_primary_coin(request):
+    if request.is_ajax():
+        user_exch_pk = request.POST.get('user_exch')
+        ue = UserExchanges.objects.get(pk=user_exch_pk)
+        coin_pk = request.POST.get('coin')
+        coin = ExchangeMainCoin.objects.get(pk=coin_pk)
+        try:
+            user_primary_coin = UserMainCoinPriority.objects.get(user_exchange=ue, main_coin=coin)
+            user_primary_coin.is_active = not user_primary_coin.is_active
+            user_primary_coin.save()
+        except UserMainCoinPriority.DoesNotExist:
+            new_user_primary_coin = UserMainCoinPriority()
+            new_user_primary_coin.main_coin = coin
+            new_user_primary_coin.priority = 1
+            new_user_primary_coin.user_exchange = ue
+            new_user_primary_coin.is_active = False
+            new_user_primary_coin.save()
+        return HttpResponse('ok', status=200)
+
+
+def change_primary_coin_rank(request):
+    if request.is_ajax():
+        type_r = request.POST.get('type')
+        ue_pk = request.POST.get('user_exch')
+        coin_pk = request.POST.get('coin')
+        ue = UserExchanges.objects.get(pk=ue_pk)
+        coin = ExchangeMainCoin.objects.get(pk=coin_pk)
+        try:
+            user_primary_coin = UserMainCoinPriority.objects.get(user_exchange=ue, main_coin=coin)
+            if type_r == 'up':
+                user_primary_coin.priority += 1
+            elif type_r == 'down':
+                if user_primary_coin.priority > 1:
+                    user_primary_coin.priority -= 1
+            user_primary_coin.save()
+        except UserMainCoinPriority.DoesNotExist:
+            new_user_primary_coin = UserMainCoinPriority()
+            new_user_primary_coin.main_coin = coin
+            if type_r == 'up':
+                new_user_primary_coin.priority = 2
+            else:
+                new_user_primary_coin.priority = 1
+            new_user_primary_coin.user_exchange = ue
+            new_user_primary_coin.is_active = True
+            new_user_primary_coin.save()
+        return HttpResponse('ok', status=200)

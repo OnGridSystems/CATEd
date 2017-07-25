@@ -1,5 +1,5 @@
 from django import template
-from tradeBOT.models import UserDeactivatedPairs, CoinMarketCupCoin
+from tradeBOT.models import UserDeactivatedPairs, CoinMarketCupCoin, UserMainCoinPriority
 from trade.models import UserBalance
 
 register = template.Library()
@@ -7,11 +7,23 @@ register = template.Library()
 
 @register.filter(name='is_active_pair')
 def is_active_pair(pair, user_exchange):
+    umcp = is_deactivate = None
+    unactive = False
     try:
         is_deactivate = UserDeactivatedPairs.objects.get(pair=pair, user_exchange=user_exchange)
-        return 'unactive'
     except UserDeactivatedPairs.DoesNotExist:
-        return ''
+        pass
+    try:
+        umcp = UserMainCoinPriority.objects.get(user_exchange=user_exchange, main_coin__coin=pair.main_coin)
+    except UserMainCoinPriority.DoesNotExist:
+        pass
+    if umcp is not None:
+        if umcp.is_active is False:
+            unactive = True
+    if is_deactivate is not None:
+        unactive = True
+    if unactive:
+        return 'unactive'
 
 
 @register.filter(name='user_have_coin')
@@ -30,3 +42,13 @@ def get_coinmarket_id(symbol):
         return coin_market_id.coin_market_id
     except CoinMarketCupCoin.DoesNotExist:
         return ''
+
+
+@register.inclusion_tag('tradeBOT/user_primary.html')
+def get_user_primary_coins(user_exchange, primary_coin):
+    try:
+        umcp = UserMainCoinPriority.objects.get(user_exchange=user_exchange, main_coin=primary_coin)
+        return {'coin': umcp,
+                'success': True}
+    except UserMainCoinPriority.DoesNotExist:
+        return {'success': False}

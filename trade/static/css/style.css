@@ -160,7 +160,7 @@ tr.balances td:last-child {
     cursor: pointer;
 }
 
-.rank-up, .rank-down {
+.rank-up, .rank-down, .primary-rank {
     padding: 3px 5px;
     color: white;
 }
@@ -175,4 +175,27 @@ tr.balances td:last-child {
 
 .pair-share {
     width: 80%;
+}
+
+.primary-coins {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-wrap: nowrap;
+    flex-wrap: nowrap;
+    -webkit-justify-content: space-around;
+    justify-content: space-around;
+}
+
+.primary-coin {
+    width: 100%;
+    text-align: center;
+}
+
+.primary-rank {
+    display: none !important;
+    cursor: pointer;
+}
+
+.rank:hover .primary-rank {
+    display: inline !important;
 }

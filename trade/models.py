@@ -138,5 +138,5 @@ class UserHoldings(models.Model):
     def as_list(self):
         return [
             int(time.mktime(self.date_time.timetuple()) * 1000),
-            float(self.total_btc)
+            round(float(self.total_btc), 6)
         ]

@@ -1,0 +1,26 @@
+{% if success %}
+    <b>Priority: {{ coin.priority }}</b> <i data-type="up" class="fa primary-rank fa-long-arrow-up green" aria-hidden="true"></i>
+    <i data-type="down" class="fa primary-rank fa-long-arrow-down red"
+       aria-hidden="true"></i><br>
+    <div class="switch center change-primary-coin-status">
+        <label>
+            Off
+            <input id="disable-script" type="checkbox" {% if coin.is_active %}checked{% endif %}>
+            <span class="lever"></span>
+            On
+        </label>
+    </div>
+{% else %}
+    <b>Priority: 1</b> <i data-type="up" class="fa primary-rank fa-long-arrow-up green" aria-hidden="true"></i>
+    <i data-type="down" class="fa primary-rank fa-long-arrow-down red"
+       aria-hidden="true"></i><br>
+    <div class="switch center change-primary-coin-status">
+        <label>
+            Off
+            <input id="disable-script" type="checkbox" checked>
+            <span class="lever"></span>
+            On
+        </label>
+    </div>
+{% endif %}
+<br>

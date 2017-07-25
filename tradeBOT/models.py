@@ -60,14 +60,14 @@ class Pair(models.Model):
 class UserMainCoinPriority(models.Model):
     user_exchange = models.ForeignKey(UserExchanges)
     main_coin = models.ForeignKey(ExchangeMainCoin)
-    share = models.DecimalField(max_digits=5, decimal_places=2)
+    priority = models.PositiveIntegerField()
     is_active = models.BooleanField()
 
     def __str__(self):
         return '%s %s' % (self.user_exchange.exchange.exchange, self.main_coin)
 
     class Meta:
-        verbose_name_plural = 'Главные монеты пользовтелей'
+        verbose_name_plural = 'Главные монеты пользователей'
         verbose_name = 'Главная монета пользователя'
 
 
