@@ -1,19 +1,24 @@
 $(document).ready(function () {
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = jQuery.trim(cookies[i]);
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
+    pair_id = $('.pair_tr').data('pair-id');
+    $('.pair_tr[data-pair-id='+pair_id+']').addClass('yellow lighten-3');
+    intervale = $('#buttons button').data('intervale');
+    draw_graph();
 
+    $('.pair_tr').on('click', function () {
+        $('.pair_tr').removeClass('yellow lighten-3');
+        $(this).addClass('yellow lighten-3');
+        if ($(this).data('pair-id') != pair_id) {
+            pair_id = $(this).data('pair-id');
+            draw_graph();
+        }
+    });
+
+    $('#buttons button').on('click', function() {
+        $('#buttons button').removeClass('green');
+        $(this).addClass('green');
+        intervale = $(this).data('intervale');
+        draw_graph();
+    });
     $('select').material_select();
     $('.modal').modal();
     $('#yandex-wallet-add').hide();
@@ -175,7 +180,12 @@ $(document).ready(function () {
                     });
             }
         }
+    }).on('focus', function () {
+        $('.collapsible').collapsible('destroy');
+    }).on('blur', function () {
+        $('.collapsible').collapsible();
     });
+
     $('.delete-user-coin').on('click', function () {
         var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
         $.post('/trade/delete_user_coin/', {
@@ -221,3 +231,175 @@ $(document).ready(function () {
         })
     }
 });
+
+socket = new WebSocket("ws://" + window.location.host + "/trade/");
+socket.onmessage = function (message) {
+    var data = JSON.parse(message.data);
+    data.map(function (item) {
+        $('.pair_last#last_' + item.pair_id).text(item.last);
+        $('.pair_last#percent_' + item.pair_id).text(item.percent + '%');
+        if (item.percent > 0) {
+            $('.pair_last#percent_' + item.pair_id).removeClass('red-text').addClass('green-text');
+            $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeUp');
+            $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>');
+        } else if (item.percent < 0) {
+            $('.pair_last#percent_' + item.pair_id).removeClass('green-text').addClass('red-text');
+            $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeDown');
+            $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>');
+        } else {
+            $('.pair_last#percent_' + item.pair_id).removeClass('green-text red-text');
+            $('.pair_last#arrow_' + item.pair_id).html('');
+        }
+    });
+    setTimeout(function () {
+        $('.pair_last').parent('tr').removeClass('priceChangeDown priceChangeUp');
+    }, 600);
+    draw_graph();
+};
+
+function draw_graph() {
+    var ohlcData = [];
+    var volumeData = [];
+    $.post('/trade/get_ticker/', {
+        pair_id: pair_id,
+        csrfmiddlewaretoken: getCookie('csrftoken'),
+        intervale: intervale
+    }, function (ticker) {
+        for (var i = 1; i < ticker.length; i++) {
+            ohlcData.push([new Date(Date.parse(ticker[i].date)), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
+            var volume = 100 + 15 * Math.random();
+            volumeData.push([new Date(Date.parse(ticker[i].date)), round(volume)]);
+        }
+        $('#jqChart').jqChart({
+            legend: {visible: false},
+            border: {lineWidth: 0, padding: 0},
+            tooltips: {
+                type: 'shared',
+                disabled: true
+            },
+            crosshairs: {
+                enabled: true,
+                hLine: false
+            },
+            animation: {duration: 0.0001},
+            axes: [
+                {
+                    type: 'linear',
+                    location: 'right',
+                    width: 80
+                }
+            ],
+            series: [
+                {
+                    title: 'Price Index',
+                    type: 'candlestick',
+                    data: ohlcData,
+                    priceUpFillStyle: 'green',
+                    priceDownFillStyle: 'red',
+                    strokeStyle: 'black'
+                }
+            ]
+        });
+        $('#jqChartVolume').jqChart({
+            legend: {visible: false},
+            border: {lineWidth: 0, padding: 0},
+            tooltips: {
+                type: 'shared',
+                disabled: true
+            },
+            crosshairs: {
+                enabled: true,
+                hLine: false
+            },
+            animation: {duration: 0.0001},
+            axes: [
+                {
+                    type: 'dateTime',
+                    location: 'bottom'
+                },
+                {
+                    type: 'linear',
+                    location: 'right',
+                    width: 80
+                }
+            ],
+            series: [
+                {
+                    type: 'column',
+                    data: volumeData,
+                    fillStyle: 'lightgrey'
+                }
+            ]
+        });
+        var isHighlighting = false;
+
+        $('#jqChart').bind('dataHighlighting', function (event, data) {
+
+            if (!data) {
+                $('#jqChartVolume').jqChart('highlightData', null);
+                return;
+            }
+
+            $('#open').html(data.open);
+            $('#high').html(data.high);
+            $('#low').html(data.low);
+            $('#close').html(data.close);
+
+            var date = data.chart.stringFormat(data.x, "mmmm d, yyyy");
+
+            $('#date').html(date);
+
+            if (!isHighlighting) {
+
+                isHighlighting = true;
+
+                var index = $.inArray(data.dataItem, ohlcData);
+                $('#jqChartVolume').jqChart('highlightData', [volumeData[index]]);
+            }
+
+            isHighlighting = false;
+        });
+
+        $('#jqChartVolume').bind('dataHighlighting', function (event, data) {
+
+            if (!data) {
+                $('#jqChart').jqChart('highlightData', null);
+                return;
+            }
+
+            $('#volume').html(data.y);
+
+            if (!isHighlighting) {
+
+                isHighlighting = true;
+
+                var index = $.inArray(data.dataItem, volumeData);
+                $('#jqChart').jqChart('highlightData', [ohlcData[index]]);
+            }
+
+            isHighlighting = false;
+        });
+
+        $('#jqChart').jqChart('highlightData', [ohlcData[0]]);
+        $('#jqChartVolume').jqChart('highlightData', [volumeData[0]]);
+    }, 'json');
+}
+
+function round(d) {
+    return Math.round(1000000 * d) / 1000000
+}
+
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
