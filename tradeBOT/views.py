@@ -102,8 +102,8 @@ def set_share(request):
                 return HttpResponse('Not your coin', status=200)
             return HttpResponse('ok', status=200)
         user_coins_share_summ = \
-        UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(
-            Sum('share'))['share__sum']
+            UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(
+                Sum('share'))['share__sum']
         if user_coins_share_summ is None:
             user_coins_share_summ = 0
         if float(user_coins_share_summ) + float(share) > 100:
@@ -200,25 +200,28 @@ def get_ticker(request):
         try:
             ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
             for i in range(0, len(ticker), intervale):
-                cur_ticker = {'date': ticker[i]['date_time'], 'open': ticker[i]['last'], 'low': ticker[i]['ask'],
-                              'high': ticker[i]['bid']}
+                # print(str(i) + '------------------------------------------------')
+                cur_ticker = {'date': ticker[i]['date_time'], 'open': ticker[i]['last'], 'low': ticker[i]['last'],
+                              'high': ticker[i]['last']}
                 try:
-                    cur_ticker['close'] = ticker[i+intervale]['last']
+                    cur_ticker['close'] = ticker[i + intervale]['last']
                 except IndexError:
-                    cur_ticker['close'] = ticker[len(ticker)-1]['last']
-                for j in range(intervale):
+                    cur_ticker['close'] = ticker[len(ticker) - 1]['last']
+                for j in range(intervale + 1):
+                    # print('Текущий ' + str(ticker[i+j]['last']))
                     try:
-                        if ticker[j]['ask'] < cur_ticker['low']:
-                            cur_ticker['low'] = ticker[j]['ask']
+                        if ticker[i + j]['last'] < cur_ticker['low']:
+                            cur_ticker['low'] = ticker[i + j]['last']
                     except IndexError:
-                        if ticker[len(ticker) - 1]['ask'] < cur_ticker['low']:
-                            cur_ticker['low'] = ticker[len(ticker) - 1]['ask']
+                        if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
+                            cur_ticker['low'] = ticker[len(ticker) - 1]['last']
                     try:
-                        if ticker[j]['bid'] > cur_ticker['high']:
-                            cur_ticker['high'] = ticker[j]['bid']
+                        if ticker[i + j]['last'] > cur_ticker['high']:
+                            # print("Было " + str(cur_ticker['high']) + ' Стало ' + str(ticker[i + j]['last']))
+                            cur_ticker['high'] = ticker[i + j]['last']
                     except IndexError:
-                        if ticker[len(ticker) - 1]['bid'] > cur_ticker['high']:
-                            cur_ticker['high'] = ticker[len(ticker) - 1]['bid']
+                        if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
+                            cur_ticker['high'] = ticker[len(ticker) - 1]['last']
                 ticker_d.append(cur_ticker)
             return HttpResponse(json.dumps(list(ticker_d), cls=DjangoJSONEncoder), status=200)
         except Pair.DoesNotExist:
