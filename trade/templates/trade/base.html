@@ -16,6 +16,7 @@
     <div class="nav-wrapper main-nav">
         <ul id="nav-mobile" class="right hide-on-med-and-down">
             <li><a href="{% url 'index' %}"><b>Home</b></a></li>
+            <li><a href="{% url 'monitoring' %}"><b>Pools</b></a></li>
 {#            <li><a href="{% url 'tradeBotMain' %}">Trade Bot</a></li>#}
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'account_logout' %}"><i class="material-icons left tiny">input</i>LogOut</a></li>

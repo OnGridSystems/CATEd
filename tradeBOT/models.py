@@ -50,7 +50,8 @@ class Pair(models.Model):
     second_coin = models.ForeignKey(ExchangeCoin, related_name='%(class)s_second_coin')
 
     def __str__(self):
-        return self.main_coin.exchange.exchange + ': ' + self.main_coin.name + ' - ' + self.second_coin.name
+        return self.main_coin.exchange.exchange + ': ' + self.main_coin.symbol.upper() + '_' +\
+               self.second_coin.symbol.upper()
 
     class Meta:
         verbose_name = "Пара"
@@ -60,14 +61,14 @@ class Pair(models.Model):
 class UserMainCoinPriority(models.Model):
     user_exchange = models.ForeignKey(UserExchanges)
     main_coin = models.ForeignKey(ExchangeMainCoin)
-    share = models.DecimalField(max_digits=5, decimal_places=2)
+    priority = models.PositiveIntegerField()
     is_active = models.BooleanField()
 
     def __str__(self):
         return '%s %s' % (self.user_exchange.exchange.exchange, self.main_coin)
 
     class Meta:
-        verbose_name_plural = 'Главные монеты пользовтелей'
+        verbose_name_plural = 'Главные монеты пользователей'
         verbose_name = 'Главная монета пользователя'
 
 
@@ -92,3 +93,19 @@ class CoinMarketCupCoin(models.Model):
 
     def __str__(self):
         return self.name + ' ' + self.symbol
+
+
+class ExchangeTicker(models.Model):
+    exchange = models.ForeignKey(Exchanges)
+    pair = models.ForeignKey(Pair)
+    high = models.DecimalField(max_digits=30, decimal_places=15)
+    last = models.DecimalField(max_digits=30, decimal_places=15)
+    low = models.DecimalField(max_digits=30, decimal_places=15)
+    bid = models.DecimalField(max_digits=30, decimal_places=15)
+    ask = models.DecimalField(max_digits=30, decimal_places=15)
+    base_volume = models.DecimalField(max_digits=30, decimal_places=15)
+    percent_change = models.DecimalField(max_digits=10, decimal_places=8, default=0)
+    date_time = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.exchange.exchange + ': ' + self.pair.main_coin.name.upper() + '-' + self.pair.second_coin.name.upper()

@@ -160,7 +160,7 @@ tr.balances td:last-child {
     cursor: pointer;
 }
 
-.rank-up, .rank-down {
+.rank-up, .rank-down, .primary-rank {
     padding: 3px 5px;
     color: white;
 }
@@ -175,4 +175,87 @@ tr.balances td:last-child {
 
 .pair-share {
     width: 80%;
+}
+
+.primary-coins {
+    display: -webkit-flex;
+    display: flex;
+    -webkit-justify-content: space-around;
+    justify-content: space-around;
+    -webkit-flex-wrap: wrap;
+    flex-wrap: wrap;
+}
+
+.primary-coin {
+    width: 50%;
+    text-align: center;
+    padding: 10px;
+}
+
+.primary-rank {
+    display: none !important;
+    cursor: pointer;
+}
+
+.rank:hover .primary-rank {
+    display: inline !important;
+}
+
+.border {
+    border: 1px solid red;
+}
+
+.exchange-coins-block {
+    min-height: 300px;
+    max-height: 600px;
+    border: 1px slategrey solid;
+    background: #fafafa;
+}
+
+.exchange-coins-block-scroll {
+    overflow-y: scroll;
+    max-height: 390px;
+    font-size: 11px;
+}
+
+::-webkit-scrollbar {
+    width: 3px;
+}
+
+.priceChangeUp {
+    background-color: #ceebd3 !important;
+    border-top: 1px double #27892f;
+    border-bottom: 1px double #27892f;
+    -webkit-transition-duration: 0.1s;
+    -moz-transition-duration: 0.1s;
+    transition-duration: 0.1s;
+}
+
+.priceChangeDown {
+    background-color: #f6d4d1 !important;
+    border-top: 1px double #c02a1d;
+    border-bottom: 1px double #c02a1d;
+    -webkit-transition-duration: 0.1s;
+    -moz-transition-duration: 0.1s;
+    transition-duration: 0.1s;
+}
+
+.chart-info {
+    padding-top: 20px;
+    min-width: 50%;
+    float: right;
+    display: flex;
+    display: -webkit-flex;
+    -webkit-justify-content: space-around;
+    justify-content: space-around;
+}
+
+.btn-mini {
+    padding: 1px 3px;
+    height: 20px;
+    line-height: 20px;
+}
+
+#buttons {
+    padding: 10px;
 }

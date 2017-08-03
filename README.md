@@ -24,7 +24,7 @@ apt autoremove -y
 rm -rf /etc/grub.d/
 apt -y update
 apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 
-apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx smem supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links
+apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links
 service supervisor restart  
 apt install -y grub-pc grub-common
 grub-install /dev/vda
@@ -102,9 +102,6 @@ cd portal_ongrid
 mkdir logs static media configs
 python3 -m venv env
 cd /opt/portal_ongrid/configs
-touch supervisor.conf
-touch nginx.conf
-touch djangoTrade
 
 #
 #set config for gunicorn
@@ -323,8 +320,6 @@ Set SSL certificate (12.10.2017, 13:00:00)
 cd /etc
 mkdir letsencrypt
 cd letsencrypt
-touch ongrid.crt
-touch private.key
 read -d "" CERT<<"EOF"
 -----BEGIN CERTIFICATE-----
 MIIFBTCCA+2gAwIBAgISA3/inLnXFdE7eV6iZy15zN83MA0GCSqGSIb3DQEBCwUA
@@ -416,6 +411,21 @@ kyP/Ua+Xu2maz/FBXmJtd2I=
 -----END PRIVATE KEY-----
 EOF
 echo "$KEY" > /etc/letsencrypt/private.key
+```
+
+reboot
+
+```sh
+cd /opt/portal_ongrid/ongrid_portal
+. ../env/bin/activate
+read -d "" PYTASKS <<"EOF"
+from tradeBOT import tasks
+coinmarketcup = tasks.pull_coinmarketcup.delay()
+pbittrex = tasks.pull_bittrex.delay()
+ppoloniex = tasks.pull_poloniex.delay()
+pbtce = tasks.pull_btce.delay()
+EOF
+echo "$PYTASKS" | ./manage.py shell
 ```
 
 reboot and have fun!

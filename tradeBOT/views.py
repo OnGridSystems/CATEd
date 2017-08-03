@@ -1,8 +1,13 @@
+import json
+
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from trade.models import UserExchanges, Exchanges
-from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin
+from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin, UserMainCoinPriority, \
+    ExchangeTicker
+from channels.channel import Channel
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 def main(request):
@@ -15,10 +20,7 @@ def setup(request, pk):
     args = {}
     try:
         args['user_exchange'] = UserExchanges.objects.get(pk=pk, user=request.user)
-        args['coins'] = ExchangeCoin.objects.filter(exchange=args['user_exchange'].exchange).order_by('-is_active',
-                                                                                                      'name')
-        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by(
-            '-rank')
+        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by('-rank')
         args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange)
     except UserExchanges.DoesNotExist:
         return redirect('index')
@@ -32,7 +34,7 @@ def add_user_coin(request):
         try:
             user_exchange = UserExchanges.objects.get(pk=user_exchange_pk)
             coin = ExchangeCoin.objects.get(pk=coin_pk)
-            user_coin = UserCoin.objects.get(coin=coin, user_exchange=user_exchange)
+            user_coin = UserCoin.objects.get(coin=coin, user_exchange=user_exchange, user=request.user)
         except ExchangeCoin.DoesNotExist:
             pass
         except UserExchanges.DoesNotExist:
@@ -88,6 +90,8 @@ def set_share(request):
     if request.is_ajax():
         user_coin_id = request.POST.get('coin_id')
         share = request.POST.get('share')
+        if int(share) < 0:
+            return HttpResponse('Invalid request', status=200)
         user_exch = request.POST.get('user_exch')
         if int(share) == 0:
             try:
@@ -97,7 +101,9 @@ def set_share(request):
             except UserCoin.DoesNotExist:
                 return HttpResponse('Not your coin', status=200)
             return HttpResponse('ok', status=200)
-        user_coins_share_summ = UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(Sum('share'))['share__sum']
+        user_coins_share_summ = \
+            UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(
+                Sum('share'))['share__sum']
         if user_coins_share_summ is None:
             user_coins_share_summ = 0
         if float(user_coins_share_summ) + float(share) > 100:
@@ -136,3 +142,87 @@ def change_user_exchange_script_activity(request):
             return HttpResponse('true', status=200)
         except UserExchanges.DoesNotExist:
             return HttpResponse('false', status=200)
+
+
+def change_primary_coin(request):
+    if request.is_ajax():
+        user_exch_pk = request.POST.get('user_exch')
+        ue = UserExchanges.objects.get(pk=user_exch_pk)
+        coin_pk = request.POST.get('coin')
+        coin = ExchangeMainCoin.objects.get(pk=coin_pk)
+        try:
+            user_primary_coin = UserMainCoinPriority.objects.get(user_exchange=ue, main_coin=coin)
+            user_primary_coin.is_active = not user_primary_coin.is_active
+            user_primary_coin.save()
+        except UserMainCoinPriority.DoesNotExist:
+            new_user_primary_coin = UserMainCoinPriority()
+            new_user_primary_coin.main_coin = coin
+            new_user_primary_coin.priority = 1
+            new_user_primary_coin.user_exchange = ue
+            new_user_primary_coin.is_active = False
+            new_user_primary_coin.save()
+        return HttpResponse('ok', status=200)
+
+
+def change_primary_coin_rank(request):
+    if request.is_ajax():
+        type_r = request.POST.get('type')
+        ue_pk = request.POST.get('user_exch')
+        coin_pk = request.POST.get('coin')
+        ue = UserExchanges.objects.get(pk=ue_pk)
+        coin = ExchangeMainCoin.objects.get(pk=coin_pk)
+        try:
+            user_primary_coin = UserMainCoinPriority.objects.get(user_exchange=ue, main_coin=coin)
+            if type_r == 'up':
+                user_primary_coin.priority += 1
+            elif type_r == 'down':
+                if user_primary_coin.priority > 1:
+                    user_primary_coin.priority -= 1
+            user_primary_coin.save()
+        except UserMainCoinPriority.DoesNotExist:
+            new_user_primary_coin = UserMainCoinPriority()
+            new_user_primary_coin.main_coin = coin
+            if type_r == 'up':
+                new_user_primary_coin.priority = 2
+            else:
+                new_user_primary_coin.priority = 1
+            new_user_primary_coin.user_exchange = ue
+            new_user_primary_coin.is_active = True
+            new_user_primary_coin.save()
+        return HttpResponse('ok', status=200)
+
+
+def get_ticker(request):
+    if request.is_ajax():
+        pair_id = request.POST.get('pair_id')
+        intervale = int(request.POST.get('intervale'))
+        ticker_d = []
+        try:
+            ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
+            for i in range(0, len(ticker), intervale):
+                # print(str(i) + '------------------------------------------------')
+                cur_ticker = {'date': ticker[i]['date_time'], 'open': ticker[i]['last'], 'low': ticker[i]['last'],
+                              'high': ticker[i]['last']}
+                try:
+                    cur_ticker['close'] = ticker[i + intervale]['last']
+                except IndexError:
+                    cur_ticker['close'] = ticker[len(ticker) - 1]['last']
+                for j in range(intervale + 1):
+                    # print('Текущий ' + str(ticker[i+j]['last']))
+                    try:
+                        if ticker[i + j]['last'] < cur_ticker['low']:
+                            cur_ticker['low'] = ticker[i + j]['last']
+                    except IndexError:
+                        if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
+                            cur_ticker['low'] = ticker[len(ticker) - 1]['last']
+                    try:
+                        if ticker[i + j]['last'] > cur_ticker['high']:
+                            # print("Было " + str(cur_ticker['high']) + ' Стало ' + str(ticker[i + j]['last']))
+                            cur_ticker['high'] = ticker[i + j]['last']
+                    except IndexError:
+                        if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
+                            cur_ticker['high'] = ticker[len(ticker) - 1]['last']
+                ticker_d.append(cur_ticker)
+            return HttpResponse(json.dumps(list(ticker_d), cls=DjangoJSONEncoder), status=200)
+        except Pair.DoesNotExist:
+            return None

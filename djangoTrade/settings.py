@@ -32,6 +32,10 @@ LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 
+
+# redis sessions
+SESSION_ENGINE = 'redis_sessions.session'
+
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -63,14 +67,15 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'trade',
     'tradeBOT',
+    'monitoring',
     'user_profile',
     'django_celery_beat',
     'allauth_temp',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'monitoring',
     'django.contrib.humanize',
+    'channels',
     # ... include the providers you want to enable:
     # 'allauth.socialaccount.providers.facebook',
     # 'allauth.socialaccount.providers.google',
@@ -177,3 +182,15 @@ YANDEX_MONEY_CLIENT_SECRET = '211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69
 STATIC_ROOT = '/opt/portal_ongrid/static'
 MEDIA_ROOT = '/opt/portal_ongrid/media'
 MEDIA_URL = '/media/'
+
+# channels
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "asgi_redis.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("localhost", 6379)],
+        },
+        "ROUTING": "djangoTrade.routing.channel_routing",
+    },
+}
