@@ -28,7 +28,7 @@ class UserPools(models.Model):
 
 
 class Worker(models.Model):
-    address_pool = models.ForeignKey(UserPools)
+    address_pool = models.ForeignKey(UserPools, null=True)
     name = models.CharField(max_length=255)
     last_submit_time = models.DateTimeField(null=True)
     reported_hash_rate = models.DecimalField(decimal_places=1, max_digits=5)
@@ -37,6 +37,7 @@ class Worker(models.Model):
     stale_shares = models.IntegerField(null=True)
     invalid_share_ratio = models.IntegerField(null=True)
     last_update = models.DateTimeField(auto_now=True)
+    uptime = models.BigIntegerField(null=True)
 
     def __str__(self):
         return self.address_pool.name + " - " + self.name + ": " + str(self.last_update)

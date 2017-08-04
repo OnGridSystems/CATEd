@@ -6,7 +6,6 @@ from django.shortcuts import render
 
 from monitoring.models import Worker, UserPools, WorkersHistory
 
-
 def monitor(request):
     args = {'pools': UserPools.objects.all()}
     return render(request, 'monitoring/pools.html', args)
