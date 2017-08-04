@@ -1,4 +1,6 @@
 from __future__ import absolute_import, unicode_literals
+
+import json
 import os
 import re
 from celery.schedules import crontab
@@ -9,13 +11,16 @@ from celery import shared_task
 import time
 import requests
 from decimal import Decimal
+
+from channels import Group
+
 from trade.drivers.btce_driver import APIError
 from trade.drivers import btce_trader, bittrex_driver
 from poloniex import Poloniex, PoloniexCommandException
 from yandex_money.api import Wallet, ExternalPayment
 
 from trade.models import Exchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker
 
 
 @shared_task
@@ -116,60 +121,60 @@ def pull_bittrex():
     return True
 
 
-@shared_task
-def pull_btce():
-    exchange = Exchanges.objects.get(exchange='btc-e')
-    coins = requests.get('https://btc-e.nz/api/3/info').json()
-    pairs = list(coins['pairs'].keys())
-    for item in pairs:
-        pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
-        if pair:
-            try:
-                main_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(1))
-                if main_coin_in_top:
-                    try:
-                        main_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
-                    except ExchangeCoin.DoesNotExist:
-                        new_coin = ExchangeCoin()
-                        new_coin.exchange = exchange
-                        new_coin.name = main_coin_in_top.name
-                        new_coin.symbol = pair.group(1)
-                        new_coin.is_active = not coins['pairs'][item]['hidden']
-                        new_coin.save()
-                        try:
-                            old_primary_coin = ExchangeMainCoin.objects.get(coin=new_coin)
-                        except ExchangeMainCoin.DoesNotExist:
-                            new_primary_coin = ExchangeMainCoin()
-                            new_primary_coin.coin = new_coin
-                            new_primary_coin.total = 0
-                            new_primary_coin.save()
-                second_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(2))
-                if second_coin_in_top:
-                    try:
-                        second_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
-                    except ExchangeCoin.DoesNotExist:
-                        new_coin = ExchangeCoin()
-                        new_coin.exchange = exchange
-                        new_coin.name = second_coin_in_top.name
-                        new_coin.symbol = pair.group(2)
-                        new_coin.is_active = not coins['pairs'][item]['hidden']
-                        new_coin.save()
-            except CoinMarketCupCoin.DoesNotExist:
-                pass
-            try:
-                main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
-                second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
-                if main_coin and second_coin:
-                    try:
-                        old_pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
-                    except Pair.DoesNotExist:
-                        new_pair = Pair()
-                        new_pair.main_coin = main_coin
-                        new_pair.second_coin = second_coin
-                        new_pair.save()
-            except ExchangeCoin.DoesNotExist:
-                pass
-    return True
+# @shared_task
+# def pull_btce():
+#     exchange = Exchanges.objects.get(exchange='btc-e')
+#     coins = requests.get('https://btc-e.nz/api/3/info').json()
+#     pairs = list(coins['pairs'].keys())
+#     for item in pairs:
+#         pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
+#         if pair:
+#             try:
+#                 main_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(1))
+#                 if main_coin_in_top:
+#                     try:
+#                         main_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+#                     except ExchangeCoin.DoesNotExist:
+#                         new_coin = ExchangeCoin()
+#                         new_coin.exchange = exchange
+#                         new_coin.name = main_coin_in_top.name
+#                         new_coin.symbol = pair.group(1)
+#                         new_coin.is_active = not coins['pairs'][item]['hidden']
+#                         new_coin.save()
+#                         try:
+#                             old_primary_coin = ExchangeMainCoin.objects.get(coin=new_coin)
+#                         except ExchangeMainCoin.DoesNotExist:
+#                             new_primary_coin = ExchangeMainCoin()
+#                             new_primary_coin.coin = new_coin
+#                             new_primary_coin.total = 0
+#                             new_primary_coin.save()
+#                 second_coin_in_top = CoinMarketCupCoin.objects.get(symbol=pair.group(2))
+#                 if second_coin_in_top:
+#                     try:
+#                         second_coin_exist = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+#                     except ExchangeCoin.DoesNotExist:
+#                         new_coin = ExchangeCoin()
+#                         new_coin.exchange = exchange
+#                         new_coin.name = second_coin_in_top.name
+#                         new_coin.symbol = pair.group(2)
+#                         new_coin.is_active = not coins['pairs'][item]['hidden']
+#                         new_coin.save()
+#             except CoinMarketCupCoin.DoesNotExist:
+#                 pass
+#             try:
+#                 main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+#                 second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+#                 if main_coin and second_coin:
+#                     try:
+#                         old_pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+#                     except Pair.DoesNotExist:
+#                         new_pair = Pair()
+#                         new_pair.main_coin = main_coin
+#                         new_pair.second_coin = second_coin
+#                         new_pair.save()
+#             except ExchangeCoin.DoesNotExist:
+#                 pass
+#     return True
 
 
 @shared_task
@@ -182,6 +187,7 @@ def pull_coinmarketcup():
                 old_coinmarket_coin.coin_market_id = item['id']
                 old_coinmarket_coin.name = item['name']
                 old_coinmarket_coin.price_usd = item['price_usd']
+                old_coinmarket_coin.rank = item['rank']
                 old_coinmarket_coin.volume_usd_24h = item['24h_volume_usd']
                 old_coinmarket_coin.available_supply = item['available_supply']
                 old_coinmarket_coin.total_supply = item['total_supply']
@@ -197,4 +203,83 @@ def pull_coinmarketcup():
                 new_coin.available_supply = item['available_supply']
                 new_coin.total_supply = item['total_supply']
                 new_coin.save()
+    return True
+
+
+@periodic_task(run_every=datetime.timedelta(minutes=1))
+def pull_poloniex_ticker():
+    exchange = Exchanges.objects.get(exchange='poloniex')
+    ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
+    to_template = []
+    for item in ticker:
+        pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
+        try:
+            main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+            second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+            pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+            new_ticker = ExchangeTicker()
+            new_ticker.exchange = exchange
+            new_ticker.pair = pair
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange,
+                                                            date_time__gt=datetime.date.today()).order_by(
+                'date_time').first()
+            if old_exch_ticker is not None:
+                old_last = old_exch_ticker.last
+                new_last = ticker[item]['last']
+                new_ticker.percent_change = round((float(new_last) - float(old_last)) / float(old_last), 8)
+            new_ticker.high = ticker[item]['high24hr']
+            new_ticker.low = ticker[item]['low24hr']
+            new_ticker.bid = ticker[item]['highestBid']
+            new_ticker.ask = ticker[item]['lowestAsk']
+            new_ticker.base_volume = ticker[item]['baseVolume']
+            new_ticker.last = ticker[item]['last']
+            new_ticker.save()
+            pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
+                         'percent': round(new_ticker.percent_change * 100, 2)}
+            to_template.append(pair_temp)
+        except ExchangeCoin.DoesNotExist:
+            pass
+        except Pair.DoesNotExist:
+            pass
+    if len(to_template) > 0:
+        Group("trade").send({'text': json.dumps(to_template)})
+    return True
+
+
+@periodic_task(run_every=crontab(minute='*/1'))
+def pull_bittrex_ticker():
+    to_template = []
+    exchange = Exchanges.objects.get(exchange='bittrex')
+    ticker = requests.get('https://bittrex.com/api/v1.1/public/getmarketsummaries').json()
+    for item in ticker['result']:
+        pair_r = re.match(r'([a-zA-Z0-9]+)-([a-zA-Z0-9]+)', item['MarketName'])
+        try:
+            main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair_r.group(1))
+            second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair_r.group(2))
+            pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+            new_ticker = ExchangeTicker()
+            new_ticker.exchange = exchange
+            new_ticker.pair = pair
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).order_by(
+                '-date_time').first()
+            if old_exch_ticker is not None:
+                old_last = old_exch_ticker.last
+                new_last = item['Last']
+                new_ticker.percent_change = round((float(new_last) - float(old_last)) / float(old_last), 8)
+            new_ticker.high = item['High']
+            new_ticker.low = item['Low']
+            new_ticker.bid = item['Bid']
+            new_ticker.ask = item['Ask']
+            new_ticker.base_volume = item['BaseVolume']
+            new_ticker.last = item['Last']
+            new_ticker.save()
+            pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
+                         'percent': round(new_ticker.percent_change * 100, 2)}
+            to_template.append(pair_temp)
+        except ExchangeCoin.DoesNotExist:
+            pass
+        except Pair.DoesNotExist:
+            pass
+    if len(to_template) > 0:
+        Group("trade").send({'text': json.dumps(to_template)})
     return True

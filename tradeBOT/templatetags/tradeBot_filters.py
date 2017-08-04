@@ -1,6 +1,7 @@
 from django import template
-from tradeBOT.models import UserDeactivatedPairs, CoinMarketCupCoin, UserMainCoinPriority
+from tradeBOT.models import UserDeactivatedPairs, CoinMarketCupCoin, UserMainCoinPriority, Pair, ExchangeTicker
 from trade.models import UserBalance
+
 
 register = template.Library()
 
@@ -52,3 +53,30 @@ def get_user_primary_coins(user_exchange, primary_coin):
                 'success': True}
     except UserMainCoinPriority.DoesNotExist:
         return {'success': False}
+
+
+@register.inclusion_tag('tradeBOT/get_primary_pairs.html')
+def get_primary_pairs(coin, user_exchange):
+    try:
+        pairs = Pair.objects.filter(main_coin=coin)
+        return {'pairs': pairs, 'user_exchange': user_exchange}
+    except Pair.DoesNotExist:
+        return None
+
+
+@register.filter(name='get_last')
+def get_last(pair, user_exchange):
+    ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
+    if ticker is not None:
+        return round(ticker.last, 6)
+    else:
+        return 0
+
+
+@register.filter(name='get_change_percent')
+def get_change_percent(pair, user_exchange):
+    ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
+    if ticker is not None:
+        return round(ticker.percent_change * 100, 2)
+    else:
+        return 0
