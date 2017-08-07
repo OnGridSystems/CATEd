@@ -9,6 +9,10 @@ from django.shortcuts import render
 import requests
 import time
 import re
+import paramiko
+import json
+
+from paramiko.ssh_exception import NoValidConnectionsError
 
 from monitoring.models import *
 
@@ -90,4 +94,41 @@ def save_worker_history():
         new_worker_history.date_time = date
         new_worker_history.reported_hash_rate = worker.reported_hash_rate
         new_worker_history.save()
+    return True
+
+
+# @periodic_task(run_every=crontab(minute='*/5'))
+@shared_task
+def uptime_worker():
+    ssh = paramiko.SSHClient()
+    privkey = paramiko.RSAKey.from_private_key_file('/home/klyaus/.ssh/id_rsa')
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect('vpn.ongrid.pro', username='d.suldin', pkey=privkey)
+    comm = "python3 /opt/script.py"
+    print("Executing {}".format(comm))
+    stdin, stdout, stderr = ssh.exec_command(comm)
+    h = json.loads(stdout.read().decode('utf-8'))
+    for i in range(len(h)):
+        rigip = str(h[i][0])
+        print(h[i][1])
+        print(Worker.objects.filter(name=h[i][1]).values("uptime"))
+        try:
+            ssh.connect(rigip, username='user', pkey=privkey)
+            rigcomm = "awk '{print int($1)}' /proc/uptime"
+            stdin, stdout, stderr = ssh.exec_command(rigcomm)
+            name = h[i][1]
+            uptime = stdout.read().decode('utf-8')
+            worker = Worker.objects.filter(name=name)
+            if worker is not None:
+                for w in worker:
+                    w.uptime = uptime
+                    w.save()
+            else:
+                new_worker = Worker()
+                new_worker.name = name
+                new_worker.uptime = uptime
+                new_worker.save()
+        except NoValidConnectionsError:
+            # print(rigip + ' не найден')
+            pass
     return True

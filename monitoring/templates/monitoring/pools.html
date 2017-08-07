@@ -9,12 +9,14 @@
             {% if pools %}
                 <ul class="collapsible" data-collapsible="expandable">
                     <table class="exchange z-depth-1">
-                        <col width="20%">
-                        <col width="20%">
+                        <col width="15%">
+                        <col width="10%">
+                        <col width="15%">
                         <col width="60%">
                         <thead>
                         <tr class="exchange-header">
                             <th>Name</th>
+                            <th>Active Workers</th>
                             <th>Hashrate</th>
                             <th>Address</th>
                         </tr>
@@ -24,11 +26,13 @@
                         <li>
                             <div class="collapsible-header  active green lighten-5">
                                 <table class="exchange">
-                                    <col width="20%">
-                                    <col width="20%">
+                                    <col width="15%">
+                                    <col width="10%">
+                                    <col width="15%">
                                     <col width="60%">
                                     <tr>
                                         <td>{{ pool.name }}</td>
+                                        <td>{{ pool | amount_workers }}</td>
                                         <td>{{ pool | pool_total_hash }} Mh/s</td>
                                         <td>{{ pool.address }}</td>
                                     </tr>
@@ -41,7 +45,6 @@
                     {% endfor %}
                 </ul>
             {% endif %}
-            <h2 class="center">Holdings Chart</h2>
             <div id="gra" style="height: 400px; min-width: 310px"></div>
         </div>
     </div>
@@ -70,7 +73,7 @@
                                     seriesOptions[i] = {
                                         name: name,
                                         data: hold
-                                    };monitoring
+                                    };
                                     seriesCounter += 1;
                                     if (seriesCounter === data.length) {
                                         createChart();
@@ -113,7 +116,7 @@
         function createChart() {
             Highcharts.stockChart('gra', {
                 title: {
-                    text: 'Хуяк'
+                    text: 'Hashrate'
                 },
                 xAxis: {
                     type: 'datetime',
