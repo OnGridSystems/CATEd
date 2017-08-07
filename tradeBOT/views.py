@@ -1,5 +1,6 @@
 import json
-
+import datetime
+import time
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -21,7 +22,8 @@ def setup(request, pk):
     try:
         args['user_exchange'] = UserExchanges.objects.get(pk=pk, user=request.user)
         args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by('-rank')
-        args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange)
+        args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange).order_by(
+            'coin__symbol')
     except UserExchanges.DoesNotExist:
         return redirect('index')
     return render(request, 'tradeBOT/setup.html', args)
@@ -196,11 +198,17 @@ def get_ticker(request):
     if request.is_ajax():
         pair_id = request.POST.get('pair_id')
         intervale = int(request.POST.get('intervale'))
+        zoom = request.POST.get('zoom')
         ticker_d = []
         try:
-            ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
+            if zoom == 'all':
+                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
+            else:
+                zoom = int(zoom)
+                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id,
+                                                            date_time__gte=int(
+                                                                time.time() - (zoom * 60 * 60))).values())
             for i in range(0, len(ticker), intervale):
-                # print(str(i) + '------------------------------------------------')
                 cur_ticker = {'date': ticker[i]['date_time'], 'open': ticker[i]['last'], 'low': ticker[i]['last'],
                               'high': ticker[i]['last']}
                 try:
@@ -208,7 +216,6 @@ def get_ticker(request):
                 except IndexError:
                     cur_ticker['close'] = ticker[len(ticker) - 1]['last']
                 for j in range(intervale + 1):
-                    # print('Текущий ' + str(ticker[i+j]['last']))
                     try:
                         if ticker[i + j]['last'] < cur_ticker['low']:
                             cur_ticker['low'] = ticker[i + j]['last']
@@ -217,7 +224,6 @@ def get_ticker(request):
                             cur_ticker['low'] = ticker[len(ticker) - 1]['last']
                     try:
                         if ticker[i + j]['last'] > cur_ticker['high']:
-                            # print("Было " + str(cur_ticker['high']) + ' Стало ' + str(ticker[i + j]['last']))
                             cur_ticker['high'] = ticker[i + j]['last']
                     except IndexError:
                         if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:

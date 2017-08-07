@@ -1,7 +1,8 @@
 $(document).ready(function () {
     pair_id = $('.pair_tr').data('pair-id');
-    $('.pair_tr[data-pair-id='+pair_id+']').addClass('yellow lighten-3');
-    intervale = $('#buttons button').data('intervale');
+    $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('yellow lighten-3');
+    intervale = $('#buttons .candlestick').data('intervale');
+    zoom = $('#buttons .zoom').data('zoom');
     draw_graph();
 
     $('.pair_tr').on('click', function () {
@@ -13,12 +14,19 @@ $(document).ready(function () {
         }
     });
 
-    $('#buttons button').on('click', function() {
-        $('#buttons button').removeClass('green');
+    $('#buttons .candlestick').on('click', function () {
+        $('#buttons .candlestick').removeClass('green');
         $(this).addClass('green');
         intervale = $(this).data('intervale');
         draw_graph();
     });
+    $('#buttons .zoom').on('click', function () {
+        $('#buttons .zoom').removeClass('green');
+        $(this).addClass('green');
+        zoom = $(this).data('zoom');
+        draw_graph();
+    });
+
     $('select').material_select();
     $('.modal').modal();
     $('#yandex-wallet-add').hide();
@@ -263,23 +271,33 @@ function draw_graph() {
     $.post('/trade/get_ticker/', {
         pair_id: pair_id,
         csrfmiddlewaretoken: getCookie('csrftoken'),
-        intervale: intervale
+        intervale: intervale,
+        zoom: zoom
     }, function (ticker) {
         for (var i = 1; i < ticker.length; i++) {
-            ohlcData.push([new Date(Date.parse(ticker[i].date)), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
+            console.log(ticker[i].date);
+            console.log('Это ' + new Date(ticker[i].date*1000));
+            ohlcData.push([new Date(ticker[i].date * 1000), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
             var volume = 100 + 15 * Math.random();
-            volumeData.push([new Date(Date.parse(ticker[i].date)), round(volume)]);
+            volumeData.push([new Date(ticker[i].date * 1000), round(volume)]);
         }
         $('#jqChart').jqChart({
             legend: {visible: false},
-            border: {lineWidth: 0, padding: 0},
+            border: {lineWidth: 1, padding: 0},
             tooltips: {
+                disabled: false,
                 type: 'shared',
-                disabled: true
+                borderColor: 'auto',
+                snapArea: 100,
+                highlighting: true,
+                highlightingFillStyle: 'rgba(204, 204, 204, 0.5)',
+                highlightingStrokeStyle: 'rgba(204, 204, 204, 0.5)'
             },
             crosshairs: {
                 enabled: true,
-                hLine: false
+                hLine: {strokeStyle: '#9c9b96'},
+                vLine: {strokeStyle: '#9c9b96'},
+                snapToDataPoints: false
             },
             animation: {duration: 0.0001},
             axes: [
@@ -291,25 +309,32 @@ function draw_graph() {
             ],
             series: [
                 {
-                    title: 'Price Index',
                     type: 'candlestick',
                     data: ohlcData,
-                    priceUpFillStyle: 'green',
-                    priceDownFillStyle: 'red',
-                    strokeStyle: 'black'
+                    priceUpFillStyle: '#4caf50',
+                    priceDownFillStyle: '#f44336',
+                    strokeStyle: 'black',
+                    pointWidth: 0.6
                 }
             ]
         });
         $('#jqChartVolume').jqChart({
             legend: {visible: false},
-            border: {lineWidth: 0, padding: 0},
+            border: {lineWidth: 1, padding: 0},
             tooltips: {
+                disabled: false,
                 type: 'shared',
-                disabled: true
+                borderColor: 'black',
+                snapArea: 100,
+                highlighting: true,
+                highlightingFillStyle: 'rgba(204, 204, 204, 0.5)',
+                highlightingStrokeStyle: 'rgba(204, 204, 204, 0.5)'
             },
             crosshairs: {
                 enabled: true,
-                hLine: false
+                hLine: {strokeStyle: '#9c9b96'},
+                vLine: {strokeStyle: '#9c9b96'},
+                snapToDataPoints: false
             },
             animation: {duration: 0.0001},
             axes: [
@@ -345,7 +370,7 @@ function draw_graph() {
             $('#low').html(data.low);
             $('#close').html(data.close);
 
-            var date = data.chart.stringFormat(data.x, "mmmm d, yyyy");
+            var date = data.chart.stringFormat(data.x, "dd.mm.yyyy HH:MM");
 
             $('#date').html(date);
 
@@ -386,7 +411,7 @@ function draw_graph() {
 }
 
 function round(d) {
-    return Math.round(1000000 * d) / 1000000
+    return Math.round(100000000 * d) / 100000000
 }
 
 function getCookie(name) {

@@ -1,23 +1,14 @@
 from __future__ import absolute_import, unicode_literals
-
 import json
-import os
 import re
 from celery.schedules import crontab
 from celery.task import periodic_task
 import datetime
-from http.client import HTTPException
 from celery import shared_task
 import time
 import requests
-from decimal import Decimal
-
 from channels import Group
 
-from trade.drivers.btce_driver import APIError
-from trade.drivers import btce_trader, bittrex_driver
-from poloniex import Poloniex, PoloniexCommandException
-from yandex_money.api import Wallet, ExternalPayment
 
 from trade.models import Exchanges
 from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker
@@ -210,6 +201,7 @@ def pull_coinmarketcup():
 def pull_poloniex_ticker():
     exchange = Exchanges.objects.get(exchange='poloniex')
     ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
+    date_time = round_down(time.time())
     to_template = []
     for item in ticker:
         pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
@@ -220,9 +212,7 @@ def pull_poloniex_ticker():
             new_ticker = ExchangeTicker()
             new_ticker.exchange = exchange
             new_ticker.pair = pair
-            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange,
-                                                            date_time__gt=datetime.date.today()).order_by(
-                'date_time').first()
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(datetime.date.today().strftime('%s'))).order_by('date_time').first()
             if old_exch_ticker is not None:
                 old_last = old_exch_ticker.last
                 new_last = ticker[item]['last']
@@ -233,6 +223,7 @@ def pull_poloniex_ticker():
             new_ticker.ask = ticker[item]['lowestAsk']
             new_ticker.base_volume = ticker[item]['baseVolume']
             new_ticker.last = ticker[item]['last']
+            new_ticker.date_time = date_time
             new_ticker.save()
             pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
                          'percent': round(new_ticker.percent_change * 100, 2)}
@@ -251,6 +242,7 @@ def pull_bittrex_ticker():
     to_template = []
     exchange = Exchanges.objects.get(exchange='bittrex')
     ticker = requests.get('https://bittrex.com/api/v1.1/public/getmarketsummaries').json()
+    date_time = round_down(time.time())
     for item in ticker['result']:
         pair_r = re.match(r'([a-zA-Z0-9]+)-([a-zA-Z0-9]+)', item['MarketName'])
         try:
@@ -260,8 +252,7 @@ def pull_bittrex_ticker():
             new_ticker = ExchangeTicker()
             new_ticker.exchange = exchange
             new_ticker.pair = pair
-            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).order_by(
-                '-date_time').first()
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(datetime.date.today().strftime('%s'))).order_by('date_time').first()
             if old_exch_ticker is not None:
                 old_last = old_exch_ticker.last
                 new_last = item['Last']
@@ -272,6 +263,7 @@ def pull_bittrex_ticker():
             new_ticker.ask = item['Ask']
             new_ticker.base_volume = item['BaseVolume']
             new_ticker.last = item['Last']
+            new_ticker.date_time = date_time
             new_ticker.save()
             pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
                          'percent': round(new_ticker.percent_change * 100, 2)}
@@ -283,3 +275,8 @@ def pull_bittrex_ticker():
     if len(to_template) > 0:
         Group("trade").send({'text': json.dumps(to_template)})
     return True
+
+
+def round_down(x):
+    x = int(x)
+    return x - (x % 100)

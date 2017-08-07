@@ -212,6 +212,11 @@ tr.balances td:last-child {
     background: #fafafa;
 }
 
+.graph-block {
+    border: 1px slategrey solid;
+    background: #fafafa;
+}
+
 .exchange-coins-block-scroll {
     overflow-y: scroll;
     max-height: 390px;
@@ -241,6 +246,7 @@ tr.balances td:last-child {
 }
 
 .chart-info {
+    font-size: 0.8rem;
     padding-top: 20px;
     min-width: 50%;
     float: right;
@@ -258,4 +264,13 @@ tr.balances td:last-child {
 
 #buttons {
     padding: 10px;
+}
+
+.ui-jqchart-tooltip {
+    background: white;
+    color: black;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 10;
+    border: 1px solid black;
 }

@@ -10,8 +10,9 @@
             On
         </label>
     </div>
+    <br>
     <div class="row">
-        <div class="col s9 m9 l9">
+        <div class="col s9 m9 l9 graph-block">
             <div class="chart-info">
                 <div class="chart-info-item left">
                     <b></b>
@@ -42,17 +43,34 @@
                     </div>
                 </div>
                 <div>
-                    <div id="jqChartVolume" style="width: 98%; height: 150px;">
+                    <div id="jqChartVolume" style="width: 98%; height: 250px;">
                     </div>
                 </div>
                 <div class="clearfix"></div>
-                <div id="buttons">
-                    <b>Candlestick</b>
-                    <button data-intervale="5" class="btn waves-effect btn-mini white-text green">5 min</button>
-                    <button data-intervale="15" class="btn waves-effect btn-mini white-text">15 min</button>
-                    <button data-intervale="30" class="btn waves-effect btn-mini white-text">30 min</button>
-                    <button data-intervale="60" class="btn waves-effect btn-mini white-text">60 min</button>
-                    <button data-intervale="120" class="btn waves-effect btn-mini white-text">120 min</button>
+                <div class="row">
+                    <div class="col s6 m6 l6 right-align">
+                        <div id="buttons">
+                            <b>Zoom</b>
+                            <button data-zoom="6" class="zoom btn waves-effect btn-mini white-text green">6h</button>
+                            <button data-zoom="24" class="zoom btn waves-effect btn-mini white-text">1d</button>
+                            <button data-zoom="48" class="zoom btn waves-effect btn-mini white-text">2d</button>
+                            <button data-zoom="96" class="zoom btn waves-effect btn-mini white-text">4d</button>
+                            <button data-zoom="168" class="zoom btn waves-effect btn-mini white-text">1w</button>
+                            <button data-zoom="336" class="zoom btn waves-effect btn-mini white-text">2w</button>
+                            <button data-zoom="720" class="zoom btn waves-effect btn-mini white-text">1m</button>
+                            <button data-zoom="all" class="zoom btn waves-effect btn-mini white-text">all</button>
+                        </div>
+                    </div>
+                    <div class="col s6 m6 l6">
+                        <div id="buttons">
+                            <b>Candlestick</b>
+                            <button data-intervale="5" class="candlestick btn waves-effect btn-mini white-text green">5 min</button>
+                            <button data-intervale="15" class="candlestick btn waves-effect btn-mini white-text">15 min</button>
+                            <button data-intervale="30" class="candlestick btn waves-effect btn-mini white-text">30 min</button>
+                            <button data-intervale="60" class="candlestick btn waves-effect btn-mini white-text">1 hour</button>
+                            <button data-intervale="120" class="candlestick btn waves-effect btn-mini white-text">2 hours</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

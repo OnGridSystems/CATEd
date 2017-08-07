@@ -50,7 +50,7 @@ class Pair(models.Model):
     second_coin = models.ForeignKey(ExchangeCoin, related_name='%(class)s_second_coin')
 
     def __str__(self):
-        return self.main_coin.exchange.exchange + ': ' + self.main_coin.symbol.upper() + '_' +\
+        return self.main_coin.exchange.exchange + ': ' + self.main_coin.symbol.upper() + '_' + \
                self.second_coin.symbol.upper()
 
     class Meta:
@@ -105,7 +105,7 @@ class ExchangeTicker(models.Model):
     ask = models.DecimalField(max_digits=30, decimal_places=15)
     base_volume = models.DecimalField(max_digits=30, decimal_places=15)
     percent_change = models.DecimalField(max_digits=10, decimal_places=8, default=0)
-    date_time = models.DateTimeField(auto_now=True)
+    date_time = models.BigIntegerField(blank=False, null=False)
 
     def __str__(self):
         return self.exchange.exchange + ': ' + self.pair.main_coin.name.upper() + '-' + self.pair.second_coin.name.upper()

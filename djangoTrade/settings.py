@@ -13,7 +13,6 @@ from __future__ import absolute_import, unicode_literals
 import os
 
 # Celery options
-
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_RESULT_BACKEND = 'db+sqlite:///result.sqlite'
@@ -21,7 +20,6 @@ CELERY_TASK_SERIALIZER = 'json'
 # CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Europe/Moscow'
 CELERY_SEND_TASK_ERROR_EMAILS = True
-ADMINS = (('Сергей', 'achievement008@gmail.com'),)
 CELERYD_MAX_TASKS_PER_CHILD = 5
 
 # AllAuth setting
@@ -32,7 +30,6 @@ LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 
-
 # redis sessions
 SESSION_ENGINE = 'redis_sessions.session'
 
@@ -40,6 +37,8 @@ SESSION_ENGINE = 'redis_sessions.session'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_INDEX_TABLESPACE = 10
+
+ADMINS = (('Сергей', 'achievement008@gmail.com'),)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
