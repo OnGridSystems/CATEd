@@ -14,7 +14,8 @@ import requests
 from channels import Group
 from poloniex import Poloniex
 from trade.models import Exchanges, UserExchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair, \
+    ToTrade
 
 
 @shared_task
@@ -204,7 +205,7 @@ def pull_coinmarketcup():
 def pull_poloniex_ticker():
     exchange = Exchanges.objects.get(exchange='poloniex')
     ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
-    date_time = round_down(time.time())
+    date_time = round_down(time.time(), 1)
     to_template = []
     for item in ticker:
         pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
@@ -236,6 +237,7 @@ def pull_poloniex_ticker():
             pass
         except Pair.DoesNotExist:
             pass
+    calculate_to_trade.delay()
     if len(to_template) > 0:
         Group("trade").send({'text': json.dumps(to_template)})
     return True
@@ -246,7 +248,7 @@ def pull_bittrex_ticker():
     to_template = []
     exchange = Exchanges.objects.get(exchange='bittrex')
     ticker = requests.get('https://bittrex.com/api/v1.1/public/getmarketsummaries').json()
-    date_time = round_down(time.time())
+    date_time = round_down(time.time(), 1)
     for item in ticker['result']:
         pair_r = re.match(r'([a-zA-Z0-9]+)-([a-zA-Z0-9]+)', item['MarketName'])
         try:
@@ -282,9 +284,9 @@ def pull_bittrex_ticker():
     return True
 
 
-def round_down(x):
+def round_down(x, s):
     x = int(x)
-    return x - (x % 100)
+    return x - (x % (10 * s))
 
 
 @periodic_task(run_every=datetime.timedelta(hours=1))
@@ -323,11 +325,9 @@ def pull_poloniex_orders():
                             n_order.rate = order['rate']
                             total = (D(order['rate']) * D(order['amount'])).quantize(D('.000000001'))
                             if total.quantize(D('.00000001')) != D(str(order['total'])):
-                                print('her')
-                                print('Их тотал: ' + str(order['total']))
-                                print('Мой тотал: ' + str(round(float(total), 8)))
-                                print('----------------------')
-                                # n_order.save()
+                                total = round(float(total), 8)
+                            n_order.our_total = total
+                            n_order.save()
                 print(getcontext())
             except HTTPException:
                 print('Ошибка, начинаем заново')
@@ -336,7 +336,24 @@ def pull_poloniex_orders():
         # print("Никто не включил скрипт")
     return True
 
-# @shared_task
-# def calculate_to_trade():
-#     user_pairs = UserPair.objects.filter(~Q(change_percent=0) & ~Q(change_interval=0))
-#     for item in user_pairs:
+
+@shared_task
+def calculate_to_trade():
+    user_pairs = UserPair.objects.filter(~Q(change_percent=0) & ~Q(change_interval=0))
+    for item in user_pairs:
+        ticker = ExchangeTicker.objects.filter(pair=item.pair,
+                                               date_time__gte=time.time() - item.change_interval).earliest('date_time')
+        last_ticker = ExchangeTicker.objects.filter(pair=item.pair).latest('date_time')
+        if ticker is not None and last_ticker is not None:
+            change_percent = (last_ticker.last - ticker.last) / ticker.last
+            if abs(change_percent) >= item.change_percent:
+                to_trade = ToTrade()
+                to_trade.percent_react = change_percent
+                to_trade.user_pair = item
+                to_trade.type = 'up' if change_percent < 0 else 'down'
+                to_trade.price = last_ticker.last
+                to_trade.amount = 0
+                to_trade.total = 0
+                to_trade.fee = 0.015 if change_percent < 0 else 0.025
+                to_trade.cause = 'Got into the conditions'
+                to_trade.save()

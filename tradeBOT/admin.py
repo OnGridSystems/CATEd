@@ -41,8 +41,11 @@ class PairAdmin(admin.ModelAdmin):
 
 
 class ExchangeTickerAdmin(admin.ModelAdmin):
-    list_display = ['exchange', 'pair', 'high', 'last', 'low', 'bid', 'ask', 'percent_change', 'date_time']
+    list_display = [field.name for field in models.ExchangeTicker._meta.fields]
     list_filter = ['exchange', 'pair']
+
+    class Meta:
+        model = models.ExchangeTicker
 
 
 class OrderAdmin(admin.ModelAdmin):

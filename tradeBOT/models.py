@@ -124,6 +124,7 @@ class Order(models.Model):
 
 class ToTrade(models.Model):
     user_pair = models.ForeignKey(UserPair, blank=False, null=False)
+    percent_react = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
     type = models.CharField(max_length=10, blank=False, null=False)
     price = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
     amount = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)

@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from trade.models import UserExchanges, Exchanges
 from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, UserMainCoinPriority, \
-    ExchangeTicker, UserPair
+    ExchangeTicker, UserPair, ToTrade
 from django.core.serializers.json import DjangoJSONEncoder
 
 
@@ -19,6 +19,8 @@ def setup(request, pk):
             '-rank')
         args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange).order_by(
             'coin__symbol')
+        args['to_trade'] = ToTrade.objects.filter(user_pair__user_exchange=args['user_exchange']).order_by(
+            'date_updated')
     except UserExchanges.DoesNotExist:
         return redirect('index')
     return render(request, 'tradeBOT/setup.html', args)

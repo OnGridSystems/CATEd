@@ -79,6 +79,56 @@
                     </div>
                 </div>
             </div>
+            <div class="col s12 m12 l12 exchange-coins-block">
+                <table width="100%">
+                    <colgroup>
+                        <col width="10%">
+                        <col width="7%">
+                        <col width="6%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="16%">
+                        <col width="16%">
+                        <col width="17%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>Pair</th>
+                        <th>Percent change</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Total</th>
+                        <th>Fee</th>
+                        <th>Cause</th>
+                        <th>Date created</th>
+                        <th>Date updated</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in to_trade %}
+                        <tr>
+                            <td>{{ item.user_pair.pair }}</td>
+                            <td>{{ item.percent_react }}</td>
+                            <td>{{ item.type }}</td>
+                            <td>{{ item.price }}</td>
+                            <td>{{ item.amount }}</td>
+                            <td>{{ item.total }}</td>
+                            <td>{{ item.fee }}</td>
+                            <td>{{ item.cause }}</td>
+                            <td>{{ item.date_created }}</td>
+                            <td>{{ item.date_updated }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="10" class="center">Empty</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="col s3 m3 l3">
             <div class="exchange-coins-block">
@@ -170,12 +220,16 @@
                                             {% csrf_token %}
                                             <input type="hidden" name="user-exchange-pk" value="{{ user_exchange.pk }}">
                                             <input type="hidden" name="pair-pk" value="{{ pair.pk }}">
-                                            <p class="center">Specify the percentage of price change in the interval at which the
+                                            <p class="center">Specify the percentage of price change in the interval at
+                                                which the
                                                 script
                                                 will work.</p>
                                             Price changed by <input step="0.001" title="Change percent" type="number"
-                                                                    name="change_percent" value="{{ pair.pk | user_pair_percent_change }}"> percent in
-                                            <input title="Change interval" type="number" name="change_interval"  value="{{ pair.pk | user_pair_interval_change }}">
+                                                                    name="change_percent"
+                                                                    value="{{ pair.pk | user_pair_percent_change }}">
+                                            percent in
+                                            <input title="Change interval" type="number" name="change_interval"
+                                                   value="{{ pair.pk | user_pair_interval_change }}">
                                             seconds.
                                             <button>OK</button>
                                         </form>
