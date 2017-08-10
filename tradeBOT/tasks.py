@@ -1,6 +1,10 @@
 from __future__ import absolute_import, unicode_literals
 import json
 import re
+from django.db.models import Q
+from http.client import HTTPException
+import sys
+from decimal import Decimal as D, getcontext, setcontext
 from celery.schedules import crontab
 from celery.task import periodic_task
 import datetime
@@ -8,10 +12,9 @@ from celery import shared_task
 import time
 import requests
 from channels import Group
-
-
-from trade.models import Exchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker
+from poloniex import Poloniex
+from trade.models import Exchanges, UserExchanges
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair
 
 
 @shared_task
@@ -197,7 +200,7 @@ def pull_coinmarketcup():
     return True
 
 
-@periodic_task(run_every=datetime.timedelta(minutes=1))
+@periodic_task(run_every=datetime.timedelta(seconds=10))
 def pull_poloniex_ticker():
     exchange = Exchanges.objects.get(exchange='poloniex')
     ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
@@ -212,7 +215,8 @@ def pull_poloniex_ticker():
             new_ticker = ExchangeTicker()
             new_ticker.exchange = exchange
             new_ticker.pair = pair
-            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(datetime.date.today().strftime('%s'))).order_by('date_time').first()
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(
+                datetime.date.today().strftime('%s'))).order_by('date_time').first()
             if old_exch_ticker is not None:
                 old_last = old_exch_ticker.last
                 new_last = ticker[item]['last']
@@ -237,7 +241,7 @@ def pull_poloniex_ticker():
     return True
 
 
-@periodic_task(run_every=crontab(minute='*/1'))
+@periodic_task(run_every=datetime.timedelta(seconds=10))
 def pull_bittrex_ticker():
     to_template = []
     exchange = Exchanges.objects.get(exchange='bittrex')
@@ -252,7 +256,8 @@ def pull_bittrex_ticker():
             new_ticker = ExchangeTicker()
             new_ticker.exchange = exchange
             new_ticker.pair = pair
-            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(datetime.date.today().strftime('%s'))).order_by('date_time').first()
+            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(
+                datetime.date.today().strftime('%s'))).order_by('date_time').first()
             if old_exch_ticker is not None:
                 old_last = old_exch_ticker.last
                 new_last = item['Last']
@@ -280,3 +285,58 @@ def pull_bittrex_ticker():
 def round_down(x):
     x = int(x)
     return x - (x % 100)
+
+
+@periodic_task(run_every=datetime.timedelta(hours=1))
+def clean_ticker():
+    ExchangeTicker.objects.filter(date_time__lt=time.time() - 3600).delete()
+
+
+@shared_task
+def pull_poloniex_orders():
+    getcontext().rounding = 'ROUND_DOWN'
+    exchange = Exchanges.objects.get(exchange='poloniex')
+    poloniex_ue = UserExchanges.objects.filter(pk=4)
+    if len(poloniex_ue) > 0:
+        for ue in poloniex_ue:
+            try:
+                ue_apisecret = ue.apisecret.encode()
+                driver = Poloniex(secret=ue_apisecret, apikey=ue.apikey)
+                orders = driver.returnTradeHistory(start=1, end=9999999999)
+                for item in orders:
+                    for order in orders[item]:
+                        try:
+                            e_order = Order.objects.get(orderNumber=order['tradeID'])
+                        except Order.DoesNotExist:
+                            n_order = Order()
+                            n_order.ue = ue
+                            n_order.pair = item
+                            n_order.globalTradeID = order['globalTradeID']
+                            n_order.type = order['type']
+                            n_order.total = order['total']
+                            n_order.amount = order['amount']
+                            n_order.tradeID = order['tradeID']
+                            n_order.date_time = order['date']
+                            n_order.category = order['category']
+                            n_order.orderNumber = order['orderNumber']
+                            n_order.fee = order['fee']
+                            n_order.rate = order['rate']
+                            total = (D(order['rate']) * D(order['amount'])).quantize(D('.000000001'))
+                            if total.quantize(D('.00000001')) != D(str(order['total'])):
+                                print('her')
+                                print('Их тотал: ' + str(order['total']))
+                                print('Мой тотал: ' + str(round(float(total), 8)))
+                                print('----------------------')
+                                # n_order.save()
+                print(getcontext())
+            except HTTPException:
+                print('Ошибка, начинаем заново')
+    else:
+        pass
+        # print("Никто не включил скрипт")
+    return True
+
+# @shared_task
+# def calculate_to_trade():
+#     user_pairs = UserPair.objects.filter(~Q(change_percent=0) & ~Q(change_interval=0))
+#     for item in user_pairs:

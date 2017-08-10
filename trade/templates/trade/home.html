@@ -359,6 +359,7 @@
 {% block script %}
     <script type="text/javascript" src="{% static 'js/highstock.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/exporting.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/script.js' %}"></script>
     <script>
         var seriesOptions = [],
             seriesCounter = 0;
@@ -376,6 +377,7 @@
                                 dataType: 'json',
                                 async: !1,
                                 success: function (hold) {
+                                    console.log(hold);
                                     seriesOptions[i] = {
                                         name: name,
                                         data: hold

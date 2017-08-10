@@ -12,6 +12,7 @@ from trade.forms import UserExchangesForm, UserWalletForm
 from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, Transaction, UserHoldings
 from yandex_money.api import Wallet, ExternalPayment
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 @login_required
@@ -156,7 +157,7 @@ def get_holding(request):
         else:
             holdings = UserHoldings.objects.filter(type=type_r).order_by('date_time')
             list_hold = [obj.as_list() for obj in holdings]
-            return HttpResponse(json.dumps(list_hold), status=200)
+            return HttpResponse(json.dumps(list_hold, cls=DjangoJSONEncoder), status=200)
 
 
 def add_new_transaction_comment(request):

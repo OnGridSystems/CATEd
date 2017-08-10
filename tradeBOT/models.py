@@ -18,19 +18,18 @@ class ExchangeCoin(models.Model):
         verbose_name_plural = "Монеты биржи"
 
 
-class UserCoin(models.Model):
+class UserPair(models.Model):
     user = models.ForeignKey(User)
-    coin = models.ForeignKey(ExchangeCoin)
     user_exchange = models.ForeignKey(UserExchanges)
+    pair = models.ForeignKey('Pair')
     share = models.DecimalField(decimal_places=2, max_digits=5, default=0)
     rank = models.PositiveIntegerField(default=1)
-
-    def __str__(self):
-        return self.user.username + ' ' + self.coin.symbol
+    change_percent = models.DecimalField(max_digits=5, decimal_places=3, default=0)
+    change_interval = models.IntegerField(default=0)
 
     class Meta:
-        verbose_name = "Монета пользователя"
-        verbose_name_plural = "Монеты пользователя"
+        verbose_name = "Пара пользователя"
+        verbose_name_plural = "Пары пользователей"
 
 
 class ExchangeMainCoin(models.Model):
@@ -72,11 +71,6 @@ class UserMainCoinPriority(models.Model):
         verbose_name = 'Главная монета пользователя'
 
 
-class UserDeactivatedPairs(models.Model):
-    pair = models.ForeignKey(Pair)
-    user_exchange = models.ForeignKey(UserExchanges)
-
-
 class CoinMarketCupCoin(models.Model):
     coin_market_id = models.CharField(max_length=63, verbose_name="Внутренее имя", default='')
     name = models.CharField(max_length=63, verbose_name="Имя", unique=True)
@@ -109,3 +103,40 @@ class ExchangeTicker(models.Model):
 
     def __str__(self):
         return self.exchange.exchange + ': ' + self.pair.main_coin.name.upper() + '-' + self.pair.second_coin.name.upper()
+
+
+class Order(models.Model):
+    ue = models.ForeignKey(UserExchanges)
+    pair = models.CharField(max_length=50)
+    globalTradeID = models.BigIntegerField()
+    tradeID = models.BigIntegerField()
+    orderNumber = models.BigIntegerField()
+    category = models.CharField(max_length=50)
+    type = models.CharField(max_length=10)
+    amount = models.DecimalField(max_digits=20, decimal_places=8)
+    rate = models.DecimalField(max_digits=20, decimal_places=8)
+    fee = models.DecimalField(max_digits=10, decimal_places=8)
+    total = models.DecimalField(max_digits=20, decimal_places=8)
+    our_total = models.DecimalField(max_digits=20, decimal_places=8)
+    is_ok = models.CharField(max_length=5)
+    date_time = models.DateTimeField()
+
+
+class ToTrade(models.Model):
+    user_pair = models.ForeignKey(UserPair, blank=False, null=False)
+    type = models.CharField(max_length=10, blank=False, null=False)
+    price = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    amount = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    total = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    fee = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    cause = models.CharField(max_length=255)
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_updated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.user_pair.pair) + ' ' + self.type
+
+    class Meta:
+        verbose_name = 'Пара готовая к торговле'
+        verbose_name_plural = 'Пары готовые к торговле'
+

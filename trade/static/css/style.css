@@ -274,3 +274,20 @@ tr.balances td:last-child {
     z-index: 10;
     border: 1px solid black;
 }
+
+.coinmarketcap-currency-widget div {
+    border-radius: 0 !important;
+}
+.coinmarketcap-currency-widget > div > div:last-child {
+    opacity: 0;
+    height: 0 !important;
+    padding: 0 !important;
+}
+
+.pair-advanced {
+    padding-bottom: 10px;
+}
+
+.pair-advanced input {
+    width: 50px;
+}
