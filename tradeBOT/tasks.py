@@ -328,7 +328,6 @@ def pull_poloniex_orders():
                                 total = round(float(total), 8)
                             n_order.our_total = total
                             n_order.save()
-                print(getcontext())
             except HTTPException:
                 print('Ошибка, начинаем заново')
     else:
@@ -341,11 +340,17 @@ def pull_poloniex_orders():
 def calculate_to_trade():
     user_pairs = UserPair.objects.filter(~Q(change_percent=0) & ~Q(change_interval=0))
     for item in user_pairs:
-        ticker = ExchangeTicker.objects.filter(pair=item.pair,
-                                               date_time__gte=time.time() - item.change_interval).earliest('date_time')
+        ticker = ExchangeTicker.objects.filter(pair=item.pair, date_time__gte=round_down(time.time(),
+                                                                                         1) - item.change_interval,
+                                               date_time__lte=round_down(time.time(),
+                                                                         1) - item.change_interval + 12).earliest(
+            'date_time')
         last_ticker = ExchangeTicker.objects.filter(pair=item.pair).latest('date_time')
         if ticker is not None and last_ticker is not None:
+            print('Last: ' + str(ticker.pk) + ' -- ' + str(ticker.last))
+            print('Current: ' + str(last_ticker.pk) + ' -- ' + str(last_ticker.last))
             change_percent = (last_ticker.last - ticker.last) / ticker.last
+            # print('Change percent' + str(change_percent))
             if abs(change_percent) >= item.change_percent:
                 to_trade = ToTrade()
                 to_trade.percent_react = change_percent
