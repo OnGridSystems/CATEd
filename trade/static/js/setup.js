@@ -196,7 +196,7 @@ function getCookie(name) {
 
 function draw_graph() {
     var ohlcData = [];
-    var volumeData = [];
+    // var volumeData = [];
     $.post('/trade/get_ticker/', {
         pair_id: pair_id,
         csrfmiddlewaretoken: getCookie('csrftoken'),
@@ -205,9 +205,9 @@ function draw_graph() {
     }, function (ticker) {
         console.log(ticker);
         for (var i = 1; i < ticker.length; i++) {
-            ohlcData.push([new Date(ticker[i].date), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
-            var volume = 100 + 15 * Math.random();
-            volumeData.push([new Date(ticker[i].date), round(volume)]);
+            ohlcData.push([new Date(Date.parse(ticker[i].date)), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
+            // var volume = 100 + 15 * Math.random();
+            // volumeData.push([new Date(Date.parse(ticker[i].date)), round(volume)]);
         }
         $('#jqChart').jqChart({
             legend: {visible: false},
@@ -245,52 +245,52 @@ function draw_graph() {
                 }
             ]
         });
-        $('#jqChartVolume').jqChart({
-            legend: {visible: false},
-            border: {lineWidth: 1, padding: 0},
-            tooltips: {
-                disabled: false,
-                type: 'shared',
-                borderColor: 'black',
-                snapArea: 100,
-                highlighting: true,
-                highlightingFillStyle: 'rgba(204, 204, 204, 0.5)',
-                highlightingStrokeStyle: 'rgba(204, 204, 204, 0.5)'
-            },
-            crosshairs: {
-                enabled: true,
-                hLine: {strokeStyle: '#9c9b96'},
-                vLine: {strokeStyle: '#9c9b96'},
-                snapToDataPoints: false
-            },
-            animation: {duration: 0.0001},
-            axes: [
-                {
-                    type: 'dateTime',
-                    location: 'bottom'
-                },
-                {
-                    type: 'linear',
-                    location: 'right',
-                    width: 80
-                }
-            ],
-            series: [
-                {
-                    type: 'column',
-                    data: volumeData,
-                    fillStyle: 'lightgrey'
-                }
-            ]
-        });
+        // $('#jqChartVolume').jqChart({
+        //     legend: {visible: false},
+        //     border: {lineWidth: 1, padding: 0},
+        //     tooltips: {
+        //         disabled: false,
+        //         type: 'shared',
+        //         borderColor: 'black',
+        //         snapArea: 100,
+        //         highlighting: true,
+        //         highlightingFillStyle: 'rgba(204, 204, 204, 0.5)',
+        //         highlightingStrokeStyle: 'rgba(204, 204, 204, 0.5)'
+        //     },
+        //     crosshairs: {
+        //         enabled: true,
+        //         hLine: {strokeStyle: '#9c9b96'},
+        //         vLine: {strokeStyle: '#9c9b96'},
+        //         snapToDataPoints: false
+        //     },
+        //     animation: {duration: 0.0001},
+        //     axes: [
+        //         {
+        //             type: 'dateTime',
+        //             location: 'bottom'
+        //         },
+        //         {
+        //             type: 'linear',
+        //             location: 'right',
+        //             width: 80
+        //         }
+        //     ],
+        //     series: [
+        //         {
+        //             type: 'column',
+        //             data: volumeData,
+        //             fillStyle: 'lightgrey'
+        //         }
+        //     ]
+        // });
         var isHighlighting = false;
 
         $('#jqChart').bind('dataHighlighting', function (event, data) {
 
-            if (!data) {
-                $('#jqChartVolume').jqChart('highlightData', null);
-                return;
-            }
+            // if (!data) {
+            //     $('#jqChartVolume').jqChart('highlightData', null);
+            //     return;
+            // }
 
             $('#open').html(data.open);
             $('#high').html(data.high);
@@ -301,39 +301,39 @@ function draw_graph() {
 
             $('#date').html(date);
 
-            if (!isHighlighting) {
-
-                isHighlighting = true;
-
-                var index = $.inArray(data.dataItem, ohlcData);
-                $('#jqChartVolume').jqChart('highlightData', [volumeData[index]]);
-            }
-
-            isHighlighting = false;
-        });
-
-        $('#jqChartVolume').bind('dataHighlighting', function (event, data) {
-
-            if (!data) {
-                $('#jqChart').jqChart('highlightData', null);
-                return;
-            }
-
-            $('#volume').html(data.y);
-
-            if (!isHighlighting) {
-
-                isHighlighting = true;
-
-                var index = $.inArray(data.dataItem, volumeData);
-                $('#jqChart').jqChart('highlightData', [ohlcData[index]]);
-            }
+            // if (!isHighlighting) {
+            //
+            //     isHighlighting = true;
+            //
+            //     var index = $.inArray(data.dataItem, ohlcData);
+            //     $('#jqChartVolume').jqChart('highlightData', [volumeData[index]]);
+            // }
 
             isHighlighting = false;
         });
+
+        // $('#jqChartVolume').bind('dataHighlighting', function (event, data) {
+        //
+        //     if (!data) {
+        //         $('#jqChart').jqChart('highlightData', null);
+        //         return;
+        //     }
+        //
+        //     $('#volume').html(data.y);
+        //
+        //     if (!isHighlighting) {
+        //
+        //         isHighlighting = true;
+        //
+        //         var index = $.inArray(data.dataItem, volumeData);
+        //         $('#jqChart').jqChart('highlightData', [ohlcData[index]]);
+        //     }
+        //
+        //     isHighlighting = false;
+        // });
 
         $('#jqChart').jqChart('highlightData', [ohlcData[0]]);
-        $('#jqChartVolume').jqChart('highlightData', [volumeData[0]]);
+        // $('#jqChartVolume').jqChart('highlightData', [volumeData[0]]);
     }, 'json');
 }
 

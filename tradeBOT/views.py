@@ -1,6 +1,6 @@
 import json
 import time
-
+import datetime
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -175,28 +175,30 @@ def get_ticker(request):
                 zoom = int(zoom)
                 ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id,
                                                             date_time__gte=int(
-                                                                time.time() - (zoom * 60 * 60))).values())
+                                                                time.time() - (zoom * 60 * 60))).order_by('date_time').values())
             for i in range(0, len(ticker), intervale):
-                cur_ticker = {'date': int(ticker[i]['date_time']) * 1000, 'open': ticker[i]['last'],
+                cur_ticker = {'date': datetime.datetime.fromtimestamp(ticker[i]['date_time']).strftime('%c'), 'open': ticker[i]['last'],
                               'low': ticker[i]['last'],
                               'high': ticker[i]['last']}
                 try:
                     cur_ticker['close'] = ticker[i + intervale]['last']
                 except IndexError:
                     cur_ticker['close'] = ticker[len(ticker) - 1]['last']
-                for j in range(intervale + 1):
+                for j in range(1, intervale + 1):
                     try:
                         if ticker[i + j]['last'] < cur_ticker['low']:
                             cur_ticker['low'] = ticker[i + j]['last']
                     except IndexError:
-                        if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
-                            cur_ticker['low'] = ticker[len(ticker) - 1]['last']
+                        break
+                        # if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
+                        #     cur_ticker['low'] = ticker[len(ticker) - 1]['last']
                     try:
                         if ticker[i + j]['last'] > cur_ticker['high']:
                             cur_ticker['high'] = ticker[i + j]['last']
                     except IndexError:
-                        if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
-                            cur_ticker['high'] = ticker[len(ticker) - 1]['last']
+                        break
+                        # if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
+                        #     cur_ticker['high'] = ticker[len(ticker) - 1]['last']
                 ticker_d.append(cur_ticker)
             return HttpResponse(json.dumps(list(ticker_d), cls=DjangoJSONEncoder), status=200)
         except Pair.DoesNotExist:
