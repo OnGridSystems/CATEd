@@ -1,0 +1,131 @@
+{% extends "trade/base.html" %}
+{% load humanize tz pool_info static %}
+{% block style %}
+    <link rel="stylesheet" href="{% static 'css/highcharts.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col s12 l10 m12 push-l1">
+            <ul class="tabs">
+                <li class="tab col s6 m6 l6"><a class="active" href="#test1">Workers</a></li>
+                <li class="tab col s6 m6 l6"><a href="#test2">Pools Info</a></li>
+            </ul>
+        </div>
+        <div id="test1" class="col s12">
+            {% get_claymore_workers %}
+        </div>
+        <div id="test2" class="col s12">
+            {% get_pools %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+    <script type="text/javascript" src="{% static 'js/highstock.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/exporting.js' %}"></script>
+    <script>
+        var seriesOptions = [],
+            seriesCounter = 0;
+        get_holdings();
+        function get_holdings() {
+            $.ajax({
+                url: '{% url "get_workers_history" %}?type=names',
+                dataType: 'json',
+                success: function (data) {
+                    if (data.length > 0) {
+                        $.each(data, function (i, name) {
+                            $.ajax({
+                                url: '{% url "get_workers_history" %}?type=' + name,
+                                dataType: 'json',
+                                async: !1,
+                                success: function (hold) {
+                                    seriesOptions[i] = {
+                                        name: name,
+                                        data: hold
+                                    };
+                                    seriesCounter += 1;
+                                    if (seriesCounter === data.length) {
+                                        createChart();
+                                    }
+                                }
+                            });
+                        });
+                    }
+                },
+                complete: function (data) {
+                    if ('none' === data.responseText) {
+                        $('#chart').hide();
+                    } else {
+                        $('#chart').show();
+                    }
+                }
+            })
+        }
+        Highcharts.setOptions({
+            global: {
+                useUTC: true,
+                timezoneOffset: -6 * 60
+            },
+            lang: {
+                weekdays: ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"],
+                loading: "Загрузка...",
+                months: ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"],
+                numericSymbolMagnitude: 1000,
+                numericSymbols: ["k", "M", "G", "T", "P", "E"],
+                rangeSelectorFrom: "От",
+                rangeSelectorTo: "До",
+                rangeSelectorZoom: "Масштаб",
+                resetZoom: "Сбросить масштаб",
+                resetZoomTitle: "Установить масштаб 1:1",
+                shortMonths: ["Янв", "Фев", "Март", "Апр", "Май", "Июнь", "Июль", "Авг", "Сен", "Окт", "Ноя", "Дек"],
+                shortWeekdays: ["Вc", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+                thousandsSep: " "
+            }
+        });
+        function createChart() {
+            Highcharts.stockChart('gra', {
+                title: {
+                    text: 'Hashrate'
+                },
+                xAxis: {
+                    type: 'datetime',
+                    tickInterval: 5000,
+                    tickWidth: 0,
+                    tickPixelInterval: 150,
+                    tickmarkPlacement: 'on',
+                    title: {
+                        enabled: false
+                    }
+                },
+                chart: {
+                    type: 'line',
+                    animation: Highcharts.svg
+                },
+                yAxis: {
+                    tickInterval: 5
+                },
+                legend: {
+                    enabled: false
+                },
+                exporting: {
+                    enabled: true
+                },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineWidth: 1,
+                        marker: {
+                            lineWidth: 1
+                        }
+                    }
+                },
+                tooltip: {
+                    split: false,
+                    valueSuffix: ' Mh/s'
+                },
+                series: seriesOptions
+            });
+        }
+    </script>
+{% endblock %}
