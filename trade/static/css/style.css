@@ -36,6 +36,9 @@
     background: #a5d6a7;
     font-weight: bolder;
 }
+.user_coins td {
+    border-bottom: 1px solid #e8e0e0;
+}
 
 .workers {
     width: 100%;
@@ -230,8 +233,12 @@ tr.balances td:last-child {
 }
 
 .exchange-coins-block {
-    min-height: 300px;
     max-height: 600px;
+    border: 1px slategrey solid;
+    background: #fafafa;
+}
+
+.graph-block {
     border: 1px slategrey solid;
     background: #fafafa;
 }
@@ -265,6 +272,7 @@ tr.balances td:last-child {
 }
 
 .chart-info {
+    font-size: 0.8rem;
     padding-top: 20px;
     min-width: 50%;
     float: right;
@@ -282,4 +290,30 @@ tr.balances td:last-child {
 
 #buttons {
     padding: 10px;
+}
+
+.ui-jqchart-tooltip {
+    background: white;
+    color: black;
+    padding: 10px;
+    border-radius: 10px;
+    z-index: 10;
+    border: 1px solid black;
+}
+
+.coinmarketcap-currency-widget div {
+    border-radius: 0 !important;
+}
+.coinmarketcap-currency-widget > div > div:last-child {
+    opacity: 0;
+    height: 0 !important;
+    padding: 0 !important;
+}
+
+.pair-advanced {
+    padding-bottom: 10px;
+}
+
+.pair-advanced input {
+    width: 50px;
 }

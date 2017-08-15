@@ -154,3 +154,8 @@ ENV/
 # Rope project settings
 .ropeproject
 
+Будет удалено trade/migrations/0002_auto_20170712_0958.py
+Будет удалено trade/migrations/0003_transaction_currency.py
+Будет удалено trade/migrations/0004_userexchanges_is_active_script.py
+Будет удалено trade/static/images/cryptotokens/
+Будет удалено tradeBOT/migrations/
