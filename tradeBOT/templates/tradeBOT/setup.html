@@ -13,24 +13,26 @@
     <br>
     <div class="row">
         <div class="col s9 m9 l9 graph-block">
+            <div class="preview_coins" id="preview_coins">
+                <blockquote>
+                    <h4><b></b></h4>
+                </blockquote>
+            </div>
             <div class="chart-info">
                 <div class="chart-info-item left">
                     <b></b>
                 </div>
                 <div class="chart-info-item">
-                    <b>Open:</b><span id="open" style="display: inline-block;"></span>
+                    <b>Open: </b><span id="open" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>High:</b><span id="high" style="display: inline-block;"></span>
+                    <b>High: </b><span id="high" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>Low:</b><span id="low" style="display: inline-block;"></span>
+                    <b>Low: </b><span id="low" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>Close:</b><span id="close" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <b>Volume: </b><span id="volume" style="display: inline-block;"></span>
+                    <b>Close: </b><span id="close" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
                     <span style="font-weight: bolder;" id="date"></span>
@@ -89,8 +91,9 @@
                         <col width="7%">
                         <col width="7%">
                         <col width="7%">
-                        <col width="16%">
-                        <col width="16%">
+                        <col width="7%">
+                        <col width="12%">
+                        <col width="13%">
                         <col width="17%">
                     </colgroup>
                     <thead>
@@ -101,33 +104,52 @@
                         <th>Price</th>
                         <th>Amount</th>
                         <th>Total</th>
+                        <th>Total + fee</th>
                         <th>Fee</th>
                         <th>Cause</th>
                         <th>Date created</th>
                         <th>Date updated</th>
                     </tr>
                     </thead>
-                    <tbody>
-                    {% for item in to_trade %}
-                        <tr>
-                            <td>{{ item.user_pair.pair }}</td>
-                            <td>{{ item.percent_react }}</td>
-                            <td>{{ item.type }}</td>
-                            <td>{{ item.price }}</td>
-                            <td>{{ item.amount }}</td>
-                            <td>{{ item.total }}</td>
-                            <td>{{ item.fee }}</td>
-                            <td>{{ item.cause }}</td>
-                            <td>{{ item.date_created }}</td>
-                            <td>{{ item.date_updated }}</td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="10" class="center">Empty</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
                 </table>
+                <div class="exchange-coins-block-scroll">
+                    <table width="100%">
+                        <colgroup>
+                            <col width="10%">
+                            <col width="7%">
+                            <col width="6%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="12%">
+                            <col width="13%">
+                            <col width="17%">
+                        </colgroup>
+                        <tbody>
+                        {% for item in to_trade %}
+                            <tr>
+                                <td>{{ item.user_pair.pair }}</td>
+                                <td>{{ item.percent_react | multiple:100 | floatformat:'2' }}</td>
+                                <td>{{ item.type }}</td>
+                                <td>{{ item.price }}</td>
+                                <td>{{ item.amount }}</td>
+                                <td>{{ item.total }}</td>
+                                <td>{{ item.total_f }}</td>
+                                <td>{{ item.fee }}</td>
+                                <td>{{ item.cause }}</td>
+                                <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
+                                <td>{{ item.date_updated | date:'d.m.Y H:i:s' }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="10" class="center">Empty</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         <div class="col s3 m3 l3">
@@ -164,7 +186,8 @@
                 <h4 class="center">Your trade pairs</h4>
                 <table class="center" width="100%" cellspacing="1" cellpadding="0">
                     <colgroup>
-                        <col width="35%">
+                        <col width="25%">
+                        <col width="20%">
                         <col width="25%">
                         <col width="20%">
                         <col width="10%">
@@ -172,7 +195,8 @@
                     <thead>
                     <tr>
                         <th>Pair</th>
-                        <th>Share (%BTC)</th>
+                        <th>Have (% BTC)</th>
+                        <th>Max share (% BTC)</th>
                         <th>Priority</th>
                         <th>Del</th>
                     </tr>
@@ -185,20 +209,23 @@
                                 <div class="collapsible-header">
                                     <table class="center" width="100%" cellspacing="1" cellpadding="0">
                                         <colgroup>
-                                            <col width="40%">
-                                            <col width="30%">
+                                            <col width="25%">
+                                            <col width="20%">
+                                            <col width="25%">
                                             <col width="20%">
                                             <col width="10%">
                                         </colgroup>
                                         <tbody>
                                         <tr data-pair-id="{{ pair.pk }}">
                                             <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
+                                            <td>
+                                                {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
+                                            </td>
                                             <td class="center">
                                                 <input title="Pair share" class="pair-share black-text" type="number"
                                                        name="share"
                                                        value="{{ pair.share | floatformat:'-1' }}"
                                                        placeholder="pair share">
-                                                %
                                             </td>
                                             <td>
                                                 {{ pair.rank }}

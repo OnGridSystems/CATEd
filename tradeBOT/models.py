@@ -124,12 +124,13 @@ class Order(models.Model):
 
 class ToTrade(models.Model):
     user_pair = models.ForeignKey(UserPair, blank=False, null=False)
-    percent_react = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    percent_react = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     type = models.CharField(max_length=10, blank=False, null=False)
-    price = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
-    amount = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
-    total = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
-    fee = models.DecimalField(max_digits=14, decimal_places=8, blank=False, null=False)
+    price = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    amount = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    total = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    total_f = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False, default=0)
+    fee = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     cause = models.CharField(max_length=255)
     date_created = models.DateTimeField(auto_now_add=True)
     date_updated = models.DateTimeField(auto_now=True)

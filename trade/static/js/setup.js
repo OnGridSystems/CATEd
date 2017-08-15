@@ -1,11 +1,17 @@
 $(document).ready(function () {
     pair_id = $('.pair_tr').data('pair-id');
     $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('yellow lighten-3');
+    var main_coin = $('.tabs a.active').text();
+    var second_coin = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(0)').text();
+    $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
     intervale = $('#buttons .candlestick').data('intervale');
     zoom = $('#buttons .zoom').data('zoom');
     draw_graph();
 
     $('.pair_tr').on('click', function () {
+        var main_coin = $('.tabs a.active').text();
+        var second_coin = $(this).children('td:eq(0)').text();
+        $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
         $('.pair_tr').removeClass('yellow lighten-3');
         $(this).addClass('yellow lighten-3');
         if ($(this).data('pair-id') != pair_id) {
@@ -287,10 +293,10 @@ function draw_graph() {
 
         $('#jqChart').bind('dataHighlighting', function (event, data) {
 
-            // if (!data) {
-            //     $('#jqChartVolume').jqChart('highlightData', null);
-            //     return;
-            // }
+            if (!data) {
+                $('#jqChartVolume').jqChart('highlightData', null);
+                return;
+            }
 
             $('#open').html(data.open);
             $('#high').html(data.high);

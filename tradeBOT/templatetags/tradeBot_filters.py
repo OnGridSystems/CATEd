@@ -36,7 +36,7 @@ def get_user_primary_coins(user_exchange, primary_coin):
 @register.inclusion_tag('tradeBOT/get_primary_pairs.html')
 def get_primary_pairs(coin, user_exchange):
     try:
-        pairs = Pair.objects.filter(main_coin=coin)
+        pairs = Pair.objects.filter(main_coin=coin).order_by('-second_coin__is_active', 'second_coin__symbol')
         return {'pairs': pairs, 'user_exchange': user_exchange}
     except Pair.DoesNotExist:
         return None
@@ -89,3 +89,18 @@ def user_pair_interval_change(user_pair_pk):
         return user_pair.change_interval
     except UserPair.DoesNotExist:
         return 0
+
+
+@register.filter(name='multiple')
+def multiple(value, factor):
+    return value * factor
+
+
+@register.filter(name='haven_percent')
+def haven_percent(coin, ue):
+    try:
+        user_balance = UserBalance.objects.get(ue=ue, coin=coin.symbol.lower())
+        coin_total_btc = user_balance.btc_value
+    except UserBalance.DoesNotExist:
+        coin_total_btc = 0
+    return coin_total_btc / (ue.total_btc / 100)

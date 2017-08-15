@@ -35,6 +35,9 @@
     background: #a5d6a7;
     font-weight: bolder;
 }
+.user_coins td {
+    border-bottom: 1px solid #e8e0e0;
+}
 
 .user_coins td:first-child {
     font-weight: bolder;

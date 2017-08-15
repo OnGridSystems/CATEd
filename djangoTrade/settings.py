@@ -193,3 +193,6 @@ CHANNEL_LAYERS = {
         "ROUTING": "djangoTrade.routing.channel_routing",
     },
 }
+
+# время очистки тикера
+TICKER_HOURS_TO_CLEAR = 4

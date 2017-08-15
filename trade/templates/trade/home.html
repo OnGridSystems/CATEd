@@ -15,13 +15,15 @@
             <ul class="collapsible popout" data-collapsible="accordion">
                 {% if ue %}
                     <table class="exchange z-depth-1">
-                        <col width="15%">
-                        <col width="15%">
-                        <col width="15%">
-                        <col width="15%">
-                        <col width="10%">
-                        <col width="10%">
-                        <col width="10%">
+                        <colgroup>
+                            <col width="15%">
+                            <col width="15%">
+                            <col width="15%">
+                            <col width="15%">
+                            <col width="10%">
+                            <col width="10%">
+                            <col width="10%">
+                        </colgroup>
                         <thead>
                         <tr class="exchange-header">
                             <th>Exchange</th>
@@ -38,13 +40,15 @@
                         <li id="userexchange-{{ item.pk }}">
                             <div class="collapsible-header">
                                 <table class="exchange">
-                                    <col width="15%">
-                                    <col width="15%">
-                                    <col width="15%">
-                                    <col width="15%">
-                                    <col width="10%">
-                                    <col width="10%">
-                                    <col width="10%">
+                                    <colgroup>
+                                        <col width="15%">
+                                        <col width="15%">
+                                        <col width="15%">
+                                        <col width="15%">
+                                        <col width="10%">
+                                        <col width="10%">
+                                        <col width="10%">
+                                    </colgroup>
                                     <tbody>
                                     <tr>
                                         <td>{{ item.exchange.exchange }}</td>

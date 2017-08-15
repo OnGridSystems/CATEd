@@ -35,7 +35,7 @@
                             </td>
                         {% endwith %}
                         <td>{{ pair.second_coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }}</td>
-                        <td>{{ pair.second_coin.is_active }}</td>
+                        <td {% if not pair.second_coin.is_active == True %}class="red lighten-3"{% endif %}>{{ pair.second_coin.is_active | yesno:'active,frozen' }}</td>
                         <td class="center">
                             <form action="{% url 'add_user_pair' %}" method="post">
                                 {% csrf_token %}
