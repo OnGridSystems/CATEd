@@ -10,7 +10,7 @@ class WorkerAdmin(admin.ModelAdmin):
         model = Worker
 
 class UserPoolsAdmin(admin.ModelAdmin):
-    list_display = ['name', 'pool', 'address', 'comment']
+    list_display = ['name', 'pool', 'address', 'comment', 'claymore_port']
 
     class Meta:
         model = UserPools
@@ -28,7 +28,14 @@ class WorkersHistoryAdmin(admin.ModelAdmin):
     class Meta:
         model = WorkersHistory
 
+class WorkersDetailsAdmin(admin.ModelAdmin):
+    list_display = [worker_name, 'claymore_pool', 'card_name', 'hash_rate', 'last_update']
+    list_filter = ['worker__name']
+    class Meta:
+        model = WorkersDetails
+
 admin.site.register(Worker, WorkerAdmin)
+admin.site.register(WorkersDetails, WorkersDetailsAdmin)
 admin.site.register(Pools)
 admin.site.register(UserPools, UserPoolsAdmin)
 admin.site.register(WorkersHistory, WorkersHistoryAdmin)

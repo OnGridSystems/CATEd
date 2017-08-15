@@ -28,7 +28,31 @@
     text-align: center;
 }
 
+
 .exchange th {
+    border: none;
+    color: #1e2324;
+    text-align: center;
+    background: #a5d6a7;
+    font-weight: bolder;
+}
+
+.workers {
+    width: 100%;
+    text-align: center;
+}
+
+.workers td{
+    border-left: 1px solid gray;
+    border-bottom: 1px solid gray;
+}
+
+.workers td:last-child{
+    border-right: 1px solid gray;
+}
+
+
+.workers th {
     border: none;
     color: #1e2324;
     text-align: center;
