@@ -24,7 +24,7 @@ apt autoremove -y
 rm -rf /etc/grub.d/
 apt -y update
 apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 
-apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx smem supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links
+apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx smem supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links openvpn
 service supervisor restart  
 apt install -y grub-pc grub-common
 grub-install /dev/vda
@@ -91,7 +91,190 @@ EOF
 echo "$SSHCFG" >> /etc/ssh/ssh_config
 
 ```
+Setup OpenVPN client (to poll rigs)
+```
+read -d "" CACRT <<"EOF"
+-----BEGIN CERTIFICATE-----
+MIIE9DCCA9ygAwIBAgIJAL7JQUNNDavTMA0GCSqGSIb3DQEBCwUAMIGsMQswCQYD
+VQQGEwJSVTEMMAoGA1UECBMDTU9XMQ8wDQYDVQQHEwZNb3Njb3cxFzAVBgNVBAoT
+Dk9uR3JpZCBTeXN0ZW1zMRQwEgYDVQQLEwtPbkdyaWQgQ3JldzEaMBgGA1UEAxMR
+T25HcmlkIFN5c3RlbXMgQ0ExEDAOBgNVBCkTB0Vhc3lSU0ExITAfBgkqhkiG9w0B
+CQEWEm5vcmVwbHlAb25ncmlkLnBybzAeFw0xNzA3MDgxMTU5MTdaFw0yNzA3MDYx
+MTU5MTdaMIGsMQswCQYDVQQGEwJSVTEMMAoGA1UECBMDTU9XMQ8wDQYDVQQHEwZN
+b3Njb3cxFzAVBgNVBAoTDk9uR3JpZCBTeXN0ZW1zMRQwEgYDVQQLEwtPbkdyaWQg
+Q3JldzEaMBgGA1UEAxMRT25HcmlkIFN5c3RlbXMgQ0ExEDAOBgNVBCkTB0Vhc3lS
+U0ExITAfBgkqhkiG9w0BCQEWEm5vcmVwbHlAb25ncmlkLnBybzCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAMqEW8tvnRRHYFV+tFfvfOGTr40mQ3qEw/xa
+Ge8u0lqq9iIUArt1gNF4HhCv9bgeUE+EkbLDh9aNKtRLA9Z+1JToyRnMoJp5dg1r
+zEk+djArstoXx92Tla/+xY345Coo/pDKrWNUaQi34EtTZNB0TR2LvkiCFvZpxSWF
+BbcY4oc/S4r6+cTy4hSz7coSll46ilFqeQgIi/KzDRqZFlVb75SylFVuLa9ngHmN
+YyzwgioWhrfAtV4kcb1PI1MYN8An19/q/FCuX9vvGb/cV9EcCXtHtrVbQ7PLqpXa
+jUfzZnVeBtFyhYqVn4goZkoko5JblsVOPmiDCsbtwU2t+TyDpr0CAwEAAaOCARUw
+ggERMB0GA1UdDgQWBBSNOWvXw4Pu3kEQl+3JrTLDRbta6jCB4QYDVR0jBIHZMIHW
+gBSNOWvXw4Pu3kEQl+3JrTLDRbta6qGBsqSBrzCBrDELMAkGA1UEBhMCUlUxDDAK
+BgNVBAgTA01PVzEPMA0GA1UEBxMGTW9zY293MRcwFQYDVQQKEw5PbkdyaWQgU3lz
+dGVtczEUMBIGA1UECxMLT25HcmlkIENyZXcxGjAYBgNVBAMTEU9uR3JpZCBTeXN0
+ZW1zIENBMRAwDgYDVQQpEwdFYXN5UlNBMSEwHwYJKoZIhvcNAQkBFhJub3JlcGx5
+QG9uZ3JpZC5wcm+CCQC+yUFDTQ2r0zAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEB
+CwUAA4IBAQAtIJk/WMLh0tw316IOsWyByIC0PKpqigE4sE4OMoSLlFiE44jNWNLc
+KSMANlW4mqsC/c+HdSwJ1QvOGEgv0+9BnqdHi5byKrgWOOha7Z8exAFuvloA6PaN
+udtiOHmYPmtMTTqUlMO6KmPvBRp1J5MzlqOFBawbczrBSAr6P8qGNXTppMx3nXr0
+JQ9HEK7TML0fsIhbI1LZr0IhQg7zEXXNvc6ov4wFtkhPgZDmATU80ftSI1tYyxyA
+VGs2YFk4ZOEpRyEn6pdQhq8s6uWxzbtX9C5A0wKvd8Rd5ErH2gTe406tVmcke2tj
+Zvp5dXVc10KkHHYewZTDH5RgH73fggHg
+-----END CERTIFICATE-----
+EOF
+echo "$CACRT" > /etc/openvpn/ca.crt
 
+read -d "" PORTALCRT <<"EOF"
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 4 (0x4)
+    Signature Algorithm: sha256WithRSAEncryption
+        Issuer: C=RU, ST=MOW, L=Moscow, O=OnGrid Systems, OU=OnGrid Crew, CN=OnGrid Systems CA/name=EasyRSA/emailAddress=noreply@ongrid.pro
+        Validity
+            Not Before: Aug 16 06:47:33 2017 GMT
+            Not After : Aug 14 06:47:33 2027 GMT
+        Subject: C=RU, ST=MOW, L=Moscow, O=OnGrid Systems, OU=OnGrid Crew, CN=portal/name=EasyRSA/emailAddress=noreply@ongrid.pro
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:c5:75:9a:a8:42:9a:6c:8e:2d:e4:3a:4a:61:ca:
+                    5b:e3:c8:02:79:ec:0e:28:cd:6b:08:31:96:a8:dd:
+                    94:9c:ad:bd:db:d6:4b:a3:f5:5f:79:d2:d7:7f:73:
+                    d5:6a:2e:79:f9:05:1f:b6:7b:84:34:b9:a7:14:4e:
+                    e4:76:0b:84:ff:a1:80:4c:d4:b3:ee:b5:0c:9e:50:
+                    a9:ad:ec:a1:f7:4c:c0:63:18:c6:13:7f:38:dd:e5:
+                    8c:d0:1b:2b:82:84:5c:b2:0e:39:f1:6f:12:48:42:
+                    50:49:d1:d9:56:f3:b8:28:5d:bf:16:76:ef:c7:b4:
+                    dc:38:12:36:a5:fc:76:f4:2e:2a:3c:e3:b4:89:d4:
+                    a6:fa:69:48:ab:71:78:2f:e7:fd:da:a2:a0:a5:80:
+                    90:51:31:fb:ea:b4:7a:62:f3:17:74:e1:11:b7:ea:
+                    38:e7:d1:a9:6d:a5:39:f9:3f:07:54:ab:77:25:93:
+                    dc:7a:c1:47:b8:5e:fd:36:d5:46:42:11:e2:91:d8:
+                    6f:de:4b:fa:75:61:56:db:d5:61:b9:4c:5f:3f:9b:
+                    92:cc:4a:f6:63:44:64:ba:fe:bf:c5:8e:49:14:0d:
+                    0b:46:98:89:b2:dc:42:e3:2f:bf:94:9c:eb:c2:6c:
+                    b5:40:40:e6:42:a5:95:17:e9:51:15:29:3c:5d:a0:
+                    d1:41
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                Easy-RSA Generated Certificate
+            X509v3 Subject Key Identifier: 
+                06:C0:7A:D9:A6:4A:0E:B0:2C:F1:61:EF:A0:AA:8D:EB:FB:47:2C:60
+            X509v3 Authority Key Identifier: 
+                keyid:8D:39:6B:D7:C3:83:EE:DE:41:10:97:ED:C9:AD:32:C3:45:BB:5A:EA
+                DirName:/C=RU/ST=MOW/L=Moscow/O=OnGrid Systems/OU=OnGrid Crew/CN=OnGrid Systems CA/name=EasyRSA/emailAddress=noreply@ongrid.pro
+                serial:BE:C9:41:43:4D:0D:AB:D3
+
+            X509v3 Extended Key Usage: 
+                TLS Web Client Authentication
+            X509v3 Key Usage: 
+                Digital Signature
+            X509v3 Subject Alternative Name: 
+                DNS:portal
+    Signature Algorithm: sha256WithRSAEncryption
+         4e:66:36:e0:50:0e:e2:3c:54:86:22:78:22:c3:e6:3f:97:1c:
+         dc:83:71:6f:fe:bf:d1:60:7a:59:63:08:6e:07:94:9e:5c:ae:
+         3b:89:39:1c:c3:b9:11:72:d6:73:48:b7:26:90:a9:3c:54:6b:
+         90:fc:b8:e6:16:fe:d2:ab:6f:df:71:37:ca:c6:66:5c:7c:8a:
+         e0:d5:4c:7f:db:cb:9c:62:12:ef:b3:85:35:6d:6a:b9:04:86:
+         18:a3:f2:4b:34:9c:fb:e1:37:22:75:d8:0a:2b:c9:8d:5f:2a:
+         88:da:fd:c8:5d:e9:31:73:42:22:1d:d2:06:d1:3f:2c:9c:c0:
+         d9:11:f4:88:d9:16:73:21:71:f6:e1:aa:50:72:8d:44:53:79:
+         41:c6:f8:12:db:9c:f3:e2:44:3b:6d:a4:d6:a2:57:4f:41:64:
+         75:18:65:ef:17:cf:06:08:cc:5f:7a:63:54:f4:e4:31:84:82:
+         c9:05:44:1c:14:96:85:8a:17:ba:d3:2e:42:6a:a3:5d:a7:04:
+         43:5f:be:13:07:93:98:44:10:bf:01:cc:b5:c1:83:c7:72:13:
+         9c:67:55:d6:2b:27:0f:ed:5f:b5:85:b4:3b:4b:d0:8f:fe:99:
+         4b:17:d3:58:ee:77:fe:fb:81:e3:41:8e:90:b8:82:9b:57:72:
+         4b:21:b7:fb
+-----BEGIN CERTIFICATE-----
+MIIFQjCCBCqgAwIBAgIBBDANBgkqhkiG9w0BAQsFADCBrDELMAkGA1UEBhMCUlUx
+DDAKBgNVBAgTA01PVzEPMA0GA1UEBxMGTW9zY293MRcwFQYDVQQKEw5PbkdyaWQg
+U3lzdGVtczEUMBIGA1UECxMLT25HcmlkIENyZXcxGjAYBgNVBAMTEU9uR3JpZCBT
+eXN0ZW1zIENBMRAwDgYDVQQpEwdFYXN5UlNBMSEwHwYJKoZIhvcNAQkBFhJub3Jl
+cGx5QG9uZ3JpZC5wcm8wHhcNMTcwODE2MDY0NzMzWhcNMjcwODE0MDY0NzMzWjCB
+oTELMAkGA1UEBhMCUlUxDDAKBgNVBAgTA01PVzEPMA0GA1UEBxMGTW9zY293MRcw
+FQYDVQQKEw5PbkdyaWQgU3lzdGVtczEUMBIGA1UECxMLT25HcmlkIENyZXcxDzAN
+BgNVBAMTBnBvcnRhbDEQMA4GA1UEKRMHRWFzeVJTQTEhMB8GCSqGSIb3DQEJARYS
+bm9yZXBseUBvbmdyaWQucHJvMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+AQEAxXWaqEKabI4t5DpKYcpb48gCeewOKM1rCDGWqN2UnK2929ZLo/VfedLXf3PV
+ai55+QUftnuENLmnFE7kdguE/6GATNSz7rUMnlCpreyh90zAYxjGE3843eWM0Bsr
+goRcsg458W8SSEJQSdHZVvO4KF2/Fnbvx7TcOBI2pfx29C4qPOO0idSm+mlIq3F4
+L+f92qKgpYCQUTH76rR6YvMXdOERt+o459GpbaU5+T8HVKt3JZPcesFHuF79NtVG
+QhHikdhv3kv6dWFW29VhuUxfP5uSzEr2Y0Rkuv6/xY5JFA0LRpiJstxC4y+/lJzr
+wmy1QEDmQqWVF+lRFSk8XaDRQQIDAQABo4IBdjCCAXIwCQYDVR0TBAIwADAtBglg
+hkgBhvhCAQ0EIBYeRWFzeS1SU0EgR2VuZXJhdGVkIENlcnRpZmljYXRlMB0GA1Ud
+DgQWBBQGwHrZpkoOsCzxYe+gqo3r+0csYDCB4QYDVR0jBIHZMIHWgBSNOWvXw4Pu
+3kEQl+3JrTLDRbta6qGBsqSBrzCBrDELMAkGA1UEBhMCUlUxDDAKBgNVBAgTA01P
+VzEPMA0GA1UEBxMGTW9zY293MRcwFQYDVQQKEw5PbkdyaWQgU3lzdGVtczEUMBIG
+A1UECxMLT25HcmlkIENyZXcxGjAYBgNVBAMTEU9uR3JpZCBTeXN0ZW1zIENBMRAw
+DgYDVQQpEwdFYXN5UlNBMSEwHwYJKoZIhvcNAQkBFhJub3JlcGx5QG9uZ3JpZC5w
+cm+CCQC+yUFDTQ2r0zATBgNVHSUEDDAKBggrBgEFBQcDAjALBgNVHQ8EBAMCB4Aw
+EQYDVR0RBAowCIIGcG9ydGFsMA0GCSqGSIb3DQEBCwUAA4IBAQBOZjbgUA7iPFSG
+Ingiw+Y/lxzcg3Fv/r/RYHpZYwhuB5SeXK47iTkcw7kRctZzSLcmkKk8VGuQ/Ljm
+Fv7Sq2/fcTfKxmZcfIrg1Ux/28ucYhLvs4U1bWq5BIYYo/JLNJz74TciddgKK8mN
+XyqI2v3IXekxc0IiHdIG0T8snMDZEfSI2RZzIXH24apQco1EU3lBxvgS25zz4kQ7
+baTWoldPQWR1GGXvF88GCMxfemNU9OQxhILJBUQcFJaFihe60y5CaqNdpwRDX74T
+B5OYRBC/Acy1wYPHchOcZ1XWKycP7V+1hbQ7S9CP/plLF9NY7nf++4HjQY6QuIKb
+V3JLIbf7
+-----END CERTIFICATE-----
+EOF
+echo "$PORTALCRT" > /etc/openvpn/portal.crt
+
+read -d "" KEY <<"EOF"
+-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDFdZqoQppsji3k
+OkphylvjyAJ57A4ozWsIMZao3ZScrb3b1kuj9V950td/c9VqLnn5BR+2e4Q0uacU
+TuR2C4T/oYBM1LPutQyeUKmt7KH3TMBjGMYTfzjd5YzQGyuChFyyDjnxbxJIQlBJ
+0dlW87goXb8Wdu/HtNw4Ejal/Hb0Lio847SJ1Kb6aUircXgv5/3aoqClgJBRMfvq
+tHpi8xd04RG36jjn0altpTn5PwdUq3clk9x6wUe4Xv021UZCEeKR2G/eS/p1YVbb
+1WG5TF8/m5LMSvZjRGS6/r/FjkkUDQtGmImy3ELjL7+UnOvCbLVAQOZCpZUX6VEV
+KTxdoNFBAgMBAAECggEAcu0AFu6s8oHONAe5QzGESg8fYdcCZr0ojpxOE/rjhE2b
+M1iGreciqsUMqCHDFQn38/gHfS5mxElJ9Yf1cL9DqYVWJ2GlWEoIDhzkpVYU7tq9
+HvBMWQyzDHOOgZFOwahIS1n8X4lGGsh98nkxBmrTxKrLjUesR4/8nKX9KJ7InVU7
+aj1FUDXM9Q2XV/KFcDmx2ZNbv5oPbaLnsUwnKDANmYmkROIpWcrLN8VNq14balXI
+1lR3Q3ddYL7XlD5dKWQ0aoUIVzCDKa4ZTUI4/uULBQgeZypvXmnIZmQCkHWLmfAS
+9l4fu8boVuFSZ83zOpfx4mHuSisPK86WZ82pPZxkAQKBgQDnpvgu92IsxShXUbXj
+AmUeEm773C7VPr85iwJECr/ouhhrHA3a5CtkOYoauMd1lnNY5ZAM4dBn9HMvxNqz
+vWFleWtrxQTFzXBlK3IbnAlwnqeNDU7SrQoDCtD9WrzGtXhb1XjmlYJE40xt7ptC
+XoAbgl+Y2jb25aPntYkyotfPqwKBgQDaNp0HMx/P05J4Zo1s/46sG+zXxfOQEUBc
+cIeGUL39RO/AtnLScbBUpkAGcSPD8QDLe/PTu2t/0XoHTcBBEf7kg2w+wUW9gBgC
+5sDelwviv8A9sngfW22qK5XcRDawp6FFFwW3juruViigMPUGHIwWV/LNHKonECN2
+wOLuKf7mwwKBgAcoYJjK6gyqFuID01PtWgSA208K8aODKdN0WSCTGHTvcxu0JTVz
+QWf6YysKNJeMi4nepgHP5Gmh4wFB2uQc4OqKwuf0kX4vJ97oZcE2pBAHxvOTyrC1
+yg5oAich651UNCDaSr8NNZY9U7o92ixF0T2IXL3TWElutQ7OzCt1Xqe7AoGARJSH
+c3zQ0atHzElGx2vl9hdsrz/KVYvmc2b2YPM9Urz4sNNmcNdEOMZrNtsWB33V5x3U
+usWbendmZ6c69fhm6ICZY3uwpGb+pOLK2OoV1TS4gWt2rzw30hSSq8BQg+KbH7Cl
+nlPvZ+pyKC5aw4nzSQ5pA6evnklHLAphB8LxFqsCgYBtMuE94bsumdY9OIDEgdD4
+UdRnPb9xLqrjc7cAkw7mvPeXO5j+WoCiwwrB11Soq1Ub3+MWbqdYv7+iLoCmnKa7
+KwlJFN0En1omu7b3tQ51U3UnQkSUmMku2S/qzzjg1AOZwo3skA462oBIv84FSSvF
+H8Rmu/kJmSK8tbtkilGlHQ==
+-----END PRIVATE KEY-----
+EOF
+echo "$KEY" > /etc/openvpn/portal.key
+
+read -d "" OVPNCFG <<"EOF"
+client
+dev tun
+proto tcp
+remote vpn.ongrid.pro 1194
+resolv-retry infinite
+ca ca.crt
+cert portal.crt
+key portal.key
+cipher AES-256-CBC
+verb 3
+EOF
+echo "$OVPNCFG" > /etc/openvpn/client.conf
+systemctl restart openvpn@client
+```
 Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
