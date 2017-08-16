@@ -1,4 +1,6 @@
 import datetime
+
+from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import models
 from pytz import utc
@@ -31,7 +33,7 @@ class UserExchanges(models.Model):
     error = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return self.user.username + ': ' + self.exchange.exchange
+        return self.user.username + ': ' + self.exchange.exchange + ' (' + str(self.pk) + ')'
 
     class Meta:
         verbose_name = "Биржа пользователя"
@@ -138,5 +140,5 @@ class UserHoldings(models.Model):
     def as_list(self):
         return [
             int(time.mktime(self.date_time.timetuple()) * 1000),
-            round(float(self.total_btc), 6)
+            float(Decimal(self.total_btc).quantize(Decimal('.00000001')))
         ]

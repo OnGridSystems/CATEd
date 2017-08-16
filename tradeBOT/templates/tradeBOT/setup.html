@@ -1,5 +1,5 @@
 {% extends 'trade/base.html' %}
-{% load static humanize get_exchange_coins get_coin_pairs get_coin_info tradeBot_filters %}
+{% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
 {% block content %}
     <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
     <div class="switch center">
@@ -10,26 +10,29 @@
             On
         </label>
     </div>
+    <br>
     <div class="row">
-        <div class="col s9 m9 l9">
+        <div class="col s9 m9 l9 graph-block">
+            <div class="preview_coins" id="preview_coins">
+                <blockquote>
+                    <h4><b></b></h4>
+                </blockquote>
+            </div>
             <div class="chart-info">
                 <div class="chart-info-item left">
                     <b></b>
                 </div>
                 <div class="chart-info-item">
-                    <b>Open:</b><span id="open" style="display: inline-block;"></span>
+                    <b>Open: </b><span id="open" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>High:</b><span id="high" style="display: inline-block;"></span>
+                    <b>High: </b><span id="high" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>Low:</b><span id="low" style="display: inline-block;"></span>
+                    <b>Low: </b><span id="low" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
-                    <b>Close:</b><span id="close" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <b>Volume: </b><span id="volume" style="display: inline-block;"></span>
+                    <b>Close: </b><span id="close" style="display: inline-block;"></span>
                 </div>
                 <div class="chart-info-item">
                     <span style="font-weight: bolder;" id="date"></span>
@@ -41,18 +44,111 @@
                     <div id="jqChart" style="width: 98%; height: 350px;">
                     </div>
                 </div>
-                <div>
-                    <div id="jqChartVolume" style="width: 98%; height: 150px;">
+                <div class="clearfix"></div>
+                <div class="row">
+                    <div class="col s6 m6 l6 right-align">
+                        <div id="buttons">
+                            <b>Zoom</b>
+                            <button data-zoom="6" class="zoom btn waves-effect btn-mini white-text green">6h</button>
+                            <button data-zoom="24" class="zoom btn waves-effect btn-mini white-text">1d</button>
+                            <button data-zoom="48" class="zoom btn waves-effect btn-mini white-text">2d</button>
+                            <button data-zoom="96" class="zoom btn waves-effect btn-mini white-text">4d</button>
+                            <button data-zoom="168" class="zoom btn waves-effect btn-mini white-text">1w</button>
+                            <button data-zoom="336" class="zoom btn waves-effect btn-mini white-text">2w</button>
+                            <button data-zoom="720" class="zoom btn waves-effect btn-mini white-text">1m</button>
+                            <button data-zoom="all" class="zoom btn waves-effect btn-mini white-text">all</button>
+                        </div>
+                    </div>
+                    <div class="col s6 m6 l6">
+                        <div id="buttons">
+                            <b>Candlestick</b>
+                            <button data-intervale="5" class="candlestick btn waves-effect btn-mini white-text green">5
+                                min
+                            </button>
+                            <button data-intervale="15" class="candlestick btn waves-effect btn-mini white-text">15
+                                min
+                            </button>
+                            <button data-intervale="30" class="candlestick btn waves-effect btn-mini white-text">30
+                                min
+                            </button>
+                            <button data-intervale="60" class="candlestick btn waves-effect btn-mini white-text">1
+                                hour
+                            </button>
+                            <button data-intervale="120" class="candlestick btn waves-effect btn-mini white-text">2
+                                hours
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="clearfix"></div>
-                <div id="buttons">
-                    <b>Candlestick</b>
-                    <button data-intervale="5" class="btn waves-effect btn-mini white-text green">5 min</button>
-                    <button data-intervale="15" class="btn waves-effect btn-mini white-text">15 min</button>
-                    <button data-intervale="30" class="btn waves-effect btn-mini white-text">30 min</button>
-                    <button data-intervale="60" class="btn waves-effect btn-mini white-text">60 min</button>
-                    <button data-intervale="120" class="btn waves-effect btn-mini white-text">120 min</button>
+            </div>
+            <div class="col s12 m12 l12 exchange-coins-block">
+                <table width="100%">
+                    <colgroup>
+                        <col width="10%">
+                        <col width="7%">
+                        <col width="6%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="12%">
+                        <col width="13%">
+                        <col width="17%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>Pair</th>
+                        <th>Percent change</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Total</th>
+                        <th>Total + fee</th>
+                        <th>Fee</th>
+                        <th>Cause</th>
+                        <th>Date created</th>
+                        <th>Date updated</th>
+                    </tr>
+                    </thead>
+                </table>
+                <div class="exchange-coins-block-scroll">
+                    <table width="100%">
+                        <colgroup>
+                            <col width="10%">
+                            <col width="7%">
+                            <col width="6%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="7%">
+                            <col width="12%">
+                            <col width="13%">
+                            <col width="17%">
+                        </colgroup>
+                        <tbody>
+                        {% for item in to_trade %}
+                            <tr>
+                                <td>{{ item.user_pair.pair }}</td>
+                                <td>{{ item.percent_react | multiple:100 | floatformat:'2' }}</td>
+                                <td>{{ item.type }}</td>
+                                <td>{{ item.price }}</td>
+                                <td>{{ item.amount }}</td>
+                                <td>{{ item.total }}</td>
+                                <td>{{ item.total_f }}</td>
+                                <td>{{ item.fee }}</td>
+                                <td>{{ item.cause }}</td>
+                                <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
+                                <td>{{ item.date_updated | date:'d.m.Y H:i:s' }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="10" class="center">Empty</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -87,46 +183,52 @@
                 </div>
             </div>
             <div class="exchange-coins-block">
-                <h4 class="center">User Coins</h4>
-                <table class="center" width="100%">
+                <h4 class="center">Your trade pairs</h4>
+                <table class="center" width="100%" cellspacing="1" cellpadding="0">
                     <colgroup>
-                        <col width="35%">
+                        <col width="25%">
+                        <col width="20%">
                         <col width="25%">
                         <col width="20%">
                         <col width="10%">
                     </colgroup>
                     <thead>
                     <tr>
-                        <th>Coin name</th>
-                        <th>Share (%)</th>
+                        <th>Pair</th>
+                        <th>Have (% BTC)</th>
+                        <th>Max share (% BTC)</th>
                         <th>Priority</th>
                         <th>Del</th>
                     </tr>
                     </thead>
                 </table>
                 <div class="exchange-coins-block-scroll">
-                    <ul class="collapsible" data-collapsible="expandable">
-                        {% for coin in user_coins %}
+                    <ul class="collapsible">
+                        {% for pair in user_pairs %}
                             <li>
-                                <div class="collapsible-header active">
-                                    <table class="center" width="100%">
+                                <div class="collapsible-header">
+                                    <table class="center" width="100%" cellspacing="1" cellpadding="0">
                                         <colgroup>
-                                            <col width="40%">
-                                            <col width="30%">
+                                            <col width="25%">
+                                            <col width="20%">
+                                            <col width="25%">
                                             <col width="20%">
                                             <col width="10%">
                                         </colgroup>
                                         <tbody>
-                                        <tr data-coin-id="{{ coin.pk }}">
-                                            <td>{{ coin.coin.name }} ({{ coin.coin.symbol }})</td>
+                                        <tr data-pair-id="{{ pair.pk }}">
+                                            <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
+                                            <td>
+                                                {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
+                                            </td>
                                             <td class="center">
-                                                <input class="pair-share" type="number" name="share"
-                                                       value="{{ coin.share | floatformat:'-1' }}"
-                                                       placeholder="Coin share">
-                                                %
+                                                <input title="Pair share" class="pair-share black-text" type="number"
+                                                       name="share"
+                                                       value="{{ pair.share | floatformat:'-1' }}"
+                                                       placeholder="pair share">
                                             </td>
                                             <td>
-                                                {{ coin.rank }}
+                                                {{ pair.rank }}
                                                 <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
                                                 <i class="fa rank-down fa-long-arrow-down red"
                                                    aria-hidden="true"></i>
@@ -139,7 +241,26 @@
                                     </table>
                                 </div>
                                 <div class="collapsible-body">
-                                    {% coin_pairs coin user user_exchange.pk %}
+                                    <h6 class="center">Advanced settings</h6>
+                                    <div class="center pair-advanced">
+                                        <form method="post" action="{% url 'set_pair_add' %}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user-exchange-pk" value="{{ user_exchange.pk }}">
+                                            <input type="hidden" name="pair-pk" value="{{ pair.pk }}">
+                                            <p class="center">Specify the percentage of price change in the interval at
+                                                which the
+                                                script
+                                                will work.</p>
+                                            Price changed by <input step="0.001" title="Change percent" type="number"
+                                                                    name="change_percent"
+                                                                    value="{{ pair.pk | user_pair_percent_change }}">
+                                            percent in
+                                            <input title="Change interval" type="number" name="change_interval"
+                                                   value="{{ pair.pk | user_pair_interval_change }}">
+                                            seconds.
+                                            <button>OK</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </li>
                         {% empty %}
@@ -175,7 +296,5 @@
     <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqChart.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqRangeSlider.js' %}"></script>
-    <script lang="javascript" type="text/javascript">
-
-    </script>
+    <script lang="javascript" type="text/javascript" src="{% static 'js/setup.js' %}"></script>
 {% endblock %}

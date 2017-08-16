@@ -1,0 +1,60 @@
+{% load tradeBot_filters get_coin_info %}
+{% if pairs %}
+    <style>
+     td {
+         border: 1px solid lightgray;
+     }
+    </style>
+    {% for pair in pairs %}
+        <li>
+            <div class="collapsible-header">
+                <table class="center" width="100%" cellspacing="1" cellpadding="0">
+                    <colgroup>
+                        <col width="20%">
+                        <col width="20%">
+                        <col width="10%">
+                        <col width="10%">
+                        <col width="20%">
+                        <col width="10%">
+                        <col width="10%">
+                    </colgroup>
+                    <tbody>
+                    <tr class="pair_tr" data-pair-id="{{ pair.pk }}">
+                        <td class=""><b>{{ pair.second_coin.symbol }}</b></td>
+                        <td class="pair_last" id="last_{{ pair.pk }}">{{ pair|get_last:user_exchange }}</td>
+                        <td class="pair_last" id="arrow_{{ pair.pk }}">
+                            {% if pair|get_change_percent:user_exchange > 0 %}
+                                <i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>
+                            {% elif pair|get_change_percent:user_exchange < 0 %}
+                                <i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>
+                            {% endif %}
+                        </td>
+                        {% with pair|get_change_percent:user_exchange as percent %}
+                            <td class="pair_last {% if percent < 0 %}red-text{% elif percent > 0 %}green-text{% endif %}" id="percent_{{ pair.pk }}">
+                                {{ percent }}%
+                            </td>
+                        {% endwith %}
+                        <td>{{ pair.second_coin.symbol | user_have_coin:user_exchange | floatformat:"-6" }}</td>
+                        <td {% if not pair.second_coin.is_active == True %}class="red lighten-3"{% endif %}>{{ pair.second_coin.is_active | yesno:'active,frozen' }}</td>
+                        <td class="center">
+                            <form action="{% url 'add_user_pair' %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="user-exchange"
+                                       value="{{ user_exchange.pk }}">
+                                <input type="hidden" name="pair" value="{{ pair.pk }}">
+                                <i class="add_coin fa fa-plus-square-o fa-1x"
+                                   aria-hidden="true"></i>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="collapsible-body">
+                <div class="coinmarketcap-currency-widget" data-secondary="BTC"
+                     data-currency="{{ pair.second_coin.symbol | get_coinmarket_id }}"
+                     data-base="USD"></div>
+            </div>
+        </li>
+    {% endfor %}
+{% endif %}

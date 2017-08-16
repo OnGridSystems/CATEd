@@ -34,7 +34,6 @@ msgpack-python==0.4.8
 mysqlclient==1.3.10
 oauthlib==2.0.2
 paramiko==2.2.1
-pkg-resources==0.0.0
 poloniex==0.0.7
 pyasn1==0.2.3
 pyasn1-modules==0.0.9

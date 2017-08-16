@@ -415,46 +415,46 @@ def get_btc_wallet_history():
                 uw.save()
             history = requests.get(
                 'http://btc.blockr.io/api/v1/address/txs/' + uw.address).json()
-            if history['status'] == 'success':
-                for item in history['data']['txs']:
-                    try:
-                        transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), hash=item['tx'])
-                    except Transaction.MultipleObjectsReturned:
-                        pass
-                    except Transaction.DoesNotExist:
-                        tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/' + item['tx']).json()
-                        if tx_his['status'] == 'success':
-                            transaction = Transaction()
-                            transaction.name = uw.wallet.name + str(uw.pk)
-                            transaction.t_type = 'wallet'
-                            transaction.number = tx_his['data']['block']
-                            transaction.date = tx_his['data']['time_utc']
-                            transaction.currency = 'BTC'
-                            if float(item['amount']) > 0:
-                                t_from = ''
-                                for item_from in tx_his['data']['trade']['vins']:
-                                    t_from += item_from['address'] + '<br/>'
-                                t_to = uw.address
-                            else:
-                                t_from = uw.address
-                                t_to = ''
-                                for item_to in tx_his['data']['trade']['vouts']:
-                                    t_to += item_to['address'] + '<br/>'
-                            transaction.t_to = t_to
-                            transaction.t_from = t_from
-                            if t_to == uw.address:
-                                transaction.type = 'in'
-                            elif t_from == uw.address:
-                                transaction.type = 'out'
-                            else:
-                                transaction.type = 'unknown'
-                            transaction.value = item['amount']
-                            # transaction.usd_value = get_usd_value('btc', float(item['amount']))
-                            transaction.usd_value = btc_to_usd.convert('usd', 'btc', float(item['amount']))
-                            transaction.hash = item['tx']
-                            transaction.block_hash = '-'
-                            transaction.save()
-        print('ok')
+            if history:
+                if history['status'] == 'success':
+                    for item in history['data']['txs']:
+                        try:
+                            transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), hash=item['tx'])
+                        except Transaction.MultipleObjectsReturned:
+                            pass
+                        except Transaction.DoesNotExist:
+                            tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/' + item['tx']).json()
+                            if tx_his['status'] == 'success':
+                                transaction = Transaction()
+                                transaction.name = uw.wallet.name + str(uw.pk)
+                                transaction.t_type = 'wallet'
+                                transaction.number = tx_his['data']['block']
+                                transaction.date = tx_his['data']['time_utc']
+                                transaction.currency = 'BTC'
+                                if float(item['amount']) > 0:
+                                    t_from = ''
+                                    for item_from in tx_his['data']['trade']['vins']:
+                                        t_from += item_from['address'] + '<br/>'
+                                    t_to = uw.address
+                                else:
+                                    t_from = uw.address
+                                    t_to = ''
+                                    for item_to in tx_his['data']['trade']['vouts']:
+                                        t_to += item_to['address'] + '<br/>'
+                                transaction.t_to = t_to
+                                transaction.t_from = t_from
+                                if t_to == uw.address:
+                                    transaction.type = 'in'
+                                elif t_from == uw.address:
+                                    transaction.type = 'out'
+                                else:
+                                    transaction.type = 'unknown'
+                                transaction.value = item['amount']
+                                # transaction.usd_value = get_usd_value('btc', float(item['amount']))
+                                transaction.usd_value = btc_to_usd.convert('usd', 'btc', float(item['amount']))
+                                transaction.hash = item['tx']
+                                transaction.block_hash = '-'
+                                transaction.save()
     else:
         print("Кошельки отсутствуют")
     return True

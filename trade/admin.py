@@ -9,9 +9,17 @@ class TransactionAdmin(admin.ModelAdmin):
         model = Transaction
 
 
+class UserBalancesAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in UserBalance._meta.fields]
+    list_filter = ['ue']
+
+    class Meta:
+        model = UserBalance
+
+
 admin.site.register(Exchanges)
 admin.site.register(UserExchanges)
-admin.site.register(UserBalance)
+admin.site.register(UserBalance, UserBalancesAdmin)
 admin.site.register(Coin)
 admin.site.register(Wallets)
 admin.site.register(Transaction, TransactionAdmin)

@@ -24,7 +24,7 @@ apt autoremove -y
 rm -rf /etc/grub.d/
 apt -y update
 apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 
-apt install -y git mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev links
+apt install -y git redis-server mysql-server libmysqlclient-dev libssl-dev openssl rabbitmq-server screen vim gcc make python3-pip python3-venv htop mc nginx supervisor libjpeg-dev libfreetype6-dev zlib1g-dev libxml2-dev libxslt1-dev
 service supervisor restart  
 apt install -y grub-pc grub-common
 grub-install /dev/vda
@@ -253,12 +253,28 @@ set databases and mocks
 
 ```sh
 echo "create database trade character set utf8" | mysql -u root
-mysql -u root trade < dump.sql
 #
 # Migrate
-./manage.py makemigrations
+./manage.py makemigrations 
+./manage.py makemigrations trade
 ./manage.py makemigrations tradeBOT
+./manage.py makemigrations monitoring
 ./manage.py migrate
+#
+# Add main data
+read -d "" ADDMAIN<<"EOF"
+from trade import models as trade_m
+from monitoring import models as monit_m
+trade_m.Exchanges.objects.get_or_create(exchange='poloniex', url='poloniex.com', driver=1)
+trade_m.Exchanges.objects.get_or_create(exchange='bittrex', url='bittrex.com', driver=2)
+trade_m.Exchanges.objects.get_or_create(exchange='btc-e', url='btc-e.com', driver=3)
+trade_m.Wallets.objects.get_or_create(name='BTC')
+trade_m.Wallets.objects.get_or_create(name='ETH')
+trade_m.Wallets.objects.get_or_create(name='Yandex Money')
+monit_m.Pools.objects.get_or_create(pool='nanopool')
+monit_m.Pools.objects.get_or_create(pool='ethermine')
+EOF
+echo "$ADDMAIN" | ./manage.py shell
 #
 # Add users
 read -d "" PYCODE <<"EOF"
@@ -421,11 +437,16 @@ cd /opt/portal_ongrid/ongrid_portal
 read -d "" PYTASKS <<"EOF"
 from tradeBOT import tasks
 coinmarketcup = tasks.pull_coinmarketcup.delay()
-pbittrex = tasks.pull_bittrex.delay()
-ppoloniex = tasks.pull_poloniex.delay()
-pbtce = tasks.pull_btce.delay()
 EOF
 echo "$PYTASKS" | ./manage.py shell
+
+read -d "" PYTASKS2 <<"EOF"
+from tradeBOT import tasks
+pbittrex = tasks.pull_bittrex.delay()
+ppoloniex = tasks.pull_poloniex.delay()
+EOF
+echo "$PYTASKS2" | ./manage.py shell
 ```
 
 reboot and have fun!
+
