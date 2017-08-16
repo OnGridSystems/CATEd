@@ -83,7 +83,6 @@ def check_nanopool():
                     new_worker.save()
     return True
 
-
 @periodic_task(run_every=crontab(minute='*/5'))
 def save_worker_history():
     date = datetime.datetime.fromtimestamp(int(time.time())).strftime('%Y-%m-%d %H:%M:%S')
