@@ -437,10 +437,16 @@ cd /opt/portal_ongrid/ongrid_portal
 read -d "" PYTASKS <<"EOF"
 from tradeBOT import tasks
 coinmarketcup = tasks.pull_coinmarketcup.delay()
+EOF
+echo "$PYTASKS" | ./manage.py shell
+
+read -d "" PYTASKS2 <<"EOF"
+from tradeBOT import tasks
 pbittrex = tasks.pull_bittrex.delay()
 ppoloniex = tasks.pull_poloniex.delay()
 EOF
-echo "$PYTASKS" | ./manage.py shell
+echo "$PYTASKS2" | ./manage.py shell
 ```
 
 reboot and have fun!
+
