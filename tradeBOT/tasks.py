@@ -1,6 +1,10 @@
 from __future__ import absolute_import, unicode_literals
 import json
 import re
+
+import _thread
+
+import websocket
 from django.db.models import Q
 from http.client import HTTPException
 import sys
@@ -206,46 +210,63 @@ def pull_coinmarketcup():
     return True
 
 
-@periodic_task(run_every=datetime.timedelta(seconds=10))
+# @periodic_task(run_every=datetime.timedelta(seconds=10))
+@shared_task
 def pull_poloniex_ticker():
+    # exchange = Exchanges.objects.get(exchange='poloniex')
+    # ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
+    # date_time = round_down(time.time(), 1)
+    # to_template = []
+    # for item in ticker:
+    #     pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
+    #     try:
+    #         main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+    #         second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+    #         pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+    #         new_ticker = ExchangeTicker()
+    #         new_ticker.exchange = exchange
+    #         new_ticker.pair = pair
+    #         old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(
+    #             datetime.date.today().strftime('%s'))).order_by('date_time').first()
+    #         if old_exch_ticker is not None:
+    #             old_last = old_exch_ticker.last
+    #             new_last = ticker[item]['last']
+    #             new_ticker.percent_change = round((float(new_last) - float(old_last)) / float(old_last), 8)
+    #         new_ticker.high = ticker[item]['high24hr']
+    #         new_ticker.low = ticker[item]['low24hr']
+    #         new_ticker.bid = ticker[item]['highestBid']
+    #         new_ticker.ask = ticker[item]['lowestAsk']
+    #         new_ticker.base_volume = ticker[item]['baseVolume']
+    #         new_ticker.last = ticker[item]['last']
+    #         new_ticker.date_time = date_time
+    #         new_ticker.save()
+    #         pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
+    #                      'percent': round(new_ticker.percent_change * 100, 2)}
+    #         to_template.append(pair_temp)
+    #     except ExchangeCoin.DoesNotExist:
+    #         pass
+    #     except Pair.DoesNotExist:
+    #         pass
+    # calculate_to_trade.delay()
+    # if len(to_template) > 0:
+    #     Group("trade").send({'text': json.dumps(to_template)})
+    # return True
+
     exchange = Exchanges.objects.get(exchange='poloniex')
     ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
-    date_time = round_down(time.time(), 1)
-    to_template = []
+    markets = {}
     for item in ticker:
         pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
         try:
             main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
             second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
             pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
-            new_ticker = ExchangeTicker()
-            new_ticker.exchange = exchange
-            new_ticker.pair = pair
-            old_exch_ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange, date_time__gt=int(
-                datetime.date.today().strftime('%s'))).order_by('date_time').first()
-            if old_exch_ticker is not None:
-                old_last = old_exch_ticker.last
-                new_last = ticker[item]['last']
-                new_ticker.percent_change = round((float(new_last) - float(old_last)) / float(old_last), 8)
-            new_ticker.high = ticker[item]['high24hr']
-            new_ticker.low = ticker[item]['low24hr']
-            new_ticker.bid = ticker[item]['highestBid']
-            new_ticker.ask = ticker[item]['lowestAsk']
-            new_ticker.base_volume = ticker[item]['baseVolume']
-            new_ticker.last = ticker[item]['last']
-            new_ticker.date_time = date_time
-            new_ticker.save()
-            pair_temp = {'pair_id': pair.pk, 'last': new_ticker.last,
-                         'percent': round(new_ticker.percent_change * 100, 2)}
-            to_template.append(pair_temp)
+            market = {ticker[item]['id']: pair.pk}
+            markets.update(market)
         except ExchangeCoin.DoesNotExist:
             pass
         except Pair.DoesNotExist:
             pass
-    calculate_to_trade.delay()
-    if len(to_template) > 0:
-        Group("trade").send({'text': json.dumps(to_template)})
-    return True
 
 
 @periodic_task(run_every=datetime.timedelta(seconds=10))
@@ -294,9 +315,10 @@ def round_down(x, s):
     return x - (x % (10 * s))
 
 
-@periodic_task(run_every=datetime.timedelta(hours=settings.TICKER_HOURS_TO_CLEAR))
+@periodic_task(run_every=datetime.timedelta(minutes=settings.TICKER_MINUTES_TO_CLEAR))
 def clean_ticker():
-    ExchangeTicker.objects.filter(date_time__lt=time.time() - settings.TICKER_HOURS_TO_CLEAR * 60 * 60).delete()
+    ExchangeTicker.objects.filter(
+        date_time__lt=datetime.datetime.now() - datetime.timedelta(minutes=settings.TICKER_MINUTES_TO_CLEAR)).delete()
 
 
 @shared_task
@@ -345,67 +367,69 @@ def pull_poloniex_orders():
 
 @shared_task
 def calculate_to_trade():
-    getcontext().rounding = 'ROUND_DOWN'
-    user_pairs = UserPair.objects.filter(
-        ~Q(change_percent=0) & ~Q(change_interval=0) & Q(user_exchange__is_active_script=True))
-    for item in user_pairs:
-        # смотрим сколько у нас первой валюты
-        user_have_main_coin = UserBalance.objects.get(ue=item.user_exchange, coin=item.pair.main_coin.symbol.lower())
-
-        # считаем сколько можно купить второй валюты в паре
-        user_have_second_coin = UserBalance.objects.get(ue=item.user_exchange,
-                                                        coin=item.pair.second_coin.symbol.lower())
-        user_have_second_coin_in_percent = user_have_second_coin.btc_value / (item.user_exchange.total_btc / 100)
-        may_buy = item.share - user_have_second_coin_in_percent
-        print(may_buy)
-        if may_buy > 0:
-            try:
-                user_main_coin = UserMainCoinPriority.objects.get(main_coin__coin=item.pair.main_coin,
-                                                                  user_exchange=item.user_exchange)
-                is_active = user_main_coin.is_active
-            except UserMainCoinPriority.DoesNotExist:
-                is_active = True
-            if is_active:
-                try:
-                    ticker = ExchangeTicker.objects.filter(pair=item.pair,
-                                                           date_time__gte=round_down(time.time(),
-                                                                                     1) - item.change_interval,
-                                                           date_time__lte=round_down(time.time(),
-                                                                                     1) - item.change_interval + 22).earliest(
-                        'date_time')
-                    last_ticker = ExchangeTicker.objects.filter(pair=item.pair).latest('date_time')
-                except ExchangeTicker.DoesNotExist:
-                    continue
-                if ticker is not None and last_ticker is not None:
-                    # print('Last: ' + str(ticker.pk) + ' -- ' + str(ticker.last))
-                    # print('Current: ' + str(last_ticker.pk) + ' -- ' + str(last_ticker.last))
-                    change_percent = (last_ticker.last - ticker.last) / ticker.last
-                    # print('Change percent' + str(change_percent))
-                    order_type = 'up' if change_percent > 0 else 'down'
-                    need_to_write = True
-                    try:
-                        last_to_trade = ToTrade.objects.filter(user_pair=item).latest('date_created')
-                        if last_to_trade.type == order_type:
-                            need_to_write = False
-                    except ToTrade.DoesNotExist:
-                        pass
-                    if abs(change_percent * 100) >= item.change_percent and need_to_write:
-                        to_trade = ToTrade()
-                        to_trade.percent_react = change_percent
-                        to_trade.user_pair = item
-                        to_trade.type = order_type
-                        to_trade.price = last_ticker.last
-                        to_trade.amount = ((item.user_exchange.total_btc / 100) * may_buy) / last_ticker.last
-                        # Высчитываю сколько это должно стоить по версии poloniex'a
-                        total = D(str((item.user_exchange.total_btc / 100) * may_buy)).quantize(D('.000000001'))
-                        if int(total * 100000000 % 10) < 9:
-                            total = D(str(round(float(total), 8)))
-                        else:
-                            total = total.quantize(D('.00000001'))
-                        to_trade.total = total
-                        fee = D('0.0015') if change_percent < 0 else D('0.0025')
-                        to_trade.total_f = total - (total * fee)
-                        to_trade.fee = fee
-                        to_trade.cause = 'Got into the conditions'
-                        to_trade.save()
-    return True
+    pass
+    # getcontext().rounding = 'ROUND_DOWN'
+    # user_pairs = UserPair.objects.filter(
+    #     ~Q(change_percent=0) & ~Q(change_interval=0) & Q(user_exchange__is_active_script=True))
+    # for item in user_pairs:
+    #     # смотрим сколько у нас первой валюты
+    #     user_have_main_coin = UserBalance.objects.get(ue=item.user_exchange, coin=item.pair.main_coin.symbol.lower())
+    #
+    #     # считаем сколько можно купить второй валюты в паре
+    #     user_have_second_coin = UserBalance.objects.get(ue=item.user_exchange,
+    #                                                     coin=item.pair.second_coin.symbol.lower())
+    #     user_have_second_coin_in_percent = user_have_second_coin.btc_value / (item.user_exchange.total_btc / 100)
+    #     may_buy = item.share - user_have_second_coin_in_percent
+    #     print(may_buy)
+    #     if may_buy > 0:
+    #         try:
+    #             user_main_coin = UserMainCoinPriority.objects.get(main_coin__coin=item.pair.main_coin,
+    #                                                               user_exchange=item.user_exchange)
+    #             is_active = user_main_coin.is_active
+    #         except UserMainCoinPriority.DoesNotExist:
+    #             is_active = True
+    #         if is_active:
+    #             try:
+    #                 ticker = ExchangeTicker.objects.filter(pair=item.pair,
+    #                                                        date_time__gte=round_down(time.time(),
+    #                                                                                  1) - item.change_interval,
+    #                                                        date_time__lte=round_down(time.time(),
+    #                                                                                  1) - item.change_interval + 22).earliest(
+    #                     'date_time')
+    #                 last_ticker = ExchangeTicker.objects.filter(pair=item.pair).latest('date_time')
+    #             except ExchangeTicker.DoesNotExist:
+    #                 continue
+    #             if ticker is not None and last_ticker is not None:
+    #                 # print('Last: ' + str(ticker.pk) + ' -- ' + str(ticker.last))
+    #                 # print('Current: ' + str(last_ticker.pk) + ' -- ' + str(last_ticker.last))
+    #                 change_percent = (last_ticker.last - ticker.last) / ticker.last
+    #                 # print('Change percent' + str(change_percent))
+    #                 order_type = 'up' if change_percent > 0 else 'down'
+    #                 need_to_write = True
+    #                 try:
+    #                     last_to_trade = ToTrade.objects.filter(user_pair=item).latest('date_created')
+    #                     if last_to_trade.type == order_type:
+    #                         need_to_write = False
+    #                 except ToTrade.DoesNotExist:
+    #                     pass
+    #                 if abs(change_percent * 100) >= item.change_percent and need_to_write:
+    #                     to_trade = ToTrade()
+    #                     to_trade.percent_react = change_percent
+    #                     to_trade.user_pair = item
+    #                     to_trade.type = order_type
+    #                     to_trade.price = last_ticker.last
+    #                     amount = min(user_have_main_coin.balance, ((item.user_exchange.total_btc / 100) * may_buy))
+    #                     to_trade.amount = amount / last_ticker.last
+    #                     # Высчитываю сколько это должно стоить по версии poloniex'a
+    #                     total = D(str(amount)).quantize(D('.000000001'))
+    #                     if int(total * 100000000 % 10) < 9:
+    #                         total = D(str(round(float(total), 8)))
+    #                     else:
+    #                         total = total.quantize(D('.00000001'))
+    #                     to_trade.total = total
+    #                     fee = D('0.0015') if change_percent < 0 else D('0.0025')
+    #                     to_trade.total_f = total - (total * fee)
+    #                     to_trade.fee = fee
+    #                     to_trade.cause = 'Got into the conditions'
+    #                     to_trade.save()
+    # return True

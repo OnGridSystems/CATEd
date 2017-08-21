@@ -1,296 +1,242 @@
 {% extends 'trade/base.html' %}
 {% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
 {% block content %}
-    <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
-    <div class="switch center">
-        <label>
-            Off
-            <input id="disable-script" type="checkbox" {% if user_exchange.is_active_script %}checked{% endif %}>
-            <span class="lever"></span>
-            On
-        </label>
-    </div>
-    <br>
-    <div class="row">
-        <div class="col s9 m9 l9 graph-block">
-            <div class="preview_coins" id="preview_coins">
-                <blockquote>
-                    <h4><b></b></h4>
-                </blockquote>
-            </div>
-            <div class="chart-info">
-                <div class="chart-info-item left">
-                    <b></b>
+    {% autoescape on %}
+        <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
+        <div class="switch center">
+            <label>
+                Off
+                <input id="disable-script" type="checkbox" {% if user_exchange.is_active_script %}checked{% endif %}>
+                <span class="lever"></span>
+                On
+            </label>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col s9 m9 l9 graph-block">
+                <div class="preview_coins" id="preview_coins">
+                    <blockquote>
+                        <h4><b></b></h4>
+                    </blockquote>
                 </div>
-                <div class="chart-info-item">
-                    <b>Open: </b><span id="open" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <b>High: </b><span id="high" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <b>Low: </b><span id="low" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <b>Close: </b><span id="close" style="display: inline-block;"></span>
-                </div>
-                <div class="chart-info-item">
-                    <span style="font-weight: bolder;" id="date"></span>
-                </div>
-            </div>
-            <div class="clearfix"></div>
-            <div>
-                <div>
-                    <div id="jqChart" style="width: 98%; height: 350px;">
+                <div class="chart-info">
+                    <div class="chart-info-item left">
+                        <b></b>
+                    </div>
+                    <div class="chart-info-item">
+                        <b>Open: </b><span id="open" style="display: inline-block;"></span>
+                    </div>
+                    <div class="chart-info-item">
+                        <b>High: </b><span id="high" style="display: inline-block;"></span>
+                    </div>
+                    <div class="chart-info-item">
+                        <b>Low: </b><span id="low" style="display: inline-block;"></span>
+                    </div>
+                    <div class="chart-info-item">
+                        <b>Close: </b><span id="close" style="display: inline-block;"></span>
+                    </div>
+                    <div class="chart-info-item">
+                        <span style="font-weight: bolder;" id="date"></span>
                     </div>
                 </div>
                 <div class="clearfix"></div>
-                <div class="row">
-                    <div class="col s6 m6 l6 right-align">
-                        <div id="buttons">
-                            <b>Zoom</b>
-                            <button data-zoom="6" class="zoom btn waves-effect btn-mini white-text green">6h</button>
-                            <button data-zoom="24" class="zoom btn waves-effect btn-mini white-text">1d</button>
-                            <button data-zoom="48" class="zoom btn waves-effect btn-mini white-text">2d</button>
-                            <button data-zoom="96" class="zoom btn waves-effect btn-mini white-text">4d</button>
-                            <button data-zoom="168" class="zoom btn waves-effect btn-mini white-text">1w</button>
-                            <button data-zoom="336" class="zoom btn waves-effect btn-mini white-text">2w</button>
-                            <button data-zoom="720" class="zoom btn waves-effect btn-mini white-text">1m</button>
-                            <button data-zoom="all" class="zoom btn waves-effect btn-mini white-text">all</button>
+                <div>
+                    <div>
+                        <div id="jqChart" style="width: 98%; height: 350px;">
                         </div>
                     </div>
-                    <div class="col s6 m6 l6">
-                        <div id="buttons">
-                            <b>Candlestick</b>
-                            <button data-intervale="5" class="candlestick btn waves-effect btn-mini white-text green">5
-                                min
-                            </button>
-                            <button data-intervale="15" class="candlestick btn waves-effect btn-mini white-text">15
-                                min
-                            </button>
-                            <button data-intervale="30" class="candlestick btn waves-effect btn-mini white-text">30
-                                min
-                            </button>
-                            <button data-intervale="60" class="candlestick btn waves-effect btn-mini white-text">1
-                                hour
-                            </button>
-                            <button data-intervale="120" class="candlestick btn waves-effect btn-mini white-text">2
-                                hours
-                            </button>
+                    <div class="clearfix"></div>
+                    <div class="row">
+                        <div class="col s6 m6 l6 right-align">
+                            <div id="buttons">
+                                <b>Zoom</b>
+                                <button data-zoom="3" class="zoom btn waves-effect btn-mini white-text green">3h
+                                </button>
+                                <button data-zoom="6" class="zoom btn waves-effect btn-mini white-text">6h</button>
+                                <button data-zoom="24" class="zoom btn waves-effect btn-mini white-text">1d</button>
+                                <button data-zoom="48" class="zoom btn waves-effect btn-mini white-text">2d</button>
+                                <button data-zoom="96" class="zoom btn waves-effect btn-mini white-text">4d</button>
+                                <button data-zoom="168" class="zoom btn waves-effect btn-mini white-text">1w</button>
+                                <button data-zoom="336" class="zoom btn waves-effect btn-mini white-text">2w</button>
+                                <button data-zoom="720" class="zoom btn waves-effect btn-mini white-text">1m</button>
+                                <button data-zoom="all" class="zoom btn waves-effect btn-mini white-text">all</button>
+                            </div>
+                        </div>
+                        <div class="col s6 m6 l6">
+                            <div id="buttons">
+                                <b>Candlestick</b>
+                                <button data-intervale="1"
+                                        class="candlestick btn waves-effect btn-mini white-text green">1
+                                    min
+                                </button>
+                                <button data-intervale="5" class="candlestick btn waves-effect btn-mini white-text">5
+                                    min
+                                </button>
+                                <button data-intervale="15" class="candlestick btn waves-effect btn-mini white-text">15
+                                    min
+                                </button>
+                                <button data-intervale="30" class="candlestick btn waves-effect btn-mini white-text">30
+                                    min
+                                </button>
+                                <button data-intervale="60" class="candlestick btn waves-effect btn-mini white-text">1
+                                    hour
+                                </button>
+                                <button data-intervale="120" class="candlestick btn waves-effect btn-mini white-text">2
+                                    hours
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div class="col s12 m12 l12 exchange-coins-block">
+                    {% get_orders_to_trade to_trade %}
+                </div>
             </div>
-            <div class="col s12 m12 l12 exchange-coins-block">
-                <table width="100%">
-                    <colgroup>
-                        <col width="10%">
-                        <col width="7%">
-                        <col width="6%">
-                        <col width="7%">
-                        <col width="7%">
-                        <col width="7%">
-                        <col width="7%">
-                        <col width="7%">
-                        <col width="12%">
-                        <col width="13%">
-                        <col width="17%">
-                    </colgroup>
-                    <thead>
-                    <tr>
-                        <th>Pair</th>
-                        <th>Percent change</th>
-                        <th>Type</th>
-                        <th>Price</th>
-                        <th>Amount</th>
-                        <th>Total</th>
-                        <th>Total + fee</th>
-                        <th>Fee</th>
-                        <th>Cause</th>
-                        <th>Date created</th>
-                        <th>Date updated</th>
-                    </tr>
-                    </thead>
-                </table>
-                <div class="exchange-coins-block-scroll">
-                    <table width="100%">
+            <div class="col s3 m3 l3">
+                <div class="exchange-coins-block">
+                    <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
+                    <h4 class="center">Exchange Coins</h4>
+                    <h6 class="center"><i class="fa fa-question-circle-o tooltipped"
+                       data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the www.coinmarketchup.com"
+                       data-position="top"
+                       aria-hidden="true"></i> Where is my coin?</h6>
+                    <div class="row">
+                        <div class="col s12 m12 l12">
+                            <ul class="tabs">
+                                {% for pc in primary_coins %}
+                                    <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="col s12 m12 l12">
+                            <div class="exchange-coins-block-scroll">
+                                {% for pc in primary_coins %}
+                                    <div class="col s12 m12 l12" id="{{ pc.coin.symbol }}">
+                                        <ul class="collapsible">
+                                            {% get_primary_pairs pc.coin user_exchange %}
+                                        </ul>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="exchange-coins-block">
+                    <h4 class="center">Your trade pairs</h4>
+                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">
+                        {% csrf_token %}
+                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">
+                        Please, specify coefficient of depth
+                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth" value="{{ user_exchange.coefficient_of_depth }}">
+                        <button type="submit">OK</button>
+                    </form>
+                    <table class="center" width="100%" cellspacing="1" cellpadding="0">
                         <colgroup>
+                            <col width="25%">
+                            <col width="20%">
+                            <col width="25%">
+                            <col width="20%">
                             <col width="10%">
-                            <col width="7%">
-                            <col width="6%">
-                            <col width="7%">
-                            <col width="7%">
-                            <col width="7%">
-                            <col width="7%">
-                            <col width="7%">
-                            <col width="12%">
-                            <col width="13%">
-                            <col width="17%">
                         </colgroup>
-                        <tbody>
-                        {% for item in to_trade %}
-                            <tr>
-                                <td>{{ item.user_pair.pair }}</td>
-                                <td>{{ item.percent_react | multiple:100 | floatformat:'2' }}</td>
-                                <td>{{ item.type }}</td>
-                                <td>{{ item.price }}</td>
-                                <td>{{ item.amount }}</td>
-                                <td>{{ item.total }}</td>
-                                <td>{{ item.total_f }}</td>
-                                <td>{{ item.fee }}</td>
-                                <td>{{ item.cause }}</td>
-                                <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
-                                <td>{{ item.date_updated | date:'d.m.Y H:i:s' }}</td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="10" class="center">Empty</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
+                        <thead>
+                        <tr>
+                            <th>Pair</th>
+                            <th>Have (% BTC)</th>
+                            <th>Max share (% BTC)</th>
+                            <th>Priority</th>
+                            <th>Del</th>
+                        </tr>
+                        </thead>
                     </table>
-                </div>
-            </div>
-        </div>
-        <div class="col s3 m3 l3">
-            <div class="exchange-coins-block">
-                <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
-                <h4 class="center">Exchange Coins</h4>
-                <i class="fa fa-question-circle-o tooltipped"
-                   data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the website www.coinmarketchup.com"
-                   data-position="right"
-                   aria-hidden="true"></i> Where is my coin?
-                <div class="row">
-                    <div class="col s12 m12 l12">
-                        <ul class="tabs">
-                            {% for pc in primary_coins %}
-                                <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol }}</a></li>
+                    <div class="exchange-coins-block-scroll">
+                        <ul class="collapsible">
+                            {% for pair in user_pairs %}
+                                <li>
+                                    <div class="collapsible-header">
+                                        <table class="center" width="100%" cellspacing="1" cellpadding="0">
+                                            <colgroup>
+                                                <col width="25%">
+                                                <col width="20%">
+                                                <col width="25%">
+                                                <col width="20%">
+                                                <col width="10%">
+                                            </colgroup>
+                                            <tbody>
+                                            <tr data-pair-id="{{ pair.pk }}">
+                                                <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
+                                                <td>
+                                                    {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
+                                                </td>
+                                                <td class="center">
+                                                    <input title="Pair share" class="pair-share black-text"
+                                                           type="number"
+                                                           name="share"
+                                                           value="{{ pair.share | floatformat:'-1' }}"
+                                                           placeholder="pair share">
+                                                </td>
+                                                <td>
+                                                    {{ pair.rank }}
+                                                    <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
+                                                    <i class="fa rank-down fa-long-arrow-down red"
+                                                       aria-hidden="true"></i>
+                                                </td>
+                                                <td class="center">
+                                                    <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
+                                                </td>
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="collapsible-body">
+                                        <h6 class="center">Advanced settings</h6>
+                                        <div class="center pair-advanced">
+                                            <form method="post" action="{% url 'set_pair_add' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="user-exchange-pk"
+                                                       value="{{ user_exchange.pk }}">
+                                                <input type="hidden" name="pair-pk" value="{{ pair.pk }}">
+                                                <p class="center">Please indicate the rate of change in the price at which you want to react.</p>
+                                                Price changes with rate
+                                                <input step="0.00001" title="Change percent"
+                                                                        type="number"
+                                                                        name="rate_of_change"
+                                                                        max="99999999"
+                                                                        value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-4'}}"> per second.
+                                                <button>OK</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </li>
+                            {% empty %}
+                                <li>
+                                    <div class="collapsible-header">
+                                        <h6 class="center">Add coins from the list on the left, set the share, coin
+                                            trade
+                                            priority to start using the script.</h6>
+                                    </div>
+                                </li>
                             {% endfor %}
                         </ul>
                     </div>
-                    <div class="col s12 m12 l12">
-                        <div class="exchange-coins-block-scroll">
-                            {% for pc in primary_coins %}
-                                <div class="col s12 m12 l12" id="{{ pc.coin.symbol }}">
-                                    <ul class="collapsible">
-                                        {% get_primary_pairs pc.coin user_exchange %}
-                                    </ul>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-
                 </div>
-            </div>
-            <div class="exchange-coins-block">
-                <h4 class="center">Your trade pairs</h4>
-                <table class="center" width="100%" cellspacing="1" cellpadding="0">
-                    <colgroup>
-                        <col width="25%">
-                        <col width="20%">
-                        <col width="25%">
-                        <col width="20%">
-                        <col width="10%">
-                    </colgroup>
-                    <thead>
-                    <tr>
-                        <th>Pair</th>
-                        <th>Have (% BTC)</th>
-                        <th>Max share (% BTC)</th>
-                        <th>Priority</th>
-                        <th>Del</th>
-                    </tr>
-                    </thead>
-                </table>
-                <div class="exchange-coins-block-scroll">
-                    <ul class="collapsible">
-                        {% for pair in user_pairs %}
-                            <li>
-                                <div class="collapsible-header">
-                                    <table class="center" width="100%" cellspacing="1" cellpadding="0">
-                                        <colgroup>
-                                            <col width="25%">
-                                            <col width="20%">
-                                            <col width="25%">
-                                            <col width="20%">
-                                            <col width="10%">
-                                        </colgroup>
-                                        <tbody>
-                                        <tr data-pair-id="{{ pair.pk }}">
-                                            <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
-                                            <td>
-                                                {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
-                                            </td>
-                                            <td class="center">
-                                                <input title="Pair share" class="pair-share black-text" type="number"
-                                                       name="share"
-                                                       value="{{ pair.share | floatformat:'-1' }}"
-                                                       placeholder="pair share">
-                                            </td>
-                                            <td>
-                                                {{ pair.rank }}
-                                                <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
-                                                <i class="fa rank-down fa-long-arrow-down red"
-                                                   aria-hidden="true"></i>
-                                            </td>
-                                            <td class="center">
-                                                <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
-                                            </td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="collapsible-body">
-                                    <h6 class="center">Advanced settings</h6>
-                                    <div class="center pair-advanced">
-                                        <form method="post" action="{% url 'set_pair_add' %}">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="user-exchange-pk" value="{{ user_exchange.pk }}">
-                                            <input type="hidden" name="pair-pk" value="{{ pair.pk }}">
-                                            <p class="center">Specify the percentage of price change in the interval at
-                                                which the
-                                                script
-                                                will work.</p>
-                                            Price changed by <input step="0.001" title="Change percent" type="number"
-                                                                    name="change_percent"
-                                                                    value="{{ pair.pk | user_pair_percent_change }}">
-                                            percent in
-                                            <input title="Change interval" type="number" name="change_interval"
-                                                   value="{{ pair.pk | user_pair_interval_change }}">
-                                            seconds.
-                                            <button>OK</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </li>
-                        {% empty %}
-                            <li>
-                                <div class="collapsible-header">
-                                    <h6 class="center">Add coins from the list on the left, set the share, coin
-                                        trade
-                                        priority to start using the script.</h6>
-                                </div>
-                            </li>
+                <div class="exchange-coins-block">
+                    <h4 class="center">Exchange Main Coins</h4>
+                    <div class="primary-coins">
+                        {% for pc in primary_coins %}
+                            <div class="primary-coin rank z-depth-1" data-primary-coin="{{ pc.pk }}">
+                                <b>{{ pc.coin.name }}</b>
+                                <br>
+                                <img src="/static/images/cryptotokens/{{ pc.coin.symbol | get_coinmarket_id }}.png"
+                                     alt=""><br>
+                                {% get_user_primary_coins user_exchange pc %}
+                            </div>
                         {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            <div class="exchange-coins-block">
-                <h4 class="center">Exchange Main Coins</h4>
-                <div class="primary-coins">
-                    {% for pc in primary_coins %}
-                        <div class="primary-coin rank z-depth-1" data-primary-coin="{{ pc.pk }}">
-                            <b>{{ pc.coin.name }}</b>
-                            <br>
-                            <img src="/static/images/cryptotokens/{{ pc.coin.symbol | get_coinmarket_id }}.png"
-                                 alt=""><br>
-                            {% get_user_primary_coins user_exchange pc %}
-                        </div>
-                    {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    {% endautoescape %}
 {% endblock %}
 {% block script %}
     <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>

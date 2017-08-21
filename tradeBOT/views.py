@@ -164,62 +164,49 @@ def change_primary_coin_rank(request):
 
 def get_ticker(request):
     if request.is_ajax():
-        pair_id = request.POST.get('pair_id')
-        intervale = int(request.POST.get('intervale')) * 6
-        zoom = request.POST.get('zoom')
-        ticker_d = []
-        try:
-            if zoom == 'all':
-                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
-            else:
-                zoom = int(zoom)
-                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id,
-                                                            date_time__gte=int(
-                                                                time.time() - (zoom * 60 * 60))).order_by('date_time').values())
-            for i in range(0, len(ticker), intervale):
-                cur_ticker = {'date': datetime.datetime.fromtimestamp(ticker[i]['date_time']).strftime('%c'), 'open': ticker[i]['last'],
-                              'low': ticker[i]['last'],
-                              'high': ticker[i]['last']}
-                try:
-                    cur_ticker['close'] = ticker[i + intervale]['last']
-                except IndexError:
-                    cur_ticker['close'] = ticker[len(ticker) - 1]['last']
-                for j in range(1, intervale + 1):
-                    try:
-                        if ticker[i + j]['last'] < cur_ticker['low']:
-                            cur_ticker['low'] = ticker[i + j]['last']
-                    except IndexError:
-                        break
-                        # if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
-                        #     cur_ticker['low'] = ticker[len(ticker) - 1]['last']
-                    try:
-                        if ticker[i + j]['last'] > cur_ticker['high']:
-                            cur_ticker['high'] = ticker[i + j]['last']
-                    except IndexError:
-                        break
-                        # if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
-                        #     cur_ticker['high'] = ticker[len(ticker) - 1]['last']
-                ticker_d.append(cur_ticker)
-            return HttpResponse(json.dumps(list(ticker_d), cls=DjangoJSONEncoder), status=200)
-        except Pair.DoesNotExist:
-            return None
+        return HttpResponse('ok', status=200)
 
 
 def set_pair_add(request):
     if request.method == 'POST':
         pair_pk = request.POST.get('pair-pk')
         user_exchange_pk = request.POST.get('user-exchange-pk')
-        change_percent = request.POST.get('change_percent')
-        if change_percent == '':
-            change_percent = 0
-        change_interval = request.POST.get('change_interval')
-        if change_interval == '':
-            change_interval = 0
+        rate_of_change = request.POST.get('rate_of_change')
+        if rate_of_change == '':
+            rate_of_change = 0
         try:
             UserPair.objects.filter(pk=pair_pk, user_exchange_id=user_exchange_pk).update(
-                change_percent=change_percent, change_interval=change_interval)
+                rate_of_change=rate_of_change)
         except UserPair.DoesNotExist:
             pass
         return redirect('/trade/setup/' + str(user_exchange_pk) + '/')
     else:
         return redirect('/')
+
+
+def get_new_to_trade(request):
+    if request.is_ajax():
+        ue_pk = request.POST.get('user_exch')
+        already = request.POST.get('already')
+        to_trade = ToTrade.objects.filter(user_pair__user_exchange_id=ue_pk)
+        if len(to_trade) != int(already):
+            return render(request, 'tradeBOT/to_trade.html', {'to_trade': to_trade})
+        else:
+            return HttpResponse('ok', status=200)
+
+
+def exchange_depth_to_trade(request):
+    if request.method == 'POST':
+        depth = request.POST.get('depth')
+        exchange_pk = request.POST.get('user-exchange-pk')
+        if depth == '':
+            depth = 0
+        try:
+            ue = UserExchanges.objects.get(user=request.user, pk=exchange_pk)
+            ue.coefficient_of_depth = depth
+            ue.save()
+        except UserExchanges.DoesNotExist:
+            pass
+        return redirect('/trade/setup/' + str(exchange_pk) + '/')
+    else:
+        return HttpResponse('Please use POST request', status=200)

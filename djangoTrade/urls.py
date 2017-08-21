@@ -48,7 +48,10 @@ urlpatterns = [
                   url(r'^trade/relations/$', tradeBOTViews.relations, name='relations'),
                   url(r'^trade/exchange_script_activity/$', tradeBOTViews.change_user_exchange_script_activity,
                       name='change_user_exchange_script_activity'),
+                  url(r'^trade/exchange_depth_to_trade/$', tradeBOTViews.exchange_depth_to_trade,
+                      name='exchange_depth_to_trade'),
                   url(r'^trade/get_ticker/$', tradeBOTViews.get_ticker, name='get_ticker'),
+                  url(r'^trade/get_new_orders_to_trade/$', tradeBOTViews.get_new_to_trade, name='get_new_to_trade'),
                   url(r'^monitor/$', monitor_views.monitor, name='monitoring'),
                   url(r'^monitor/api/get_history/', monitor_views.get_holding, name='get_workers_history'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

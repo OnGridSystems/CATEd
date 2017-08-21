@@ -81,16 +81,16 @@ $(document).ready(function () {
         }
     });
 
-    function toggle_pair(pair_id) {
-        var user_exch = $('#exchange').val();
-        $.post('/trade/toggle_pair/', {
-            pair_id: pair_id,
-            user_exch: user_exch,
-            csrfmiddlewaretoken: getCookie('csrftoken')
-        }, function (data) {
-            'ok' === data ? location.reload() : Materialize.toast(data, 1500)
-        });
-    }
+    // function toggle_pair(pair_id) {
+    //     var user_exch = $('#exchange').val();
+    //     $.post('/trade/toggle_pair/', {
+    //         pair_id: pair_id,
+    //         user_exch: user_exch,
+    //         csrfmiddlewaretoken: getCookie('csrftoken')
+    //     }, function (data) {
+    //         'ok' === data ? location.reload() : Materialize.toast(data, 1500)
+    //     });
+    // }
 
     $('.pair-share').keypress(function (e) {
         if (e.which === 13) {
@@ -158,27 +158,47 @@ $(document).ready(function () {
             'ok' === data ? location.reload() : Materialize.toast('Error while changing rank', 1000)
         })
     }
+
+    function get_new_orders_to_trade() {
+        $.ajax({
+            url: '/trade/get_new_orders_to_trade/',
+            type: 'post',
+            dataType: 'html',
+            data: {
+                user_exch: $('#exchange').val(),
+                csrfmiddlewaretoken: getCookie('csrftoken'),
+                already: $('.orders_to_trade').length
+            },
+            success: function (data) {
+
+                console.log(data)
+
+            }
+        })
+    }
+
+    setInterval(get_new_orders_to_trade, 5000)
 });
 
 socket = new WebSocket("ws://" + window.location.host + "/trade/");
 socket.onmessage = function (message) {
-    var data = JSON.parse(message.data);
-    data.map(function (item) {
-        $('.pair_last#last_' + item.pair_id).text(item.last);
-        $('.pair_last#percent_' + item.pair_id).text(item.percent + '%');
-        if (item.percent > 0) {
-            $('.pair_last#percent_' + item.pair_id).removeClass('red-text').addClass('green-text');
-            $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeUp');
-            $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>');
-        } else if (item.percent < 0) {
-            $('.pair_last#percent_' + item.pair_id).removeClass('green-text').addClass('red-text');
-            $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeDown');
-            $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>');
-        } else {
-            $('.pair_last#percent_' + item.pair_id).removeClass('green-text red-text');
-            $('.pair_last#arrow_' + item.pair_id).html('');
-        }
-    });
+    var item = JSON.parse(message.data);
+    console.log(Math.floor(item.percent * 100) / 100);
+    $('.pair_last#last_' + item.pair_id).text(item.last);
+    $('.pair_last#percent_' + item.pair_id).text(Math.floor(item.percent * 100) / 100 + '%');
+    if (item.percent > 0) {
+        $('.pair_last#percent_' + item.pair_id).removeClass('red-text').addClass('green-text');
+        $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeUp');
+        $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>');
+    } else if (item.percent < 0) {
+        $('.pair_last#percent_' + item.pair_id).removeClass('green-text').addClass('red-text');
+        $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeDown');
+        $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>');
+    } else {
+        $('.pair_last#percent_' + item.pair_id).removeClass('green-text red-text');
+        $('.pair_last#arrow_' + item.pair_id).html('');
+    }
+
     setTimeout(function () {
         $('.pair_last').parent('tr').removeClass('priceChangeDown priceChangeUp');
     }, 600);
@@ -209,7 +229,7 @@ function draw_graph() {
         intervale: intervale,
         zoom: zoom
     }, function (ticker) {
-        console.log(ticker);
+        // console.log(ticker);
         for (var i = 1; i < ticker.length; i++) {
             ohlcData.push([new Date(Date.parse(ticker[i].date)), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
             // var volume = 100 + 15 * Math.random();
@@ -247,7 +267,8 @@ function draw_graph() {
                     data: ohlcData,
                     priceUpFillStyle: '#4caf50',
                     priceDownFillStyle: '#f44336',
-                    strokeStyle: 'black'
+                    strokeStyle: 'black',
+                    pointWidth: 0.8
                 }
             ]
         });
