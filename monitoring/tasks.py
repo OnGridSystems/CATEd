@@ -83,7 +83,6 @@ def check_nanopool():
                     new_worker.save()
     return True
 
-
 @periodic_task(run_every=crontab(minute='*/5'))
 def save_worker_history():
     date = datetime.datetime.fromtimestamp(int(time.time())).strftime('%Y-%m-%d %H:%M:%S')
@@ -138,7 +137,6 @@ def uptime_worker():
             pass
     return True
 
-
 @periodic_task(run_every=crontab(minute='*/5'))
 # @shared_task
 def check_claymore():
@@ -151,18 +149,18 @@ def check_claymore():
             port = '3333'
         id = '{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}'
         # print(port)
-        rigcomm = "echo '" + id + "' | netcat '" + ip + "' '" + port + "'"
+        rigcomm = "echo '"+id+"' | netcat '"+ ip + "' '" + port + "'"
         PIPE = subprocess.PIPE
         t = subprocess.Popen(rigcomm, shell=True, stdin=PIPE, stdout=PIPE,
-                             stderr=subprocess.STDOUT, close_fds=True, cwd='/home/')
+                         stderr=subprocess.STDOUT, close_fds=True, cwd='/home/')
 
-        c = t.stdout.read()
+        c=t.stdout.read()
 
         # весь массив, возвращённый c клэймора
         returned = json.loads(c.decode("utf-8"))['result']
         # print(returned)
 
-        claymore_version = returned[0].split(';')[0]
+        claymore_version=returned[0].split(';')[0]
         # print(claymore_version)
 
         claymore_uptime = returned[1].split(';')[0]
@@ -171,7 +169,7 @@ def check_claymore():
         hr_base = returned[3].split(';')
 
         sum_hr_base = round(sum([float(int(i) / 1000) for i in hr_base]), 3)
-        hr_details_base = '; '.join([str(int(hr_base[i]) / 1000) + 'Mh/s' for i in range(len(hr_base))])
+        hr_details_base = '; '.join([str(int(hr_base[i])/1000) + 'Mh/s' for i in range(len(hr_base))])
         # print(sum_hr_base)
         # print(hr_details_base)
 
@@ -191,7 +189,7 @@ def check_claymore():
         # print(temperature)
         # print(fun_speed)
 
-        pools = str(returned[7]).replace(';', '; ')
+        pools = str(returned[7]).replace(';','; ')
         # print(pools)
         worker.claymore_version = claymore_version
         worker.claymore_uptime = claymore_uptime
