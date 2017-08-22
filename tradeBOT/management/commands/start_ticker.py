@@ -12,7 +12,7 @@ import websockets
 from django.core.management.base import BaseCommand, CommandError
 from channels import Group
 from trade.models import Exchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, UserPair
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, UserPair, UserMainCoinPriority
 from decimal import Decimal
 import warnings
 
@@ -145,19 +145,22 @@ class PoloniexSubscriber(object):
 
 
 def calculate_to_trade(last_ticker, new_ticker):
-    seconds = Decimal(str((new_ticker.date_time - last_ticker.date_time).total_seconds()))
-    change = Decimal(str(new_ticker.last)) - Decimal(str(last_ticker.last))
-    rate_of_change = change / seconds
-    # if rate_of_change != 0:
-    #     print('Pair: ' + str(new_ticker.pair.main_coin.symbol) + '-' + str(new_ticker.pair.second_coin.symbol))
-    # if rate_of_change > 0:
-    #     print('Скорость роста: ' + str(rate_of_change))
-    # elif rate_of_change < 0:
-    #     print('Скорость падения: ' + str(rate_of_change))
-    user_pairs = UserPair.objects.filter(pair=last_ticker.pair, rate_of_change__lte=abs(rate_of_change))
-    if len(user_pairs) > 0:
-        for user_pair in user_pairs:
-            print(str(user_pair.pair.main_coin.symbol) + '-' + str(user_pair.pair.second_coin.symbol))
-            print('Установ: %.8f', user_pair.rate_of_change)
-            print('Было: %.8f', rate_of_change)
+    seconds = Decimal(str(int((new_ticker.date_time - last_ticker.date_time).total_seconds())))
+    if seconds > 1:
+        change = Decimal(str(new_ticker.last)) - Decimal(str(last_ticker.last))
+        rate_of_change = change / seconds
+        user_pairs = UserPair.objects.filter(pair=last_ticker.pair, rate_of_change__lte=abs(rate_of_change),
+                                             user_exchange__is_active_script=True).order_by('-rank')
+        if len(user_pairs) > 0:
+            for user_pair in user_pairs:
+                try:
+                    user_main_coin = UserMainCoinPriority.objects.get(main_coin__coin=user_pair.pair.main_coin,
+                                                                      user_exchange=user_pair.user_exchangem)
+                    main_coin_active = user_main_coin.is_active
+                except UserMainCoinPriority.DoesNotExist:
+                    main_coin_active = True
+                if main_coin_active:
+                    print('Change rate: ' + str(rate_of_change))
+                    print(
+                        'Pair: ' + str(user_pair.pair.main_coin.symbol) + '-' + str(user_pair.pair.second_coin.symbol))
     return

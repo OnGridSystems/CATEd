@@ -46,7 +46,7 @@ def get_primary_pairs(coin, user_exchange):
 def get_last(pair, user_exchange):
     ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
     if ticker is not None:
-        return round(ticker.last, 6)
+        return round(ticker.last, 8)
     else:
         return 0
 
