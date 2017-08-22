@@ -70,16 +70,16 @@ $(document).ready(function () {
         })
     }
 
-    $('.pair').on('click', function () {
-        var pair_id = $(this).attr('data-pair-id');
-        if (!$(this).hasClass('unactive')) {
-            if (confirm('Are you really want to deactivate pair ' + $(this).text())) {
-                toggle_pair(pair_id)
-            }
-        } else {
-            toggle_pair(pair_id)
-        }
-    });
+    // $('.pair').on('click', function () {
+    //     var pair_id = $(this).attr('data-pair-id');
+    //     if (!$(this).hasClass('unactive')) {
+    //         if (confirm('Are you really want to deactivate pair ' + $(this).text())) {
+    //             toggle_pair(pair_id)
+    //         }
+    //     } else {
+    //         toggle_pair(pair_id)
+    //     }
+    // });
 
     // function toggle_pair(pair_id) {
     //     var user_exch = $('#exchange').val();
@@ -183,7 +183,7 @@ $(document).ready(function () {
 socket = new WebSocket("ws://" + window.location.host + "/trade/");
 socket.onmessage = function (message) {
     var item = JSON.parse(message.data);
-    console.log(Math.floor(item.percent * 100) / 100);
+    row = $('.pair_last#last_' + item.pair_id).parent('tr');
     $('.pair_last#last_' + item.pair_id).text(item.last);
     $('.pair_last#percent_' + item.pair_id).text(Math.floor(item.percent * 100) / 100 + '%');
     if (item.percent > 0) {
@@ -200,9 +200,9 @@ socket.onmessage = function (message) {
     }
 
     setTimeout(function () {
-        $('.pair_last').parent('tr').removeClass('priceChangeDown priceChangeUp');
+        row.removeClass('priceChangeDown priceChangeUp');
     }, 600);
-    draw_graph();
+    // draw_graph();
 };
 
 function getCookie(name) {

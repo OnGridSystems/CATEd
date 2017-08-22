@@ -97,9 +97,9 @@
                     <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
                     <h4 class="center">Exchange Coins</h4>
                     <h6 class="center"><i class="fa fa-question-circle-o tooltipped"
-                       data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the www.coinmarketchup.com"
-                       data-position="top"
-                       aria-hidden="true"></i> Where is my coin?</h6>
+                                          data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the www.coinmarketchup.com"
+                                          data-position="top"
+                                          aria-hidden="true"></i> Where is my coin?</h6>
                     <div class="row">
                         <div class="col s12 m12 l12">
                             <ul class="tabs">
@@ -128,22 +128,59 @@
                         {% csrf_token %}
                         <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">
                         Please, specify coefficient of depth
-                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth" value="{{ user_exchange.coefficient_of_depth }}">
-                        <button type="submit">OK</button>
+                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"
+                               value="{{ user_exchange.coefficient_of_depth }}">
+                        <button type="submit" class="btn">OK</button>
                     </form>
+                    <table width="100%">
+                        <colgroup>
+                            <col width="50%">
+                            <col width="30%">
+                            <col width="20%">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>Coin</th>
+                            <th colspan="2">Share</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for uc in user_coins %}
+                            <form action="{% url 'set_share' %}" method="post">
+                                <tr>
+                                    <td><b>{{ uc.coin.symbol | upper }}</b></td>
+                                    <td>
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
+                                        <input type="hidden" name="coin" value="{{ uc.pk }}">
+                                        <input style="width: 90%;" required type="number" name="share" step="any" placeholder="Share"
+                                               value="{{ uc.share }}">&nbsp;%
+                                    </td>
+                                    <td class="center">
+                                        <button type="submit" class="btn">OK</button>
+                                    </td>
+                                </tr>
+                            </form>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2">
+                                    You don't add pairs to trade.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                     <table class="center" width="100%" cellspacing="1" cellpadding="0">
                         <colgroup>
-                            <col width="25%">
-                            <col width="20%">
-                            <col width="25%">
-                            <col width="20%">
-                            <col width="10%">
+                            <col width="50%">
+                            <col width="30%">
+                            <col width="15%">
+                            <col width="5%">
                         </colgroup>
                         <thead>
                         <tr>
                             <th>Pair</th>
                             <th>Have (% BTC)</th>
-                            <th>Max share (% BTC)</th>
                             <th>Priority</th>
                             <th>Del</th>
                         </tr>
@@ -156,24 +193,16 @@
                                     <div class="collapsible-header">
                                         <table class="center" width="100%" cellspacing="1" cellpadding="0">
                                             <colgroup>
-                                                <col width="25%">
-                                                <col width="20%">
-                                                <col width="25%">
-                                                <col width="20%">
-                                                <col width="10%">
+                                                <col width="50%">
+                                                <col width="30%">
+                                                <col width="15%">
+                                                <col width="5%">
                                             </colgroup>
                                             <tbody>
                                             <tr data-pair-id="{{ pair.pk }}">
                                                 <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
                                                 <td>
                                                     {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
-                                                </td>
-                                                <td class="center">
-                                                    <input title="Pair share" class="pair-share black-text"
-                                                           type="number"
-                                                           name="share"
-                                                           value="{{ pair.share | floatformat:'-1' }}"
-                                                           placeholder="pair share">
                                                 </td>
                                                 <td>
                                                     {{ pair.rank }}
@@ -196,13 +225,15 @@
                                                 <input type="hidden" name="user-exchange-pk"
                                                        value="{{ user_exchange.pk }}">
                                                 <input type="hidden" name="pair-pk" value="{{ pair.pk }}">
-                                                <p class="center">Please indicate the rate of change in the price at which you want to react.</p>
+                                                <p class="center">Please indicate the rate of change in the price at
+                                                    which you want to react.</p>
                                                 Price changes with rate
                                                 <input step="0.00001" title="Change percent"
-                                                                        type="number"
-                                                                        name="rate_of_change"
-                                                                        max="99999999"
-                                                                        value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-4'}}"> per second.
+                                                       type="number"
+                                                       name="rate_of_change"
+                                                       max="99999999"
+                                                       value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-4' }}">
+                                                per second.
                                                 <button>OK</button>
                                             </form>
                                         </div>
@@ -211,7 +242,7 @@
                             {% empty %}
                                 <li>
                                     <div class="collapsible-header">
-                                        <h6 class="center">Add coins from the list on the left, set the share, coin
+                                        <h6 class="center">Add coins from the list on the top, set the share, coin
                                             trade
                                             priority to start using the script.</h6>
                                     </div>
