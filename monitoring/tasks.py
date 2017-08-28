@@ -175,9 +175,12 @@ def check_claymore():
         else:
             PORT = 3333
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((HOST, PORT))
-            s.sendall(b'{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}')
-            data = s.recv(1024)
+            try:
+                s.connect((HOST, PORT))
+                s.sendall(b'{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}')
+                data = s.recv(1024)
+            except Exception:
+                continue
 
         # весь массив, возвращённый c клэймора
         returned = json.loads(data.decode("utf-8"))['result']
@@ -223,5 +226,20 @@ def check_claymore():
         worker.temperature = temperature
         worker.fun_speed = fun_speed
         worker.pools = pools
+        worker.save()
+
+    workers = Worker.objects.filter(last_update__lt=(datetime.datetime.now() - datetime.timedelta(minutes=5)))
+    for worker in workers:
+        worker.claymore_version = 'offline'
+        worker.claymore_uptime = 0
+        worker.sum_hr_base = 0
+        worker.hr_details_base = None
+        worker.sum_hr_sec = 0
+        worker.hr_details_sec = None
+        worker.temperature = 'offline'
+        worker.fun_speed = 'offline'
+        worker.pools = 'offline'
+        worker.reported_hash_rate = 0
+        worker.uptime = 0
         worker.save()
     return True
