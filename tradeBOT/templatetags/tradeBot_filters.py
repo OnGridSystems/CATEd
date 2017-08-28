@@ -46,7 +46,7 @@ def get_primary_pairs(coin, user_exchange):
 def get_last(pair, user_exchange):
     ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
     if ticker is not None:
-        return round(ticker.last, 6)
+        return round(ticker.last, 8)
     else:
         return 0
 
@@ -73,11 +73,11 @@ def is_pair_active(user_pair, user_exchange_pk):
         return True
 
 
-@register.filter(name='user_pair_percent_change')
-def user_pair_percent_change(user_pair_pk):
+@register.filter(name='user_pair_rate_of_change')
+def user_pair_rate_of_change(user_pair_pk):
     try:
         user_pair = UserPair.objects.get(pk=user_pair_pk)
-        return user_pair.change_percent
+        return user_pair.rate_of_change
     except UserPair.DoesNotExist:
         return float(0)
 
@@ -104,3 +104,8 @@ def haven_percent(coin, ue):
     except UserBalance.DoesNotExist:
         coin_total_btc = 0
     return coin_total_btc / (ue.total_btc / 100)
+
+
+@register.inclusion_tag('tradeBOT/to_trade.html')
+def get_orders_to_trade(to_trade):
+    return {'to_trade': to_trade}

@@ -1,6 +1,10 @@
 from __future__ import absolute_import, unicode_literals
 import json
 import re
+
+import _thread
+
+import websocket
 from django.db.models import Q
 from http.client import HTTPException
 import sys
@@ -205,7 +209,6 @@ def pull_coinmarketcup():
                 new_coin.save()
     return True
 
-
 # def pull_poloniex_ticker():
 #     exchange = Exchanges.objects.get(exchange='poloniex')
 #     ticker = requests.get('https://poloniex.com/public?command=returnTicker').json()
@@ -292,9 +295,10 @@ def round_down(x, s):
     return x - (x % (10 * s))
 
 
-@periodic_task(run_every=datetime.timedelta(hours=settings.TICKER_HOURS_TO_CLEAR))
+@periodic_task(run_every=datetime.timedelta(minutes=settings.TICKER_MINUTES_TO_CLEAR))
 def clean_ticker():
-    ExchangeTicker.objects.filter(date_time__lt=time.time() - settings.TICKER_HOURS_TO_CLEAR * 60 * 60).delete()
+    ExchangeTicker.objects.filter(
+        date_time__lt=datetime.datetime.now() - datetime.timedelta(minutes=settings.TICKER_MINUTES_TO_CLEAR)).delete()
 
 
 # @shared_task
@@ -339,7 +343,6 @@ def clean_ticker():
 #     else:
 #         pass
 #     return True
-
 
 # @shared_task
 # def calculate_to_trade():

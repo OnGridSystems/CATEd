@@ -52,7 +52,7 @@ SECRET_KEY = '1j&=q!62_%51y9!=97n=)bel8+#y+lup1bsy31d%s=sm!9q_c+'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['127.0.0.1', '192.168.254.247']
 
 # Application definition
 
@@ -195,4 +195,4 @@ CHANNEL_LAYERS = {
 }
 
 # время очистки тикера
-TICKER_HOURS_TO_CLEAR = 4
+TICKER_MINUTES_TO_CLEAR = 30
