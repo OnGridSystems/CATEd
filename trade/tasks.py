@@ -37,6 +37,7 @@ def pull_exchanges_balances(ue_pk=None):
             try:
                 try:
                     balances = exchange_object.fetch_balance()
+                    # print(balances)
                 except binascii.Error:
                     user_exchange.error = 'Incorrect apikey or secret'
                     user_exchange.is_correct = False
@@ -49,22 +50,24 @@ def pull_exchanges_balances(ue_pk=None):
                         if item[0] != 'info':
                             try:
                                 user_coin = UserBalance.objects.get(ue=user_exchange, coin=item[0].lower())
-                                user_coin.total = item[1]['total']
-                                user_coin.btc_value, user_coin.сonversions = fetch_btc_value(user_exchange.exchange, item[0].lower(),
-                                                                      item[1]['total'])
-                                user_coin.used = item[1]['used']
-                                user_coin.free = item[1]['free']
+                                user_coin.total = (item[1]['total'] if item[1]['total'] is not None else 0)
+                                user_coin.btc_value, user_coin.conversions = fetch_btc_value(user_exchange.exchange,
+                                                                                             item[0].lower(),
+                                                                                             item[1]['total'])
+                                user_coin.used = (item[1]['used'] if item[1]['used'] is not None else 0)
+                                user_coin.free = (item[1]['free'] if item[1]['free'] is not None else 0)
                                 user_coin.save()
                                 total_btc += _D(user_coin.btc_value)
                             except UserBalance.DoesNotExist:
                                 new_user_coin = UserBalance()
                                 new_user_coin.ue = user_exchange
                                 new_user_coin.coin = item[0].lower()
-                                new_user_coin.total = item[1]['total']
-                                new_user_coin.btc_value, new_user_coin.сonversions = fetch_btc_value(user_exchange.exchange,
-                                                                          item[0].lower(), item[1]['total'])
-                                new_user_coin.used = item[1]['used']
-                                new_user_coin.free = item[1]['free']
+                                new_user_coin.total = (item[1]['total'] if not item[1]['total'] is None else 0)
+                                new_user_coin.btc_value, new_user_coin.conversions = fetch_btc_value(
+                                    user_exchange.exchange,
+                                    item[0].lower(), item[1]['total'])
+                                new_user_coin.used = (item[1]['used'] if item[1]['used'] is not None else 0)
+                                new_user_coin.free = (item[1]['free'] if item[1]['free'] is not None else 0)
                                 new_user_coin.save()
                                 total_btc += _D(new_user_coin.btc_value)
                     user_exchange.total_btc = total_btc
@@ -80,46 +83,62 @@ def pull_exchanges_balances(ue_pk=None):
     return True
 
 
-def fetch_btc_value(exchange, coin, amount, convertations=None):
+def fetch_btc_value(exchange, coin, amount=None, convertations=None):
+    if amount is None:
+        amount = 0
+    if _D(amount) == _D(0):
+        return 0, 'Null balance'
     if convertations is None:
-        convertations = [coin + ' ('+str(amount)+')']
-    if coin == 'btc':
+        convertations = [coin + ' (' + str(_D(str(amount)).quantize(_D('.00000001'))) + ')']
+    if coin.lower() == 'btc':
         return amount, '->'.join(convertations)
     try:
         coin = ExchangeCoin.objects.get(symbol=coin.lower(), exchange=exchange)
+        # print('Нашел валюту: {}'.format(coin.symbol.upper()))
         try:
+            # print('1Ищу пару BTC_{}'.format(coin.symbol.upper()))
             pair = Pair.objects.get(main_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
                                     second_coin=coin)
+            # print('1Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
             ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
             new_amount = _D(amount).quantize(_D('.00000001')) * _D(ticker.last).quantize(_D('.00000001'))
-            convertations.append('btc ('+str(new_amount) + ')')
+            convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
             return new_amount, '->'.join(convertations)
         except Pair.DoesNotExist:
             try:
+                # print('2Ищу пару {}_BTC'.format(coin.symbol.upper()))
                 pair = Pair.objects.get(second_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
                                         main_coin=coin)
+                # print('2Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
                 ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
                 new_amount = _D(amount).quantize(_D('.00000001')) / _D(ticker.last).quantize(_D('.00000001'))
-                convertations.append('btc (' + str(new_amount) + ')')
+                convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
                 return new_amount, '->'.join(convertations)
             except Pair.DoesNotExist:
                 try:
+                    # print('3Ищу пару где вторая валюта {}'.format(coin.symbol.upper()))
                     pair = Pair.objects.get(second_coin=coin)
+                    # print('3Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
                     ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+                    # print('3Нашел тикер ' + str(ticker.last))
                     in_first_coin = _D(ticker.last) * _D(amount)
-                    convertations.append(pair.main_coin.symbol)
-                    print(
-                        'Отправляю на пересчет {}, {}, {}'.format(exchange.name, pair.main_coin.symbol, in_first_coin))
+                    convertations.append(
+                        pair.main_coin.symbol + ' (' + str(_D(str(in_first_coin)).quantize(_D('.00000001'))) + ')')
                     fetch_btc_value(exchange, pair.main_coin.symbol, in_first_coin, convertations)
                 except Pair.DoesNotExist:
+                    # print('3Пара на найдена')
                     return 0, 'Not found'
                 except ExchangeTicker.DoesNotExist:
+                    # print("3Тикер не найден")
                     return 0, 'Not found'
             except ExchangeTicker.DoesNotExist:
+                # print("2Тикер не найден")
                 return 0, 'Not found'
         except ExchangeTicker.DoesNotExist:
+            # print("1Тикер не найден")
             return 0, 'Not found'
     except ExchangeCoin.DoesNotExist:
+        # print('Валюта не найдена')
         return 0, 'Not found'
 
 
