@@ -1,0 +1,69 @@
+{% load tradeBot_filters %}
+<table width="100%">
+    <colgroup>
+        <col width="10%">
+        <col width="7%">
+        <col width="6%">
+        <col width="7%">
+        <col width="7%">
+        <col width="7%">
+        <col width="7%">
+        <col width="7%">
+        <col width="12%">
+        <col width="13%">
+        <col width="17%">
+    </colgroup>
+    <thead>
+    <tr>
+        <th>Pair</th>
+        <th>Percent change</th>
+        <th>Type</th>
+        <th>Price</th>
+        <th>Amount</th>
+        <th>Total</th>
+        <th>Total + fee</th>
+        <th>Fee</th>
+        <th>Cause</th>
+        <th>Date created</th>
+        <th>Date updated</th>
+    </tr>
+    </thead>
+</table>
+<div class="exchange-coins-block-scroll">
+    <table width="100%">
+        <colgroup>
+            <col width="10%">
+            <col width="7%">
+            <col width="6%">
+            <col width="7%">
+            <col width="7%">
+            <col width="7%">
+            <col width="7%">
+            <col width="7%">
+            <col width="12%">
+            <col width="13%">
+            <col width="17%">
+        </colgroup>
+        <tbody>
+        {% for item in to_trade %}
+            <tr class="orders_to_trade">
+                <td>{{ item.user_pair.pair }}</td>
+                <td>{{ item.percent_react | multiple:100 | floatformat:'2' }}</td>
+                <td>{{ item.type }}</td>
+                <td>{{ item.price }}</td>
+                <td>{{ item.amount }}</td>
+                <td>{{ item.total }}</td>
+                <td>{{ item.total_f }}</td>
+                <td>{{ item.fee }}</td>
+                <td>{{ item.cause }}</td>
+                <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
+                <td>{{ item.date_updated | date:'d.m.Y H:i:s' }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="10" class="center">Empty</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

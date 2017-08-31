@@ -23,6 +23,7 @@ class Exchanges(models.Model):
 class UserExchanges(models.Model):
     user = models.ForeignKey(User)
     exchange = models.ForeignKey(Exchanges)
+    coefficient_of_depth = models.IntegerField(default=0)
     apikey = models.CharField(max_length=127)
     apisecret = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)

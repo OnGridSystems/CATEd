@@ -22,14 +22,25 @@ class UserPair(models.Model):
     user = models.ForeignKey(User)
     user_exchange = models.ForeignKey(UserExchanges)
     pair = models.ForeignKey('Pair')
-    share = models.DecimalField(decimal_places=2, max_digits=5, default=0)
     rank = models.PositiveIntegerField(default=1)
-    change_percent = models.DecimalField(max_digits=5, decimal_places=3, default=0)
-    change_interval = models.IntegerField(default=0)
+    rate_of_change = models.DecimalField(max_digits=20, decimal_places=8, default=0)
 
     class Meta:
         verbose_name = "Пара пользователя"
         verbose_name_plural = "Пары пользователей"
+
+
+class UserCoinShare(models.Model):
+    user_exchange = models.ForeignKey(UserExchanges)
+    coin = models.ForeignKey(ExchangeCoin)
+    share = models.DecimalField(decimal_places=2, max_digits=5, default=0)
+
+    def __str__(self):
+        return self.user_exchange.exchange.exchange + ': ' + self.coin.symbol + ' ' + str(self.share)
+
+    class Meta:
+        verbose_name = 'Доля валюты'
+        verbose_name_plural = 'Доли валют'
 
 
 class ExchangeMainCoin(models.Model):
@@ -99,7 +110,7 @@ class ExchangeTicker(models.Model):
     ask = models.DecimalField(max_digits=30, decimal_places=15)
     base_volume = models.DecimalField(max_digits=30, decimal_places=15)
     percent_change = models.DecimalField(max_digits=10, decimal_places=8, default=0)
-    date_time = models.BigIntegerField(blank=False, null=False)
+    date_time = models.DateTimeField(auto_now=True, blank=False, null=False)
 
     def __str__(self):
         return self.exchange.exchange + ': ' + self.pair.main_coin.name.upper() + '-' + self.pair.second_coin.name.upper()

@@ -134,3 +134,39 @@ function sortGrid(colNum, type) {
     }
     grid.appendChild(tbody);
 }
+
+Storage.prototype.setObject = function (key, value) {
+    this.setItem(key, JSON.stringify(value));
+};
+
+Storage.prototype.getObject = function (key) {
+    var value = this.getItem(key);
+    try {
+        return JSON.parse(value);
+    }
+    catch(err) {
+        console.log("JSON parse failed for lookup of ", key, "\n error was: ", err);
+        return null;
+    }
+};
+
+
+// function initHashChanges() {
+// 	var h = window.location.hash;
+// 	var pair = h.toUpperCase();
+// 	pair = pair.substr(1, pair.length); // trim #
+//
+// 	// trace('on load hash is [' + h + ']');
+// 	// set this so we know not to override it with localStorage or default currencyPair
+// 	if (currencyPairArray.indexOf(pair) != -1) {
+// 		hasHashCurrencyPair = true;
+// 	}
+//
+// 	evaluateHash(h);
+//
+// 	window.onhashchange = function() {
+// 		// trace("hash changed: " + window.location.hash);
+// 		clearTimeout(hashTimer);
+// 		evaluateHash(window.location.hash);
+// 	};
+// }
