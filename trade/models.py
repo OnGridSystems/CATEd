@@ -8,22 +8,20 @@ import time
 
 
 class Exchanges(models.Model):
-    exchange = models.CharField(max_length=255)
-    url = models.URLField()
-    driver = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
+    info_frozen_key = models.CharField(max_length=31)
 
     def __str__(self):
-        return "<" + self.exchange + ">"
+        return self.name
 
     class Meta:
         verbose_name = "Биржа"
         verbose_name_plural = "Биржи"
 
 
-class UserExchanges(models.Model):
+class UserExchange(models.Model):
     user = models.ForeignKey(User)
     exchange = models.ForeignKey(Exchanges)
-    coefficient_of_depth = models.IntegerField(default=0)
     apikey = models.CharField(max_length=127)
     apisecret = models.CharField(max_length=255)
     is_active = models.BooleanField(default=False)
@@ -31,10 +29,11 @@ class UserExchanges(models.Model):
     is_correct = models.BooleanField(default=True)
     total_btc = models.DecimalField(max_digits=30, decimal_places=8)
     total_usd = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    coefficient_of_depth = models.IntegerField(default=0)
     error = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
-        return self.user.username + ': ' + self.exchange.exchange + ' (' + str(self.pk) + ')'
+        return self.user.username + ': ' + self.exchange.name + ' (' + str(self.pk) + ')'
 
     class Meta:
         verbose_name = "Биржа пользователя"
@@ -42,18 +41,21 @@ class UserExchanges(models.Model):
 
 
 class UserBalance(models.Model):
-    ue = models.ForeignKey(UserExchanges)
+    ue = models.ForeignKey(UserExchange)
     coin = models.CharField(max_length=10)
-    balance = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    total = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    used = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    free = models.DecimalField(max_digits=30, decimal_places=8, default=0)
+    conversions = models.CharField(max_length=255)
     btc_value = models.DecimalField(max_digits=30, decimal_places=8, default=0)
     last_update = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.ue.exchange.exchange + ' ' + self.ue.user.username + ' ' + self.coin + ': ' + str(self.balance)
+        return self.ue.exchange.name + ' ' + self.ue.user.username + ' ' + self.coin + ': ' + str(self.total)
 
     class Meta:
         verbose_name = "Баланс пользователя"
-        verbose_name_plural = "Финансы пользователей"
+        verbose_name_plural = "Балансы пользователей"
 
 
 class Coin(models.Model):
@@ -61,7 +63,7 @@ class Coin(models.Model):
     full_name = models.CharField(max_length=40)
 
     def __str__(self):
-        return '<' + self.short_name + ' ' + self.full_name + '>'
+        return self.short_name + '-' + self.full_name
 
     class Meta:
         verbose_name = 'Криптовалюта'

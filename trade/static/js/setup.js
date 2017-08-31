@@ -1,8 +1,9 @@
 $(document).ready(function () {
     pair_id = $('.pair_tr').data('pair-id');
-    $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('yellow lighten-3');
+    $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('active_pair');
     var main_coin = $('.tabs a.active').text();
     var second_coin = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(0)').text();
+    document.title = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(1)').text() + ' ' + main_coin + "/" + second_coin;
     $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
     intervale = $('#buttons .candlestick').data('intervale');
     zoom = $('#buttons .zoom').data('zoom');
@@ -12,8 +13,8 @@ $(document).ready(function () {
         var main_coin = $('.tabs a.active').text();
         var second_coin = $(this).children('td:eq(0)').text();
         $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
-        $('.pair_tr').removeClass('yellow lighten-3');
-        $(this).addClass('yellow lighten-3');
+        $('.pair_tr').removeClass('active_pair');
+        $(this).addClass('active_pair');
         if ($(this).data('pair-id') != pair_id) {
             pair_id = $(this).data('pair-id');
             draw_graph();

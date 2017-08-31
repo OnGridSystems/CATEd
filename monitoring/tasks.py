@@ -20,7 +20,7 @@ from monitoring.models import *
 @periodic_task(run_every=crontab(minute='*/5'))
 # @shared_task
 def check_ethermine():
-    pool = Pools.objects.get(pool='ethermine')
+    pool, c = Pools.objects.get_or_create(pool='ethermine')
     address_pool = UserPools.objects.filter(pool=pool)
     if len(address_pool) > 0:
         for ap in address_pool:
@@ -61,7 +61,7 @@ def check_ethermine():
 @periodic_task(run_every=crontab(minute='*/5'))
 # @shared_task
 def check_nanopool():
-    pool = Pools.objects.get(pool='nanopool')
+    pool, c = Pools.objects.get_or_create(pool='nanopool')
     address_pool = UserPools.objects.filter(pool=pool)
     if len(address_pool) > 0:
         for ap in address_pool:

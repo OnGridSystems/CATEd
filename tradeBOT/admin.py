@@ -1,7 +1,13 @@
 from django.contrib import admin
-from django.db.models.functions import Lower
-
 from tradeBOT import models
+
+
+class UserOrderAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in models.UserOrder._meta.fields]
+    list_filter = ['ue__exchange__name', 'order_type', 'ue__user__username']
+
+    class Meta:
+        model = models.UserOrder
 
 
 class UserPairInline(admin.TabularInline):
@@ -18,7 +24,7 @@ class ExchangeCoinAdmin(admin.ModelAdmin):
 
 class UserPairAdmin(admin.ModelAdmin):
     list_display = [field.name for field in models.UserPair._meta.fields]
-    list_filter = ['user', 'pair__main_coin__exchange__exchange']
+    list_filter = ['user', 'pair__main_coin__exchange__name']
 
     class Meta:
         model = models.UserPair
@@ -36,7 +42,7 @@ class CoinMarketCupCoinAdmin(admin.ModelAdmin):
 
 class PairAdmin(admin.ModelAdmin):
     search_fields = ['main_coin', 'second_coin']
-    list_filter = ['main_coin__exchange__exchange']
+    list_filter = ['main_coin__exchange__name']
     inlines = [UserPairInline]
 
 
@@ -74,3 +80,4 @@ admin.site.register(models.UserMainCoinPriority)
 admin.site.register(models.ExchangeTicker, ExchangeTickerAdmin)
 admin.site.register(models.Order, OrderAdmin)
 admin.site.register(models.ToTrade, ToTradeAdmin)
+admin.site.register(models.UserOrder, UserOrderAdmin)

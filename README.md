@@ -436,6 +436,7 @@ set databases and mocks
 
 ```sh
 echo "create database trade character set utf8" | mysql -u root
+echo "create database celery_result" | mysql -u root
 #
 # Migrate
 ./manage.py makemigrations 

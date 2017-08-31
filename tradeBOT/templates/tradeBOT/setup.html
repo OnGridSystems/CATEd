@@ -2,7 +2,7 @@
 {% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
 {% block content %}
     {% autoescape on %}
-        <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
+        <h3 class="center">Exchange: {{ user_exchange.exchange.name }}</h3>
         <div class="switch center">
             <label>
                 Off
@@ -88,9 +88,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="col s12 m12 l12 exchange-coins-block">
-                    {% get_orders_to_trade to_trade %}
-                </div>
+{#                <div class="col s12 m12 l12 exchange-coins-block">#}
+{#                    {% get_orders_to_trade to_trade %}#}
+{#                </div>#}
             </div>
             <div class="col s3 m3 l3">
                 <div class="exchange-coins-block">
@@ -104,7 +104,7 @@
                         <div class="col s12 m12 l12">
                             <ul class="tabs">
                                 {% for pc in primary_coins %}
-                                    <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol }}</a></li>
+                                    <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol |upper }}</a></li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -124,14 +124,14 @@
                 </div>
                 <div class="exchange-coins-block">
                     <h4 class="center">Your trade pairs</h4>
-                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">
-                        {% csrf_token %}
-                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">
-                        Please, specify coefficient of depth
-                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"
-                               value="{{ user_exchange.coefficient_of_depth }}">
-                        <button type="submit" class="btn">OK</button>
-                    </form>
+{#                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">#}
+{#                        {% csrf_token %}#}
+{#                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">#}
+{#                        Please, specify coefficient of depth#}
+{#                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"#}
+{#                               value="{{ user_exchange.coefficient_of_depth }}">#}
+{#                        <button type="submit" class="btn">OK</button>#}
+{#                    </form>#}
                     <table width="100%">
                         <colgroup>
                             <col width="50%">
@@ -153,7 +153,7 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
                                         <input type="hidden" name="coin" value="{{ uc.pk }}">
-                                        <input style="width: 90%;" required type="number" name="share" step="any" placeholder="Share"
+                                        <input style="width: 80%;" required type="number" name="share" step="any" placeholder="Share"
                                                value="{{ uc.share }}">&nbsp;%
                                     </td>
                                     <td class="center">
@@ -163,7 +163,7 @@
                             </form>
                         {% empty %}
                             <tr>
-                                <td colspan="2">
+                                <td colspan="3" class="center">
                                     You don't add pairs to trade.
                                 </td>
                             </tr>
@@ -232,7 +232,7 @@
                                                        type="number"
                                                        name="rate_of_change"
                                                        max="99999999"
-                                                       value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-4' }}">
+                                                       value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-8' }}">
                                                 per second.
                                                 <button>OK</button>
                                             </form>

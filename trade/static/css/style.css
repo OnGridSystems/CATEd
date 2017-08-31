@@ -246,7 +246,7 @@ tr.balances td:last-child {
 .exchange-coins-block-scroll {
     overflow-y: scroll;
     max-height: 390px;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 ::-webkit-scrollbar {
@@ -316,4 +316,23 @@ tr.balances td:last-child {
 
 .pair-advanced input {
     width: 100px;
+}
+
+.active_pair {
+    background-image: linear-gradient(#ebdf95, #fbf4c7 15%);
+    border-right: 0;
+    border-left: 0;
+}
+
+.active_pair td {
+    border-top: 1px solid #f7ab1c !important;
+    border-bottom: 1px solid #f7ab1c !important;
+}
+
+.pair_tr td{
+    -webkit-transition: all .3s;
+    -moz-transition: all .3s;
+    -ms-transition: all .3s;
+    -o-transition: all .3s;
+    transition: all .3s;
 }

@@ -15,11 +15,11 @@ import os
 # Celery options
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['json']
-CELERY_RESULT_BACKEND = 'db+sqlite:///result.sqlite'
+CELERY_RESULT_BACKEND = 'db+mysql://root:123@localhost/celery_result'
 CELERY_TASK_SERIALIZER = 'json'
 # CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Europe/Moscow'
-CELERY_SEND_TASK_ERROR_EMAILS = True
+CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
 
 # AllAuth setting
@@ -196,3 +196,8 @@ CHANNEL_LAYERS = {
 
 # время очистки тикера
 TICKER_MINUTES_TO_CLEAR = 30
+
+
+# минимальное значение изменения цены за секунду
+MIN_CHANGE_RATE_TO_REACT = 0.000001
+DEPTH_COEFFICIENT = 0.5
