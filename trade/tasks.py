@@ -1,7 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 import importlib
 import re
-
 import binascii
 from ccxt import ExchangeNotAvailable, RequestTimeout
 from celery.schedules import crontab
@@ -101,6 +100,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
                                     second_coin=coin)
             # print('1Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
             ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+            # print('1Нашел тикер {} {}'.format(ticker, ticker.last))
             new_amount = _D(amount).quantize(_D('.00000001')) * _D(ticker.last).quantize(_D('.00000001'))
             convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
             return new_amount, '->'.join(convertations)
@@ -111,6 +111,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
                                         main_coin=coin)
                 # print('2Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
                 ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+                # print('2Нашел тикер {} {}'.format(ticker, ticker.last))
                 new_amount = _D(amount).quantize(_D('.00000001')) / _D(ticker.last).quantize(_D('.00000001'))
                 convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
                 return new_amount, '->'.join(convertations)
@@ -120,7 +121,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
                     pair = Pair.objects.get(second_coin=coin)
                     # print('3Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
                     ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
-                    # print('3Нашел тикер ' + str(ticker.last))
+                    # print('3Нашел тикер {} {}'.format(ticker, ticker.last))
                     in_first_coin = _D(ticker.last) * _D(amount)
                     convertations.append(
                         pair.main_coin.symbol + ' (' + str(_D(str(in_first_coin)).quantize(_D('.00000001'))) + ')')

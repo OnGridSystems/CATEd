@@ -13,14 +13,28 @@ from __future__ import absolute_import, unicode_literals
 import os
 
 # Celery options
+from kombu import Queue, Exchange
+
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_RESULT_BACKEND = 'db+mysql://root:123@localhost/celery_result'
 CELERY_TASK_SERIALIZER = 'json'
-# CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Europe/Moscow'
 CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
+CELERY_QUEUES = (
+    Queue('high', Exchange('high'), routing_key='high'),
+    Queue('normal', Exchange('normal'), routing_key='normal'),
+    Queue('low', Exchange('low'), routing_key='low'),
+)
+CELERY_DEFAULT_QUEUE = 'normal'
+CELERY_DEFAULT_EXCHANGE = 'normal'
+CELERY_DEFAULT_ROUTING_KEY = 'normal'
+CELERY_ROUTES = {
+    'trade.tasks.pull_exchanges_balances': {'queue': 'high'},
+    'trade.tasks.pull_exchanges_tickers': {'queue': 'high'},
+    'tradeBOT.tasks.start_calculate_poloniex_buy': {'queue': 'high'}
+}
 
 # AllAuth setting
 ACCOUNT_EMAIL_REQUIRED = True
