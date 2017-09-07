@@ -8,7 +8,7 @@ from django.db.models import Sum, Count
 from monitoring.models import *
 
 BOT_TOKEN = "xoxb-230633578469-NkN9fdZdoKVbgHvSbkzHOtC6"
-CHANNEL_NAME = "monitoring"
+CHANNEL_NAME = "mining_monitoring"
 
 pools_name = list(UserPools.objects.values('name'))
 workers_name = list(Worker.objects.values('name'))
@@ -144,7 +144,7 @@ class Command(BaseCommand):
                                     datetime.timedelta(minutes=i.claymore_uptime)) + '\r\n' + \
                                            'Version: ' + i.claymore_version + \
                                            '\r\n\r\n'
-
-                    sc.rtm_send_message(CHANNEL_NAME, "<@{}> ".format(user) + '\r\n' + sendtext)
+                    if sendtext is not '':
+                        sc.rtm_send_message(CHANNEL_NAME, "<@{}> ".format(user) + '\r\n' + sendtext)
                 # Sleep for half a second
                 time.sleep(0.5)
