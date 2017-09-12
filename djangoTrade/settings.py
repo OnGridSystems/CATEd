@@ -22,19 +22,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Moscow'
 CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
-CELERY_QUEUES = (
-    Queue('high', Exchange('high'), routing_key='high'),
-    Queue('normal', Exchange('normal'), routing_key='normal'),
-    Queue('low', Exchange('low'), routing_key='low'),
-)
-CELERY_DEFAULT_QUEUE = 'normal'
-CELERY_DEFAULT_EXCHANGE = 'normal'
-CELERY_DEFAULT_ROUTING_KEY = 'normal'
+
 CELERY_ROUTES = {
     'trade.tasks.pull_exchanges_balances': {'queue': 'high'},
     'trade.tasks.pull_exchanges_tickers': {'queue': 'high'},
-    'tradeBOT.tasks.start_calculate_poloniex_buy': {'queue': 'high'}
+    'monitoring.tasks.*': {'queue': 'low'},
+    'tradeBOT.tasks.start_calculate_poloniex_buy': {'queue': 'high'},
+    'tradeBOT.tasks.create_order': {'queue': 'set_orders'}
 }
+
+CELERY_CREATE_MISSING_QUEUES = True
 
 # AllAuth setting
 ACCOUNT_EMAIL_REQUIRED = True
@@ -197,7 +194,6 @@ MEDIA_ROOT = '/opt/portal_ongrid/media'
 MEDIA_URL = '/media/'
 
 # channels
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "asgi_redis.RedisChannelLayer",
@@ -211,7 +207,12 @@ CHANNEL_LAYERS = {
 # время очистки тикера
 TICKER_MINUTES_TO_CLEAR = 30
 
-
 # минимальное значение изменения цены за секунду
 MIN_CHANGE_RATE_TO_REACT = 0.000001
 DEPTH_COEFFICIENT = 0.5
+
+# активные биржи для торговли
+TRADING_EXCHANGES = ['poloniex']
+
+# Time to life order, mins
+ORDER_TTL = 5

@@ -48,7 +48,7 @@
                     <div class="clearfix"></div>
                     <div class="row">
                         <div class="col s6 m6 l6 right-align">
-                            <div id="buttons">
+                            <div id="buttons-zoom">
                                 <b>Zoom</b>
                                 <button data-zoom="3" class="zoom btn waves-effect btn-mini white-text green">3h
                                 </button>
@@ -200,7 +200,7 @@
                                             </colgroup>
                                             <tbody>
                                             <tr data-pair-id="{{ pair.pk }}">
-                                                <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
+                                                <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol | upper }}</td>
                                                 <td>
                                                     {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
                                                 </td>

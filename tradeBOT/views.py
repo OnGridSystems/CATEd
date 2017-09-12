@@ -1,6 +1,8 @@
 import json
 import time
 import datetime
+
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
@@ -10,12 +12,16 @@ from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, UserMainCoinPr
 from django.core.serializers.json import DjangoJSONEncoder
 
 
+@login_required
 def setup(request, pk):
     args = {}
     try:
-        args['user_exchange'] = UserExchange.objects.get(pk=pk, user=request.user)
-        args['user_pairs'] = UserPair.objects.filter(user=request.user,
-                                                     user_exchange=args['user_exchange']).order_by(
+        args['user_exchange'] = UserExchange.objects.get(pk=pk)
+        # args['user_exchange'] = UserExchange.objects.get(pk=pk, user=request.user)
+        # args['user_pairs'] = UserPair.objects.filter(user=request.user,
+        #                                              user_exchange=args['user_exchange']).order_by(
+        #     '-rank')
+        args['user_pairs'] = UserPair.objects.filter(user_exchange=args['user_exchange']).order_by(
             '-rank')
         args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange).order_by(
             'coin__symbol')

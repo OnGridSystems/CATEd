@@ -288,7 +288,7 @@ tr.balances td:last-child {
     line-height: 20px;
 }
 
-#buttons {
+#buttons, #buttons-zoom {
     padding: 10px;
 }
 

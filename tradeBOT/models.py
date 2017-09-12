@@ -28,6 +28,8 @@ class UserPair(models.Model):
         verbose_name = "Пара пользователя"
         verbose_name_plural = "Пары пользователей"
 
+    def __str__(self):
+        return str(self.user_exchange) + ': ' + self.pair.main_coin.symbol.upper() + '_' + self.pair.second_coin.symbol.upper()
 
 class UserCoinShare(models.Model):
     user_exchange = models.ForeignKey(UserExchange)
@@ -139,6 +141,8 @@ class UserOrder(models.Model):
     order_number = models.BigIntegerField()
     first_coin_before = models.DecimalField(max_digits=20, decimal_places=10)
     second_coin_before = models.DecimalField(max_digits=20, decimal_places=10)
+    first_coin_after = models.DecimalField(max_digits=20, decimal_places=10, default=None, blank=True, null=True)
+    second_coin_after = models.DecimalField(max_digits=20, decimal_places=10, default=None, blank=True, null=True)
     price = models.DecimalField(max_digits=20, decimal_places=10)
     amount = models.DecimalField(max_digits=20, decimal_places=10)
     total = models.DecimalField(max_digits=20, decimal_places=10)
@@ -148,6 +152,7 @@ class UserOrder(models.Model):
     is_ok = models.NullBooleanField(default=None, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     date_cancel = models.DateTimeField(default=None, blank=True, null=True)
+    cancel_desc = models.CharField(max_length=100)
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):

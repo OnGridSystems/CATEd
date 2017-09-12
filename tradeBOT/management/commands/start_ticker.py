@@ -12,7 +12,9 @@ import websockets
 from django.core.management.base import BaseCommand, CommandError
 from channels import Group
 from django.db.models import Sum
+import pickle
 from django.conf import settings
+import jsonpickle
 
 from trade.models import Exchanges, UserBalance
 from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, UserPair, UserMainCoinPriority, UserCoinShare
@@ -58,7 +60,7 @@ class PoloniexSubscriber(object):
         for ticker, data in tickers_data.items():
             self._tickers_id[data['id']] = ticker
             self._markets_list.append(ticker)
-        self.exchange = Exchanges.objects.get(exchange='poloniex')
+        self.exchange = Exchanges.objects.get(name='poloniex')
         for item in tickers_data:
             pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
             try:
@@ -132,32 +134,38 @@ class PoloniexSubscriber(object):
                     values = data[2]
                     ticker_id_int = values[0]
                     if ticker_id_int in self._tickers_list:
-                        self.ticker_list.new_ticker(pair_id=self._tickers_list[ticker_id_int], last=values[1],
+                        self.ticker_list.new_ticker(pair_id=self._tickers_list[ticker_id_int],
+                                                    pair=self._tickers_id[ticker_id_int],
+                                                    last=values[1],
                                                     date=time.time())
                         current_ticker = self.ticker_list.get_ticker_by_id(self._tickers_list[ticker_id_int])
                         if current_ticker.last is not None and current_ticker.prev_last is not None:
                             seconds = _D(current_ticker.date - current_ticker.prev_date)
-                            if seconds > 0:
+                            if seconds > 1:
                                 change = _D(current_ticker.last) - _D(current_ticker.prev_last)
                                 rate_of_change = change / seconds
                                 if abs(rate_of_change) >= settings.MIN_CHANGE_RATE_TO_REACT:
                                     market = self.order_books.get_market_by_name(self._tickers_id[ticker_id_int])
                                     if market is not None:
+                                        # b = pickle.dumps(self.ticker_list)
+                                        # bits = b.decode('cp1251')
                                         args_buy = {'pair': self._tickers_list[ticker_id_int],
                                                     'bids': market.bids[:100],
-                                                    'change_rate': rate_of_change}
-                                        args_sell = {'pair': self._tickers_list[ticker_id_int],
-                                                     'asks': market.asks[:100],
-                                                     'change_rate': rate_of_change}
+                                                    'change_rate': rate_of_change,
+                                                    'ticker': jsonpickle.encode(self.ticker_list)}
+                                        # args_sell = {'pair': self._tickers_list[ticker_id_int],
+                                        #              'asks': market.asks[:100],
+                                        #              'change_rate': rate_of_change,
+                                        #              'ticker': bits}
                                         if rate_of_change > 0:
-                                            start_calculate_poloniex_buy.delay(
-                                                json.dumps(args_buy, cls=DjangoJSONEncoder))
-                                        else:
-                                            start_calculate_poloniex_sell.delay(
-                                                json.dumps(args_sell, cls=DjangoJSONEncoder))
-                                        # pair_temp = {'pair_id': pair.pk, 'last': ticker.last,
-                                        #                      'percent': ticker.percent_change}
-                                        # Group("trade").send({'text': json.dumps(pair_temp)})
+                                            res = start_calculate_poloniex_buy.delay(args_buy)
+                                            print(res)
+                                            # else:
+                                            #     start_calculate_poloniex_sell.delay(
+                                            #         json.dumps(args_sell, cls=DjangoJSONEncoder))
+                                            # pair_temp = {'pair_id': pair.pk, 'last': ticker.last,
+                                            #                      'percent': ticker.percent_change}
+                                            # Group("trade").send({'text': json.dumps(pair_temp)})
                 else:
                     ticker_id = self._tickers_id[data[0]]
                     seq = data[1]
@@ -199,75 +207,6 @@ class PoloniexSubscriber(object):
                     self._last_seq_dic[ticker_id] = seq
 
 
-def calculate_to_trade(last_ticker, new_ticker, market):
-    # seconds = Decimal(str(int((new_ticker.date_time - last_ticker.date_time).total_seconds())))
-    # if seconds > 1:
-    #     change = Decimal(str(new_ticker.last)) - Decimal(str(last_ticker.last))
-    #     rate_of_change = change / seconds
-    #     user_pairs = UserPair.objects.filter(pair=last_ticker.pair, rate_of_change__lte=abs(rate_of_change),
-    #                                          user_exchange__is_active_script=True).order_by('-rank')
-    #     if len(user_pairs) > 0:
-    #         for user_pair in user_pairs:
-    #             try:
-    #                 user_main_coin = UserMainCoinPriority.objects.get(main_coin__coin=user_pair.pair.main_coin,
-    #                                                                   user_exchange=user_pair.user_exchange)
-    #                 main_coin_active = user_main_coin.is_active
-    #             except UserMainCoinPriority.DoesNotExist:
-    #                 main_coin_active = True
-    #             if main_coin_active:
-    #                 user_balance_second_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
-    #                                                                    coin=user_pair.pair.second_coin.symbol.lower())
-    #                 user_balance_second_coin_in_btc = user_balance_second_coin.btc_value
-    #                 user_second_coin_percent = user_balance_second_coin_in_btc / (
-    #                     user_pair.user_exchange.total_btc / 100)
-    #                 user_coin_share = UserCoinShare.objects.get(user_exchange=user_pair.user_exchange,
-    #                                                             coin=user_pair.pair.second_coin)
-    #                 user_need_second_coin_in_percent = user_coin_share.share
-    #                 user_nehvataen_in_percent_of_btc = user_need_second_coin_in_percent - user_second_coin_percent
-    #
-    #                 # расчитываем приоритеты
-    #                 sum_priority_second_coin = UserPair.objects.filter(user_exchange=user_pair.user_exchange,
-    #                                                                    pair__second_coin=user_pair.pair.second_coin).aggregate(
-    #                     Sum('rank'))['rank__sum']
-    #                 user_need_to_buy_on_prior_in_percent_of_btc = Decimal(user_nehvataen_in_percent_of_btc) * (
-    #                     Decimal(user_pair.rank) / Decimal(sum_priority_second_coin))
-    #
-    #                 user_need_to_buy_on_prior_in_btc = (user_pair.user_exchange.total_btc / 100) * \
-    #                                                    user_need_to_buy_on_prior_in_percent_of_btc
-    #
-    #                 user_need_to_buy_on_prior_in_first_coin = 0
-    #
-    #                 if user_pair.pair.main_coin.symbol.upper() == 'BTC':
-    #                     user_need_to_buy_on_prior_in_first_coin = user_need_to_buy_on_prior_in_btc
-    #                 else:
-    #                     try:
-    #                         last_price = ExchangeTicker.objects.filter(pair__main_coin__symbol='BTC',
-    #                                                                    pair__second_coin=user_pair.pair.main_coin).latest(
-    #                             'date_time')
-    #                         user_need_to_buy_on_prior_in_first_coin = Decimal(
-    #                             user_need_to_buy_on_prior_in_btc) / last_price.last
-    #                     except ExchangeTicker.DoesNotExist:
-    #                         try:
-    #                             last_price = ExchangeTicker.objects.filter(pair__second_coin__symbol='BTC',
-    #                                                                        pair__main_coin=user_pair.pair.main_coin).latest(
-    #                                 'date_time')
-    #                             user_need_to_buy_on_prior_in_first_coin = Decimal(
-    #                                 user_need_to_buy_on_prior_in_btc) * last_price.last
-    #                         except ExchangeTicker.DoesNotExist:
-    #                             print('ИДИТЕ НАЗУЙ С МОНЕТОЙ: ' + str(user_pair.pair.main_coin))
-    #
-    #                 # надо потратить первой валюты user_need_to_buy_on_prior_in_first_coin
-    #                 try:
-    #                     user_balance_main_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
-    #                                                                      coin=user_pair.pair.main_coin.symbol.lower())
-    #                     if user_balance_main_coin.balance < user_need_to_buy_on_prior_in_first_coin:
-    #                         user_need_to_buy_on_prior_in_first_coin = user_balance_main_coin.balance
-    #                 except UserBalance.DoesNotExist:
-    #                     print('Не нашел такой валюты у пользователя')
-    #                     continue
-    return
-
-
 class TickerList:
     def __init__(self):
         self.tickers = []
@@ -278,7 +217,13 @@ class TickerList:
                 return item
         return None
 
-    def new_ticker(self, pair_id, last, date):
+    def get_ticker_by_name(self, pair_name):
+        for item in self.tickers:
+            if item.pair == pair_name:
+                return item
+        return None
+
+    def new_ticker(self, pair, pair_id, last, date):
         ticker = self.get_ticker_by_id(pair_id)
         if ticker is not None:
             ticker.prev_last = ticker.last
@@ -286,12 +231,13 @@ class TickerList:
             ticker.last = last
             ticker.date = date
         else:
-            new_ticker = Ticker(pair_id, last, date)
+            new_ticker = Ticker(pair_id, pair, last, date)
             self.tickers.append(new_ticker)
 
 
 class Ticker:
-    def __init__(self, pair_id, last, date):
+    def __init__(self, pair_id, pair, last, date):
+        self.pair = pair
         self.pair_id = pair_id
         self.prev_last = None
         # self.prev_high = None

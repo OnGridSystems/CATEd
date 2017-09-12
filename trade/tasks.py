@@ -174,7 +174,7 @@ def pull_exchanges_tickers():
                     pass
         except ExchangeNotAvailable:
             continue
-    pull_exchanges_balances.delay()
+    # pull_exchanges_balances.delay()
     return True
 
 
