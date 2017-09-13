@@ -642,6 +642,8 @@ class CheckSetOrderTask(Task):
             user_orders = UserOrder.objects.filter(date_cancel=None)
             orders_to_close = user_orders.filter(
                 date_created__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL))
+            print('Ордера пользователей {}'.format(user_orders))
+            print('Ордера к закрытию {}'.format(orders_to_close))
             for uo in user_orders:
                 exchange_object = class_for_name('ccxt', uo.ue.exchange.name)({
                     'apiKey': uo.ue.apikey,
@@ -656,8 +658,8 @@ class CheckSetOrderTask(Task):
                         print('Ордер № {} пора закрыть, его время пришло'.format(uo.order_number))
                         try:
                             print('Пытаюсь отменить ордер № {}'.format(uo.order_number))
-                            canc = exchange_object.cancel_order(id=uo.order_number)
-                            if canc['success'] == '1':
+                            canc = exchange_object.cancel_order(str(uo.order_number))
+                            if canc['success'] == 1:
                                 uo.date_cancel = datetime.datetime.now()
                                 uo.cancel_desc = 'TTL'
                                 uo.save()
