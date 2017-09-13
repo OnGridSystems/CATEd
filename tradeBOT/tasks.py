@@ -641,23 +641,17 @@ class CheckSetOrderTask(Task):
         try:
             user_orders = UserOrder.objects.filter(date_cancel=None)
             orders_to_close = user_orders.filter(
-                date_cancel__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL))
+                date_created__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL))
             for uo in user_orders:
                 exchange_object = class_for_name('ccxt', uo.ue.exchange.name)({
                     'apiKey': uo.ue.apikey,
                     'secret': uo.ue.apisecret
                 })
                 try:
-                    print('Проверяю ордер № {}'.format(uo.order_number))
                     order_status = exchange_object.fetch_order_status(str(uo.order_number))
-                    print('ВОТ ЧТО ВЕРНУЛА БИБЛИОТЕКА: {}'.format(order_status))
                 except CCXTError as er:
-                    print('Ошибка: {}'.format(er))
                     continue
-                open_orders = exchange_object.fetch_open_orders()
-                print('Открытые ордера: {}'.format(open_orders))
                 if order_status == 'open':
-                    print('Ордер № {} открыт'.format(uo.order_number))
                     if uo in orders_to_close:
                         print('Ордер № {} пора закрыть, его время пришло'.format(uo.order_number))
                         try:
