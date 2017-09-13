@@ -1,5 +1,8 @@
 {% extends 'trade/base.html' %}
 {% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+{% endblock %}
 {% block content %}
     {% autoescape on %}
         <h3 class="center">Exchange: {{ user_exchange.exchange.name }}</h3>
@@ -88,9 +91,12 @@
                         </div>
                     </div>
                 </div>
-{#                <div class="col s12 m12 l12 exchange-coins-block">#}
-{#                    {% get_orders_to_trade to_trade %}#}
-{#                </div>#}
+                <div class="col s12 m12 l12 exchange-coins-block">
+                    {% get_orders_to_trade to_trade %}
+                </div>
+                <div class="col s12 m12 l12 exchange-coins-block">
+                    {% get_user_orders orders %}
+                </div>
             </div>
             <div class="col s3 m3 l3">
                 <div class="exchange-coins-block">
@@ -273,5 +279,7 @@
     <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqChart.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqRangeSlider.js' %}"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
     <script lang="javascript" type="text/javascript" src="{% static 'js/setup.js' %}"></script>
+
 {% endblock %}

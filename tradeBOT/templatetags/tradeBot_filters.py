@@ -110,3 +110,8 @@ def haven_percent(coin, ue):
 @register.inclusion_tag('tradeBOT/to_trade.html')
 def get_orders_to_trade(to_trade):
     return {'to_trade': to_trade}
+
+
+@register.inclusion_tag('tradeBOT/orders.html')
+def get_user_orders(orders):
+    return {'orders': orders}

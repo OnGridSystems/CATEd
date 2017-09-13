@@ -178,7 +178,21 @@ $(document).ready(function () {
         })
     }
 
-    setInterval(get_new_orders_to_trade, 5000)
+    setInterval(get_new_orders_to_trade, 5000);
+
+    $('#user_orders').DataTable();
+    $('#calculated_to_trade').DataTable({
+        keys: true,
+        colReorder: true,
+        stateSave: true,
+        "language": {
+            "url": "https://cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Russian.json"
+        }
+    });
+    $.extend($.fn.dataTable.defaults, {
+        searching: false,
+        ordering: false
+    });
 });
 
 socket = new WebSocket("ws://" + window.location.host + "/trade/");
