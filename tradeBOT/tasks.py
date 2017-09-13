@@ -12,7 +12,7 @@ from djangoTrade.celery import app
 import requests
 from trade.models import Exchanges, UserExchange, UserBalance
 from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair, \
-    ToTrade, UserMainCoinPriority, UserCoinShare, UserOrder
+    ToTrade, UserMainCoinPriority, UserCoinShare, UserOrder, Сalculations
 from trade.tasks import pull_exchanges_balances
 from django.conf import settings
 from decimal import Decimal as _D
@@ -166,7 +166,7 @@ def calculate_order_for_user(user_pair_pk, params, type):
                 try:
                     user_balance_main_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
                                                                      coin=user_pair.pair.main_coin.symbol.lower())
-                    if user_balance_main_coin.free == 0 or user_balance_main_coin.free < 0.00001:
+                    if user_balance_main_coin.free == 0 or user_balance_main_coin.free < 0.0001:
                         print('{} доступно {}'.format(user_pair.pair.main_coin.symbol.upper(),
                                                       user_balance_main_coin.free))
                         return True
@@ -184,6 +184,17 @@ def calculate_order_for_user(user_pair_pk, params, type):
                                                                        total,
                                                                        user_pair.pair.second_coin.symbol.upper()))
                 print('Считал по {}'.format(price))
+
+                calculations = Сalculations()
+                calculations.user_pair = user_pair
+                calculations.rate_change = change_rate
+                calculations.type = type
+                calculations.depth_coef = settings.DEPTH_COEFFICIENT
+                calculations.price = price
+                calculations.amount = total
+                calculations.bids = json.dumps(bids)
+                calculations.asks = None
+                calculations.save()
 
                 try:
                     to_trade = ToTrade.objects.get(user_pair=user_pair, type='buy')
@@ -212,33 +223,46 @@ def calculate_order_for_user(user_pair_pk, params, type):
             asks = params['asks']
             user_have_second_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
                                                             coin=user_pair.pair.second_coin.symbol.lower())
-            price = calculate_price(amount=user_have_second_coin.free, o_type='sell', asks=asks)
-            total = user_have_second_coin.free * _D(price)
-            print('Нашел цену: ' + str(price))
-            print('Хочу потратить {} {} чтобы купить {} {}'.format(user_have_second_coin.free,
-                                                                   user_pair.pair.second_coin.symbol.upper(),
-                                                                   total,
-                                                                   user_pair.pair.main_coin.symbol.upper()))
-            try:
-                to_trade = ToTrade.objects.get(user_pair=user_pair, type='sell')
-                to_trade.price = price
-                to_trade.amount = user_have_second_coin.free
-                to_trade.total = total
-                to_trade.total_f = total - (total * _D('.0015'))
-                to_trade.percent_react = change_rate
-                to_trade.save()
-            except ToTrade.DoesNotExist:
-                new_order = ToTrade()
-                new_order.user_pair = user_pair
-                new_order.type = 'sell'
-                new_order.percent_react = change_rate
-                new_order.price = price
-                new_order.amount = user_have_second_coin.free
-                new_order.total = total
-                new_order.total_f = total - (total * _D('.0015'))
-                new_order.fee = _D('.0015')
-                new_order.cause = 'Change rate'
-                new_order.save()
+            if user_have_second_coin.free > 0.001:
+                price = calculate_price(amount=user_have_second_coin.free, o_type='sell', asks=asks)
+                total = user_have_second_coin.free * _D(price)
+                print('Нашел цену: ' + str(price))
+                print('Хочу потратить {} {} чтобы купить {} {}'.format(user_have_second_coin.free,
+                                                                       user_pair.pair.second_coin.symbol.upper(),
+                                                                       total,
+                                                                       user_pair.pair.main_coin.symbol.upper()))
+
+                calculations = Сalculations()
+                calculations.user_pair = user_pair
+                calculations.rate_change = change_rate
+                calculations.type = type
+                calculations.depth_coef = settings.DEPTH_COEFFICIENT
+                calculations.price = price
+                calculations.amount = user_have_second_coin.free
+                calculations.asks = json.dumps(asks)
+                calculations.bids = None
+                calculations.save()
+
+                try:
+                    to_trade = ToTrade.objects.get(user_pair=user_pair, type='sell')
+                    to_trade.price = price
+                    to_trade.amount = user_have_second_coin.free
+                    to_trade.total = total
+                    to_trade.total_f = total - (total * _D('.0015'))
+                    to_trade.percent_react = change_rate
+                    to_trade.save()
+                except ToTrade.DoesNotExist:
+                    new_order = ToTrade()
+                    new_order.user_pair = user_pair
+                    new_order.type = 'sell'
+                    new_order.percent_react = change_rate
+                    new_order.price = price
+                    new_order.amount = user_have_second_coin.free
+                    new_order.total = total
+                    new_order.total_f = total - (total * _D('.0015'))
+                    new_order.fee = _D('.0015')
+                    new_order.cause = 'Change rate'
+                    new_order.save()
     except UserPair.DoesNotExist:
         pass
     return True
@@ -301,7 +325,7 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='celery@worker.high')
+@celeryd_init.connect(sender='worker_high@lab-sk')
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high')
     SetOrderTask.apply_async(queue='set_orders')
@@ -624,17 +648,30 @@ class CheckSetOrderTask(Task):
                     'secret': uo.ue.apisecret
                 })
                 try:
-                    order_status = exchange_object.fetch_order_status(id=uo.order_number)
-                except Exception:
+                    print('Проверяю ордер № {}'.format(uo.order_number))
+                    order_status = exchange_object.fetch_order_status(str(uo.order_number))
+                    print('ВОТ ЧТО ВЕРНУЛА БИБЛИОТЕКА: {}'.format(order_status))
+                except CCXTError as er:
+                    print('Ошибка: {}'.format(er))
                     continue
+                open_orders = exchange_object.fetch_open_orders()
+                print('Открытые ордера: {}'.format(open_orders))
                 if order_status == 'open':
+                    print('Ордер № {} открыт'.format(uo.order_number))
                     if uo in orders_to_close:
-                        canc = exchange_object.cancel_order(id=uo.order_number)
-                        if canc['success'] == '1':
-                            uo.date_cancel = datetime.datetime.now()
-                            uo.cancel_desc = 'TTL'
-                            uo.save()
+                        print('Ордер № {} пора закрыть, его время пришло'.format(uo.order_number))
+                        try:
+                            print('Пытаюсь отменить ордер № {}'.format(uo.order_number))
+                            canc = exchange_object.cancel_order(id=uo.order_number)
+                            if canc['success'] == '1':
+                                uo.date_cancel = datetime.datetime.now()
+                                uo.cancel_desc = 'TTL'
+                                uo.save()
+                        except CCXTError as er:
+                            print('При отмене ордера № {} возникла ошибка: {}'.format(uo.order_number, er))
+                            continue
                 elif order_status == 'closed':
+                    print('Ордер № {} закрыт'.format(uo.order_number))
                     uo.date_cancel = datetime.datetime.now()
                     try:
                         current_balance_main_coin = UserBalance.objects.get(ue=uo.ue,
@@ -654,7 +691,7 @@ class CheckSetOrderTask(Task):
                         if fact_total != 0:
                             fact_fee = 100 * _D(uo.total) / _D(fact_total) - 100
                             uo.fact_fee = fact_fee
-                            if fact_fee > 0.002:
+                            if fact_fee > 0.2:
                                 uo.is_ok = False
                     elif uo.order_type == 'sell':
                         fact_total = _D(current_balance_main_coin.total) - _D(uo.first_coin_before)
@@ -662,7 +699,7 @@ class CheckSetOrderTask(Task):
                         if fact_total != 0:
                             fact_fee = 100 * _D(uo.total) / _D(fact_total) - 100
                             uo.fact_fee = fact_fee
-                            if fact_fee > 0.002:
+                            if fact_fee > 0.2:
                                 uo.is_ok = False
                     uo.cancel_desc = 'Worked'
                     uo.save()
@@ -673,9 +710,9 @@ class CheckSetOrderTask(Task):
                 date_updated__gte=datetime.datetime.now() - datetime.timedelta(minutes=5)).earliest('date_created')
 
             already_in_orders = UserOrder.objects.filter(ue=to_trade.user_pair.user_exchange,
-                                                         pair=to_trade.user_pair.pair)
+                                                         pair=to_trade.user_pair.pair, date_cancel=None)
             if len(already_in_orders) > 0:
-                pass
+                to_trade.delete()
             else:
                 exchange_name = to_trade.user_pair.user_exchange.exchange.name
                 exchange_object = class_for_name('ccxt', exchange_name)({
@@ -695,6 +732,7 @@ class CheckSetOrderTask(Task):
                             price=to_trade.price,
                             params={'postOnly': 1}
                         )
+                        print('Ответ от биржи (покупка): {}'.format(order))
                     elif to_trade.type == 'sell':
                         order = exchange_object.create_limit_sell_order(
                             symbol=to_trade.user_pair.pair.second_coin.symbol.upper() + '/' + to_trade.user_pair.pair.main_coin.symbol.upper(),
@@ -702,6 +740,7 @@ class CheckSetOrderTask(Task):
                             price=to_trade.price,
                             params={'postOnly': 1}
                         )
+                        print('Ответ от биржи (продажа): {}'.format(order))
                     if order is not None:
                         pull_exchanges_balances.delay(to_trade.user_pair.user_exchange.pk)
                         user_order = UserOrder()

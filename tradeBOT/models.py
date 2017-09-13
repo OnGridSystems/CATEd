@@ -182,3 +182,15 @@ class ToTrade(models.Model):
     class Meta:
         verbose_name = 'Пара готовая к торговле'
         verbose_name_plural = 'Пары готовые к торговле'
+
+
+class Сalculations(models.Model):
+    user_pair = models.ForeignKey(UserPair)
+    rate_change = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    type = models.CharField(max_length=10)
+    depth_coef = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    price = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    amount = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
+    bids = models.TextField(blank=True, null=True)
+    asks = models.TextField(blank=True, null=True)
+    date_created = models.DateTimeField(auto_now=True)

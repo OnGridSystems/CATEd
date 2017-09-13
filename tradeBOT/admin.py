@@ -2,6 +2,13 @@ from django.contrib import admin
 from tradeBOT import models
 
 
+class CalculationsAdmin(admin.ModelAdmin):
+    list_display = ['user_pair', 'rate_change', 'type', 'depth_coef', 'price', 'amount', 'date_created']
+
+    class Meta:
+        model = models.Сalculations
+
+
 class UserOrderAdmin(admin.ModelAdmin):
     list_display = [field.name for field in models.UserOrder._meta.fields]
     list_filter = ['ue__exchange__name', 'order_type', 'ue__user__username']
@@ -82,3 +89,5 @@ admin.site.register(models.Order, OrderAdmin)
 admin.site.register(models.ToTrade, ToTradeAdmin)
 admin.site.register(models.UserOrder, UserOrderAdmin)
 admin.site.register(models.UserCoinShare)
+admin.site.register(models.Сalculations, CalculationsAdmin)
+

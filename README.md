@@ -93,6 +93,7 @@ echo "$SSHCFG" >> /etc/ssh/ssh_config
 ```
 Setup OpenVPN client (to poll rigs)
 ```
+mkdir /etc/openvpn
 read -d "" CACRT <<"EOF"
 -----BEGIN CERTIFICATE-----
 MIIE9DCCA9ygAwIBAgIJAL7JQUNNDavTMA0GCSqGSIb3DQEBCwUAMIGsMQswCQYD
@@ -278,7 +279,6 @@ systemctl restart openvpn@client
 Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
-pip3 install --upgrade pip setuptools wheel
 cd /opt
 mkdir portal_ongrid
 cd portal_ongrid
@@ -435,8 +435,8 @@ echo "$PATCH" | patch /opt/portal_ongrid/env/lib/python3.5/site-packages/polonie
 set databases and mocks
 
 ```sh
-echo "create database trade character set utf8" | mysql -u root
-echo "create database celery_result" | mysql -u root
+echo "create database trade character set utf8;" | mysql -u root
+echo "create database celery_result;" | mysql -u root
 #
 # Migrate
 ./manage.py makemigrations 
@@ -449,9 +449,9 @@ echo "create database celery_result" | mysql -u root
 read -d "" ADDMAIN<<"EOF"
 from trade import models as trade_m
 from monitoring import models as monit_m
-trade_m.Exchanges.objects.get_or_create(exchange='poloniex', url='poloniex.com', driver=1)
-trade_m.Exchanges.objects.get_or_create(exchange='bittrex', url='bittrex.com', driver=2)
-trade_m.Exchanges.objects.get_or_create(exchange='btc-e', url='btc-e.com', driver=3)
+trade_m.Exchanges.objects.get_or_create(exchange='poloniex')
+trade_m.Exchanges.objects.get_or_create(exchange='bittrex')
+trade_m.Exchanges.objects.get_or_create(exchange='btc-e')
 trade_m.Wallets.objects.get_or_create(name='BTC')
 trade_m.Wallets.objects.get_or_create(name='ETH')
 trade_m.Wallets.objects.get_or_create(name='Yandex Money')
@@ -478,27 +478,42 @@ supervisorctl restart djangoTrade_web
 install and configure celery
 
 ```sh
+sudo adduser celery
+
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
 chmod +x /etc/init.d/celeryd /etc/init.d/celerybeat
+
+#add celery config
 read -d "" CELERYD_CFG <<"EOF"
+CELERY_NODES="worker_set_orders worker_low worker_normal worker_high"
 CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
 CELERY_APP="djangoTrade"
 CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
-CELERYD_OPTS="--time-limit=300 --concurrency=1"
+CELERYD_OPTS="-Q:worker_set_orders set_orders -Q:worker_low low -Q:worker_normal normal -Q:worker_high high -c:worker_set_orders 1 -c:worker_low 3 -c:worker_normal 3 -c:worker_high 2"
 CELERYD_LOG_FILE="/var/log/celery/%n%I.log"
 CELERYD_PID_FILE="/var/run/celery/%n.pid"
-CELERYD_USER="root"
-CELERYD_GROUP="root"
+CELERYD_USER="celery"
+CELERYD_GROUP="celery"
 DJANGO_SETTINGS_MODULE="djangoTrade.settings"
 CELERY_CREATE_DIRS=1
 SECRET_KEY="ada#qadaa2d#1232%!^&#*(&@(!&Y!&#*T!@(^F#!@&#F!@&#F!(@"
 EOF
 echo "$CELERYD_CFG" > /etc/default/celeryd
+
+read -d "" CELERYBEAT_CFG <<"EOF"
+CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
+CELERY_APP="djangoTrade"
+CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
+DJANGO_SETTINGS_MODULE="djangoTrade.settings"
+EOF
+echo "$CELERYBEAT_CFG" > /etc/default/celerybeat
+
 /etc/init.d/celeryd create-paths
 /etc/init.d/celeryd start
 /etc/init.d/celeryd stop
 sudo update-rc.d celeryd defaults
+sudo update-rc.d celerybeat defaults
 ```
 
 make all components start on boot in screens
@@ -625,9 +640,8 @@ EOF
 echo "$PYTASKS" | ./manage.py shell
 
 read -d "" PYTASKS2 <<"EOF"
-from tradeBOT import tasks
-pbittrex = tasks.pull_bittrex.delay()
-ppoloniex = tasks.pull_poloniex.delay()
+from trade import tasks
+tasks.pull_exchanges.delay()
 EOF
 echo "$PYTASKS2" | ./manage.py shell
 ```
