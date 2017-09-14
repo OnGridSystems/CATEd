@@ -161,7 +161,7 @@ class UserOrder(models.Model):
     interim_main_coin = models.DecimalField(max_digits=20, decimal_places=10)
     date_created = models.DateTimeField(auto_now_add=True)
     date_cancel = models.DateTimeField(default=None, blank=True, null=True)
-    cancel_desc = models.CharField(max_length=100, blank=True, null=True)
+    cancel_desc = models.CharField(max_length=100, blank=True, null=True, default=None)
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
