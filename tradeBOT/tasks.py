@@ -763,8 +763,13 @@ class CheckSetOrderTask(Task):
                         user_order.pair = to_trade.user_pair.pair
                         user_order.order_type = to_trade.type
                         user_order.order_number = order['id']
-                        user_order.first_coin_before = user_balance_main_coin.total
-                        user_order.second_coin_before = user_balance_second_coin.total
+                        user_order.interim_main_coin = user_balance_main_coin.total
+                        user_order.main_coin_before_total = user_balance_main_coin.total
+                        user_order.main_coin_before_free = user_balance_main_coin.free
+                        user_order.main_coin_before_used = user_balance_main_coin.used
+                        user_order.second_coin_before_total = user_balance_second_coin.total
+                        user_order.second_coin_before_free = user_balance_second_coin.free
+                        user_order.second_coin_before_used = user_balance_second_coin.used
                         user_order.price = to_trade.price
                         user_order.amount = to_trade.amount
                         user_order.total = to_trade.price * to_trade.amount
