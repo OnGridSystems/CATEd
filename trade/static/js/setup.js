@@ -1,4 +1,5 @@
 $(document).ready(function () {
+    $('select').addClass('browser-default');
     pair_id = $('.pair_tr').data('pair-id');
     $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('active_pair');
     var main_coin = $('.tabs a.active').text();
@@ -181,14 +182,7 @@ $(document).ready(function () {
     setInterval(get_new_orders_to_trade, 5000);
 
     $('#user_orders').DataTable();
-    $('#calculated_to_trade').DataTable({
-        keys: true,
-        colReorder: true,
-        stateSave: true,
-        "language": {
-            "url": "https://cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Russian.json"
-        }
-    });
+    $('#calculated_to_trade').DataTable();
     $.extend($.fn.dataTable.defaults, {
         searching: false,
         ordering: false

@@ -27,7 +27,7 @@ def setup(request, pk):
             'coin__symbol')
         args['to_trade'] = ToTrade.objects.filter(user_pair__user_exchange=args['user_exchange']).order_by(
             'date_updated')
-        args['orders'] = UserOrder.objects.filter(ue=args['user_exchange']).order_by('pk')
+        args['orders'] = UserOrder.objects.filter(ue=args['user_exchange']).order_by('-pk')
         args['user_coins'] = UserCoinShare.objects.filter(user_exchange=args['user_exchange'])
     except UserExchange.DoesNotExist:
         return redirect('index')

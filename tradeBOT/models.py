@@ -152,7 +152,7 @@ class UserOrder(models.Model):
     is_ok = models.NullBooleanField(default=None, blank=True, null=True)
     date_created = models.DateTimeField(auto_now_add=True)
     date_cancel = models.DateTimeField(default=None, blank=True, null=True)
-    cancel_desc = models.CharField(max_length=100)
+    cancel_desc = models.CharField(max_length=100, blank=True, null=True)
     date_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):

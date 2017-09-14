@@ -336,3 +336,8 @@ tr.balances td:last-child {
     -o-transition: all .3s;
     transition: all .3s;
 }
+
+.orders td {
+    font-size: 10px;
+    padding: 0 !important;
+}
