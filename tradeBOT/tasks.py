@@ -298,6 +298,7 @@ class BidsAsksTypeException(Exception):
     def __init__(self, value):
         self.value = value
 
+
     def __str__(self):
         return repr(self.value)
 
@@ -329,7 +330,6 @@ WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high')
     SetOrderTask.apply_async(queue='set_orders')
-
 
 class PoloniexSubscriber(object):
     def __init__(self):
@@ -766,3 +766,4 @@ class CheckSetOrderTask(Task):
 
 
 SetOrderTask = app.register_task(CheckSetOrderTask())
+

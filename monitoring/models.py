@@ -38,9 +38,9 @@ class Worker(models.Model):
     stale_shares = models.IntegerField(null=True)
     invalid_share_ratio = models.IntegerField(null=True)
     last_update = models.DateTimeField(auto_now=True)
-    uptime = models.BigIntegerField(null=True)
+    uptime = models.BigIntegerField(null=True, default=0)
     ip_address = models.CharField(max_length=255, null=True)
-    sum_hr_base = models.DecimalField(decimal_places=1, max_digits=5, default = 0)
+    sum_hr_base = models.DecimalField(decimal_places=1, max_digits=5, default=0)
     sum_hr_sec = models.DecimalField(decimal_places=1, max_digits=5, default=0)
     hr_details_base = models.CharField(max_length=255, null=True)
     hr_details_sec = models.CharField(max_length=255, null=True)
@@ -48,10 +48,14 @@ class Worker(models.Model):
     fun_speed = models.CharField(max_length=255, null=True)
     pools = models.CharField(max_length=255, null=True)
     claymore_version = models.CharField(max_length=255, null=True)
-    claymore_uptime =  models.BigIntegerField(null=True)
+    claymore_uptime =  models.BigIntegerField(null=True, default=0)
 
     def __str__(self):
-        return self.address_pool.name + " - " + self.name + ": " + str(self.last_update)
+        if self.address_pool is None:
+            return self.name + ": " + str(self.last_update)
+        else:
+            return self.address_pool.name + " - " + self.name + ": " + str(self.last_update)
+
 
     class Meta:
         unique_together = ['address_pool', 'name']
@@ -61,6 +65,8 @@ class WorkersHistory(models.Model):
     worker = models.ForeignKey(Worker)
     reported_hash_rate = models.DecimalField(decimal_places=1, max_digits=5)
     date_time = models.DateTimeField(blank=False)
+    sum_hr_base = models.DecimalField(decimal_places=1, max_digits=5, default=0)
+    sum_hr_sec = models.DecimalField(decimal_places=1, max_digits=5, default=0)
 
     def as_list(self):
         return [
@@ -68,20 +74,3 @@ class WorkersHistory(models.Model):
             float(self.reported_hash_rate)
         ]
 
-
-class WorkersDetails(models.Model):
-    worker = models.ForeignKey(Worker)
-    claymore = models.CharField(max_length=255, null=True)
-    claymore_pool = models.CharField(max_length=255, null=True)
-    card_name = models.CharField(max_length=255, null=True)
-    hash_rate = models.DecimalField(decimal_places=1, max_digits=5)
-    temperature = models.IntegerField(null=True)
-    speed_fun = models.IntegerField(null=True)
-    last_update = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.worker.name + ": " + self.claymore_pool+" - " + self.card_name + ": " + str(self.hash_rate)
-
-    class Meta:
-        verbose_name = "Подробности по ригам"
-        verbose_name_plural = "Подробности по ригам"
