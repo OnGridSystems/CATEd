@@ -666,23 +666,39 @@ class CheckSetOrderTask(Task):
                         except CCXTError as er:
                             print('При отмене ордера № {} возникла ошибка: {}'.format(uo.order_number, er))
                             continue
+                    else:
+                        try:
+                            current_balance_main_coin = UserBalance.objects.get(ue=uo.ue,
+                                                                                coin=uo.pair.main_coin.symbol.lower())
+                            uo.interim_main_coin = current_balance_main_coin.total
+                            uo.save()
+                        except UserBalance.DoesNotExist:
+                            pass
                 elif order_status == 'closed':
                     print('Ордер № {} закрыт'.format(uo.order_number))
                     uo.date_cancel = datetime.datetime.now()
                     try:
                         current_balance_main_coin = UserBalance.objects.get(ue=uo.ue,
                                                                             coin=uo.pair.main_coin.symbol.lower())
-                        uo.first_coin_after = current_balance_main_coin.total
+                        uo.main_coin_after_total = current_balance_main_coin.total
+                        uo.main_coin_after_free = current_balance_main_coin.free
+                        uo.main_coin_after_used = current_balance_main_coin.used
                     except UserBalance.DoesNotExist:
-                        uo.first_coin_after = '-1'
+                        uo.main_coin_after_total = '-1'
+                        uo.main_coin_after_used = '-1'
+                        uo.main_coin_after_free = '-1'
                     try:
                         current_balance_second_coin = UserBalance.objects.get(ue=uo.ue,
                                                                               coin=uo.pair.second_coin.symbol.lower())
-                        uo.second_coin_after = current_balance_second_coin.total
+                        uo.second_coin_after_total = current_balance_second_coin.total
+                        uo.second_coin_after_used = current_balance_second_coin.used
+                        uo.second_coin_after_free = current_balance_second_coin.free
                     except UserBalance.DoesNotExist:
-                        uo.second_coin_after = '-1'
+                        uo.second_coin_after_total = '-1'
+                        uo.second_coin_after_used = '-1'
+                        uo.second_coin_after_free = '-1'
                     if uo.order_type == 'buy':
-                        fact_total = _D(uo.first_coin_before) - _D(current_balance_main_coin.total)
+                        fact_total = _D(uo.interim_main_coin) - _D(current_balance_main_coin.total)
                         uo.fact_total = fact_total
                         if fact_total != 0:
                             fact_fee = 100 * _D(uo.total) / _D(fact_total) - 100
@@ -690,7 +706,7 @@ class CheckSetOrderTask(Task):
                             if fact_fee > 0.2:
                                 uo.is_ok = False
                     elif uo.order_type == 'sell':
-                        fact_total = _D(current_balance_main_coin.total) - _D(uo.first_coin_before)
+                        fact_total = _D(current_balance_main_coin.total) - _D(uo.interim_main_coin)
                         uo.fact_total = fact_total
                         if fact_total != 0:
                             fact_fee = 100 * _D(uo.total) / _D(fact_total) - 100
@@ -700,6 +716,9 @@ class CheckSetOrderTask(Task):
                     uo.cancel_desc = 'Worked'
                     uo.save()
         except CCXTError:
+            pass
+        except Exception as e:
+            print('При проверке ордера возникла ошибка: {}'.format(e))
             pass
         try:
             to_trade = ToTrade.objects.filter(
