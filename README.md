@@ -449,9 +449,7 @@ echo "create database celery_result;" | mysql -u root
 read -d "" ADDMAIN<<"EOF"
 from trade import models as trade_m
 from monitoring import models as monit_m
-trade_m.Exchanges.objects.get_or_create(exchange='poloniex')
-trade_m.Exchanges.objects.get_or_create(exchange='bittrex')
-trade_m.Exchanges.objects.get_or_create(exchange='btc-e')
+trade_m.Exchanges.objects.get_or_create(name='poloniex', info_frozen_key='-isFrozen')
 trade_m.Wallets.objects.get_or_create(name='BTC')
 trade_m.Wallets.objects.get_or_create(name='ETH')
 trade_m.Wallets.objects.get_or_create(name='Yandex Money')
