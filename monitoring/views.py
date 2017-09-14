@@ -33,3 +33,5 @@ def get_chart(request):
                 total_hash_pool.append([int(time.mktime(dt['date_time'].timetuple()) * 1000), total_hash_workers])
             # list_hold = [obj.as_list() for obj in workers]
             return HttpResponse(json.dumps(total_hash_pool), status=200)
+
+

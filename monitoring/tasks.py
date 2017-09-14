@@ -2,9 +2,12 @@
 from __future__ import absolute_import, unicode_literals
 
 import datetime
+from json import JSONDecodeError
+
 from celery import shared_task
 from celery.schedules import crontab
 from celery.task import periodic_task
+from django.db.models import Q
 from django.shortcuts import render
 import requests
 import time
@@ -13,7 +16,7 @@ import paramiko
 import json
 import subprocess
 from paramiko.ssh_exception import NoValidConnectionsError
-
+import socket
 from monitoring.models import *
 
 
@@ -24,7 +27,10 @@ def check_ethermine():
     address_pool = UserPools.objects.filter(pool=pool)
     if len(address_pool) > 0:
         for ap in address_pool:
-            response = requests.get('https://ethermine.org/api/miner_new/' + ap.address).json()
+            try:
+                response = requests.get('https://ethermine.org/api/miner_new/' + ap.address).json()
+            except JSONDecodeError:
+                continue
             workers = response['workers']
             for worker in workers:
                 name = workers[worker]['worker']
@@ -35,16 +41,18 @@ def check_ethermine():
                 stale_shares = workers[worker]['staleShares']
                 invalid_share_ratio = workers[worker]['invalidShareRatio']
                 try:
-                    old_worker = Worker.objects.get(name=worker, address_pool=ap)
+                    old_worker = Worker.objects.get(Q(name=name) & (Q(address_pool=ap) | Q(address_pool__isnull=True)))
                     old_worker.last_submit_time = last_submit_time
                     old_worker.reported_hash_rate = reported_hash_rate
                     old_worker.valid_shares = valid_shares
                     old_worker.invalid_shares = invalid_shares
                     old_worker.stale_shares = stale_shares
                     old_worker.invalid_share_ratio = invalid_share_ratio
+                    old_worker.address_pool = ap
                     old_worker.save()
                 # TODO обновить информацию по уже существующему Воркеру
                 except Worker.DoesNotExist:
+                    print('Новый воркер')
                     new_worker = Worker()
                     new_worker.address_pool = ap
                     new_worker.name = worker
@@ -59,19 +67,22 @@ def check_ethermine():
 
 
 @periodic_task(run_every=crontab(minute='*/5'))
-# @shared_task
+#  @shared_task
 def check_nanopool():
     pool, c = Pools.objects.get_or_create(pool='nanopool')
     address_pool = UserPools.objects.filter(pool=pool)
     if len(address_pool) > 0:
         for ap in address_pool:
-            response = requests.get('https://api.nanopool.org/v1/etc/reportedhashrates/' + ap.address).json()
+            try:
+                response = requests.get('https://api.nanopool.org/v1/etc/reportedhashrates/' + ap.address).json()
+            except JSONDecodeError:
+                continue
             workers = response['data']
             for worker in workers:
                 name = worker['worker']
                 reported_hash_rate = worker['hashrate']
                 try:
-                    old_worker = Worker.objects.get(name=name, address_pool=ap)
+                    old_worker = Worker.objects.get(Q(name=name) & (Q(address_pool=ap) | Q(address_pool__isnull=True)))
                     old_worker.reported_hash_rate = reported_hash_rate
                     old_worker.save()
                 # TODO обновить информацию по уже существующему Воркеру
@@ -83,6 +94,7 @@ def check_nanopool():
                     new_worker.save()
     return True
 
+
 @periodic_task(run_every=crontab(minute='*/5'))
 def save_worker_history():
     date = datetime.datetime.fromtimestamp(int(time.time())).strftime('%Y-%m-%d %H:%M:%S')
@@ -92,6 +104,8 @@ def save_worker_history():
         new_worker_history.worker = worker
         new_worker_history.date_time = date
         new_worker_history.reported_hash_rate = worker.reported_hash_rate
+        new_worker_history.sum_hr_base = worker.sum_hr_base
+        new_worker_history.sum_hr_sec = worker.sum_hr_sec
         new_worker_history.save()
     return True
 
@@ -137,30 +151,42 @@ def uptime_worker():
             pass
     return True
 
+
 @periodic_task(run_every=crontab(minute='*/5'))
 # @shared_task
 def check_claymore():
     workers = Worker.objects.all()
     for worker in workers:
-        ip = worker.ip_address
+        # ip = worker.ip_address
+        # if worker.address_pool is not None:
+        #     port = str(worker.address_pool.claymore_port)
+        # else:
+        #     port = '3333'
+        # id = '{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}'
+        # # print(port)
+        # rigcomm = "echo '"+id+"' | netcat '"+ ip + "' '" + port + "'"
+        # PIPE = subprocess.PIPE
+        # t = subprocess.Popen(rigcomm, shell=True, stdin=PIPE, stdout=PIPE,
+        #                  stderr=subprocess.STDOUT, close_fds=True, cwd='/home/')
+        # c=t.stdout.read()
+        HOST = worker.ip_address
         if worker.address_pool is not None:
-            port = str(worker.address_pool.claymore_port)
+            PORT = worker.address_pool.claymore_port
         else:
-            port = '3333'
-        id = '{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}'
-        # print(port)
-        rigcomm = "echo '"+id+"' | netcat '"+ ip + "' '" + port + "'"
-        PIPE = subprocess.PIPE
-        t = subprocess.Popen(rigcomm, shell=True, stdin=PIPE, stdout=PIPE,
-                         stderr=subprocess.STDOUT, close_fds=True, cwd='/home/')
-
-        c=t.stdout.read()
+            PORT = 3333
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.connect((HOST, PORT))
+                s.sendall(b'{"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}')
+                data = s.recv(1024)
+            except Exception:
+                continue
 
         # весь массив, возвращённый c клэймора
-        returned = json.loads(c.decode("utf-8"))['result']
+        returned = json.loads(data.decode("utf-8"))['result']
         # print(returned)
 
-        claymore_version=returned[0].split(';')[0]
+        claymore_version = returned[0].split(';')[0]
         # print(claymore_version)
 
         claymore_uptime = returned[1].split(';')[0]
@@ -169,7 +195,7 @@ def check_claymore():
         hr_base = returned[3].split(';')
 
         sum_hr_base = round(sum([float(int(i) / 1000) for i in hr_base]), 3)
-        hr_details_base = '; '.join([str(int(hr_base[i])/1000) + 'Mh/s' for i in range(len(hr_base))])
+        hr_details_base = '; '.join([str(int(hr_base[i]) / 1000) + 'Mh/s' for i in range(len(hr_base))])
         # print(sum_hr_base)
         # print(hr_details_base)
 
@@ -189,7 +215,7 @@ def check_claymore():
         # print(temperature)
         # print(fun_speed)
 
-        pools = str(returned[7]).replace(';','; ')
+        pools = str(returned[7]).replace(';', '; ')
         # print(pools)
         worker.claymore_version = claymore_version
         worker.claymore_uptime = claymore_uptime
@@ -200,5 +226,20 @@ def check_claymore():
         worker.temperature = temperature
         worker.fun_speed = fun_speed
         worker.pools = pools
+        worker.save()
+
+    workers = Worker.objects.filter(last_update__lt=(datetime.datetime.now() - datetime.timedelta(minutes=5)))
+    for worker in workers:
+        worker.claymore_version = 'offline'
+        worker.claymore_uptime = 0
+        worker.sum_hr_base = 0
+        worker.hr_details_base = None
+        worker.sum_hr_sec = 0
+        worker.hr_details_sec = None
+        worker.temperature = 'offline'
+        worker.fun_speed = 'offline'
+        worker.pools = 'offline'
+        worker.reported_hash_rate = 0
+        worker.uptime = 0
         worker.save()
     return True

@@ -23,24 +23,21 @@ def worker_name(worker_history):
 
 
 def pool(worker_history):
-    return worker_history.worker.address_pool.name
+    if worker_history.worker.address_pool is None:
+        return ''
+    else:
+        return worker_history.worker.address_pool.name
 
 
 class WorkersHistoryAdmin(admin.ModelAdmin):
-    list_display = [worker_name, pool, 'reported_hash_rate', 'date_time']
+    list_display = [worker_name, pool, 'reported_hash_rate', 'sum_hr_base', 'sum_hr_base', 'date_time']
     list_filter = ['worker__name', 'worker__address_pool__name']
-
+    ordering = ['date_time', 'worker__name']
     class Meta:
         model = WorkersHistory
 
-class WorkersDetailsAdmin(admin.ModelAdmin):
-    list_display = [worker_name, 'claymore_pool', 'card_name', 'hash_rate', 'last_update']
-    list_filter = ['worker__name']
-    class Meta:
-        model = WorkersDetails
 
 admin.site.register(Worker, WorkerAdmin)
-admin.site.register(WorkersDetails, WorkersDetailsAdmin)
 admin.site.register(Pools)
 admin.site.register(UserPools, UserPoolsAdmin)
 admin.site.register(WorkersHistory, WorkersHistoryAdmin)
