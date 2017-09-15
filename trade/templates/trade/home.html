@@ -51,7 +51,7 @@
                                     </colgroup>
                                     <tbody>
                                     <tr>
-                                        <td>{{ item.exchange.exchange }}</td>
+                                        <td>{{ item.exchange.name }}</td>
                                         <td>{{ item.total_btc|floatformat:"-8" }} BTC</td>
                                         <td>{{ item.total_usd|floatformat:"-8" }} USD</td>
                                         {% with user|get_user_summaries_usd as total_usd %}

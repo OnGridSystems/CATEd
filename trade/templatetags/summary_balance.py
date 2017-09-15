@@ -1,5 +1,5 @@
 from django import template
-from trade.models import UserWallet, UserExchanges
+from trade.models import UserWallet, UserExchange
 import requests
 
 register = template.Library()
@@ -10,7 +10,7 @@ def get_user_summaries_btc(user):
     btc_total = float(0)
     usd_total = float(0)
     wallets = UserWallet.objects.all()
-    exchanges = UserExchanges.objects.all()
+    exchanges = UserExchange.objects.all()
     if wallets is not None:
         for wallet in wallets:
             usd_total += float(wallet.total_usd)
@@ -27,7 +27,7 @@ def get_user_summaries_btc(user):
 def get_user_summaries_usd(user):
     usd_total = float(0)
     wallets = UserWallet.objects.all()
-    exchanges = UserExchanges.objects.all()
+    exchanges = UserExchange.objects.all()
     if wallets is not None:
         for wallet in wallets:
             usd_total += float(wallet.total_usd)

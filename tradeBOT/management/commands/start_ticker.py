@@ -11,10 +11,17 @@ from collections import OrderedDict
 import websockets
 from django.core.management.base import BaseCommand, CommandError
 from channels import Group
-from trade.models import Exchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, UserPair, UserMainCoinPriority
-from decimal import Decimal
+from django.db.models import Sum
+import pickle
+from django.conf import settings
+import jsonpickle
+
+from trade.models import Exchanges, UserBalance
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, UserPair, UserMainCoinPriority, UserCoinShare
+from decimal import Decimal as _D
 import warnings
+from tradeBOT.tasks import start_calculate_poloniex_buy, start_calculate_poloniex_sell
+from django.core.serializers.json import DjangoJSONEncoder
 
 warnings.filterwarnings(
     'ignore', r"DateTimeField .* received a naive datetime",
@@ -47,8 +54,13 @@ TRADE_OUTPUT = 'TRADE {}={}(tradeId),{}(bookSide),{}(price),{}(size),{}(timestam
 class PoloniexSubscriber(object):
     def __init__(self):
         self._tickers_list = {}
+        self._markets_list = []
+        self._tickers_id = {}
         tickers_data = self._get_all_tickers()
-        self.exchange = Exchanges.objects.get(exchange='poloniex')
+        for ticker, data in tickers_data.items():
+            self._tickers_id[data['id']] = ticker
+            self._markets_list.append(ticker)
+        self.exchange = Exchanges.objects.get(name='poloniex')
         for item in tickers_data:
             pair = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
             try:
@@ -64,6 +76,8 @@ class PoloniexSubscriber(object):
         self._sub_thread = None
         self._event_loop = None
         self._last_seq_dic = {}
+        self.order_books = OrderBooks()
+        self.ticker_list = TickerList()
 
     def get_tickers(self):
         return self._tickers_list
@@ -91,6 +105,11 @@ class PoloniexSubscriber(object):
         async with websockets.connect(API_LINK) as websocket:
             await websocket.send(SUBSCRIBE_COMMAND.replace(
                 '$', str(TICKER_SUBSCRIBE)))
+            for ticker in self._markets_list:
+                req = SUBSCRIBE_COMMAND.replace(
+                    '$', '\"' + ticker + '\"')
+                await websocket.send(req)
+
             # now parse received data
             while True:
                 message = await websocket.recv()
@@ -115,52 +134,206 @@ class PoloniexSubscriber(object):
                     values = data[2]
                     ticker_id_int = values[0]
                     if ticker_id_int in self._tickers_list:
-                        pair = Pair.objects.get(pk=self._tickers_list[ticker_id_int])
-                        need_calculate = False
-                        try:
-                            last_pair_ticker = ExchangeTicker.objects.filter(pair=pair,
-                                                                             date_time__gte=datetime.datetime.fromtimestamp(
-                                                                                 time.time() - 10)).latest('date_time')
-                            need_calculate = True
-                        except ExchangeTicker.DoesNotExist:
-                            pass
-                        ticker = ExchangeTicker()
-                        ticker.exchange = self.exchange
-                        ticker.pair = pair
-                        ticker.high = values[8]
-                        ticker.low = values[9]
-                        ticker.last = values[1]
-                        ticker.bid = values[3]
-                        ticker.ask = values[2]
-                        ticker.base_volume = values[5]
-                        ticker.percent_change = values[4]
-                        ticker.save()
-                        if need_calculate and last_pair_ticker:
-                            thread = threading.Thread(target=calculate_to_trade, args=(last_pair_ticker, ticker))
-                            thread.daemon = True
-                            thread.start()
-                            # pair_temp = {'pair_id': pair.pk, 'last': ticker.last,
-                            #                      'percent': ticker.percent_change}
-                            # Group("trade").send({'text': json.dumps(pair_temp)})
+                        self.ticker_list.new_ticker(pair_id=self._tickers_list[ticker_id_int],
+                                                    pair=self._tickers_id[ticker_id_int],
+                                                    last=values[1],
+                                                    date=time.time())
+                        current_ticker = self.ticker_list.get_ticker_by_id(self._tickers_list[ticker_id_int])
+                        if current_ticker.last is not None and current_ticker.prev_last is not None:
+                            seconds = _D(current_ticker.date - current_ticker.prev_date)
+                            if seconds > 1:
+                                change = _D(current_ticker.last) - _D(current_ticker.prev_last)
+                                rate_of_change = change / seconds
+                                if abs(rate_of_change) >= settings.MIN_CHANGE_RATE_TO_REACT:
+                                    market = self.order_books.get_market_by_name(self._tickers_id[ticker_id_int])
+                                    if market is not None:
+                                        # b = pickle.dumps(self.ticker_list)
+                                        # bits = b.decode('cp1251')
+                                        args_buy = {'pair': self._tickers_list[ticker_id_int],
+                                                    'bids': market.bids[:100],
+                                                    'change_rate': rate_of_change,
+                                                    'ticker': jsonpickle.encode(self.ticker_list)}
+                                        # args_sell = {'pair': self._tickers_list[ticker_id_int],
+                                        #              'asks': market.asks[:100],
+                                        #              'change_rate': rate_of_change,
+                                        #              'ticker': bits}
+                                        if rate_of_change > 0:
+                                            res = start_calculate_poloniex_buy.delay(args_buy)
+                                            print(res)
+                                            # else:
+                                            #     start_calculate_poloniex_sell.delay(
+                                            #         json.dumps(args_sell, cls=DjangoJSONEncoder))
+                                            # pair_temp = {'pair_id': pair.pk, 'last': ticker.last,
+                                            #                      'percent': ticker.percent_change}
+                                            # Group("trade").send({'text': json.dumps(pair_temp)})
+                else:
+                    ticker_id = self._tickers_id[data[0]]
+                    seq = data[1]
+                    for update in data[2]:
+                        # this mean this is snapshot
+                        if update[0] == 'i':
+                            # UPDATE[1]['currencyPair'] is the ticker name
+                            self._last_seq_dic[ticker_id] = seq
+                            asks = []
+
+                            for price, size in update[1]['orderBook'][0].items():
+                                asks.append([price, size])
+
+                            bids = []
+                            for price, size in update[1]['orderBook'][1].items():
+                                bids.append([price, size])
+
+                            self.order_books.add_market(ticker_id=data[0], ticker_name=ticker_id, asks=asks, bids=bids)
+                        # this mean add or change or remove
+                        elif update[0] == 'o':
+                            if self._last_seq_dic[ticker_id] + 1 != seq:
+                                raise Exception('Problem with seq number prev_seq={},message={}'.format(
+                                    self._last_seq_dic[ticker_id], message))
+
+                            price = update[2]
+                            side = 'bid' if update[1] == 1 else 'ask'
+                            size = update[3]
+                            # this mean remove
+                            market = self.order_books.get_market_by_id(data[0])
+                            if size == '0.00000000':
+                                # print('\033[96mthis mean remove\033[0m')
+                                if market is not None:
+                                    market.remove_item(side=side, price=str(price))
+                            # this mean add or change
+                            else:
+                                # print('\033[96mthis mean add or change\033[0m')
+                                if market is not None:
+                                    market.add_or_change(side=side, price=price, size=size)
+                    self._last_seq_dic[ticker_id] = seq
 
 
-def calculate_to_trade(last_ticker, new_ticker):
-    seconds = Decimal(str(int((new_ticker.date_time - last_ticker.date_time).total_seconds())))
-    if seconds > 1:
-        change = Decimal(str(new_ticker.last)) - Decimal(str(last_ticker.last))
-        rate_of_change = change / seconds
-        user_pairs = UserPair.objects.filter(pair=last_ticker.pair, rate_of_change__lte=abs(rate_of_change),
-                                             user_exchange__is_active_script=True).order_by('-rank')
-        if len(user_pairs) > 0:
-            for user_pair in user_pairs:
-                try:
-                    user_main_coin = UserMainCoinPriority.objects.get(main_coin__coin=user_pair.pair.main_coin,
-                                                                      user_exchange=user_pair.user_exchangem)
-                    main_coin_active = user_main_coin.is_active
-                except UserMainCoinPriority.DoesNotExist:
-                    main_coin_active = True
-                if main_coin_active:
-                    print('Change rate: ' + str(rate_of_change))
-                    print(
-                        'Pair: ' + str(user_pair.pair.main_coin.symbol) + '-' + str(user_pair.pair.second_coin.symbol))
-    return
+class TickerList:
+    def __init__(self):
+        self.tickers = []
+
+    def get_ticker_by_id(self, pair_id):
+        for item in self.tickers:
+            if item.pair_id == pair_id:
+                return item
+        return None
+
+    def get_ticker_by_name(self, pair_name):
+        for item in self.tickers:
+            if item.pair == pair_name:
+                return item
+        return None
+
+    def new_ticker(self, pair, pair_id, last, date):
+        ticker = self.get_ticker_by_id(pair_id)
+        if ticker is not None:
+            ticker.prev_last = ticker.last
+            ticker.prev_date = ticker.date
+            ticker.last = last
+            ticker.date = date
+        else:
+            new_ticker = Ticker(pair_id, pair, last, date)
+            self.tickers.append(new_ticker)
+
+
+class Ticker:
+    def __init__(self, pair_id, pair, last, date):
+        self.pair = pair
+        self.pair_id = pair_id
+        self.prev_last = None
+        # self.prev_high = None
+        # self.prev_low = None
+        self.prev_date = None
+        self.last = last
+        # self.high = high
+        # self.low = low
+        self.date = date
+
+
+class OrderBooks:
+    def __init__(self):
+        self.markets = []
+
+    def add_market(self, ticker_id, ticker_name, asks, bids):
+        market = self.get_market_by_id(ticker_id)
+        if market is not None:
+            market.bids = bids
+            market.asks = asks
+        else:
+            new_market = MarketBook(ticker_id, ticker_name)
+            new_market.asks = asks
+            new_market.bids = bids
+            self.markets.append(new_market)
+
+    def get_market_by_id(self, ticker_id):
+        for market in self.markets:
+            if market.ticker_id == ticker_id:
+                return market
+        return None
+
+    def get_market_by_name(self, ticker_name):
+        for market in self.markets:
+            if market.ticker_name == ticker_name:
+                return market
+        return None
+
+
+class MarketBook:
+    def __init__(self, ticker_id, ticker_name):
+        self.ticker_name = ticker_name
+        self.ticker_id = ticker_id
+        self.bids = []
+        self.asks = []
+
+    def __repr__(self):
+        return self.ticker_name
+
+    def remove_item(self, side, price):
+        if side == 'bid':
+            for item in self.bids:
+                if item[0] == price:
+                    self.bids.remove(item)
+                    # print('Удалил ' + str(self.ticker_name) + ' ' + str(side) + ' ' + str(price))
+        elif side == 'ask':
+            for item in self.asks:
+                if item[0] == price:
+                    self.asks.remove(item)
+                    # print('Удалил ' + str(self.ticker_name) + ' ' + str(side) + ' ' + str(price))
+
+    def add_or_change(self, side, price, size):
+        # у bids обратная сортировка 10-9-8-7-...
+        changed = False
+        if side == 'bid':
+            for item in self.bids:
+                if item[0] == price:
+                    item[1] = str(size)
+                    changed = True
+                    # print('изменил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))
+                    break
+                elif item[0] < price:
+                    self.bids.append([str(price), str(size)])
+                    changed = True
+                    self.bids.sort(reverse=True, key=lambda x: _D(x[0]))
+                    # print('добавил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))
+                    break
+            if not changed:
+                self.bids.append([str(price), str(size)])
+                self.bids.sort(reverse=True, key=lambda x: _D(x[0]))
+                # print('добавил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))
+        # у asks прямая сортировка 7-8-9-10-...
+        elif side == 'ask':
+            for item in reversed(self.asks):
+                if item[0] == price:
+                    item[1] = str(size)
+                    changed = True
+                    # print('изменил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))
+                    break
+                elif item[0] < price:
+                    self.asks.append([str(price), str(size)])
+                    changed = True
+                    self.asks.sort(key=lambda x: _D(x[0]))
+                    # print('добавил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))
+                    break
+            if not changed:
+                self.asks.append([str(price), str(size)])
+                self.asks.sort(key=lambda x: _D(x[0]))
+                # print('добавил ' + str(self.ticker_name) + ' цена ' + str(price) + " кол-во " + str(size))

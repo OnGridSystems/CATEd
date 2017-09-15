@@ -1,8 +1,11 @@
 {% extends 'trade/base.html' %}
 {% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+{% endblock %}
 {% block content %}
     {% autoescape on %}
-        <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
+        <h3 class="center">Exchange: {{ user_exchange.exchange.name }}</h3>
         <div class="switch center">
             <label>
                 Off
@@ -48,7 +51,7 @@
                     <div class="clearfix"></div>
                     <div class="row">
                         <div class="col s6 m6 l6 right-align">
-                            <div id="buttons">
+                            <div id="buttons-zoom">
                                 <b>Zoom</b>
                                 <button data-zoom="3" class="zoom btn waves-effect btn-mini white-text green">3h
                                 </button>
@@ -91,6 +94,9 @@
                 <div class="col s12 m12 l12 exchange-coins-block">
                     {% get_orders_to_trade to_trade %}
                 </div>
+                <div class="col s12 m12 l12 exchange-coins-block">
+                    {% get_user_orders orders %}
+                </div>
             </div>
             <div class="col s3 m3 l3">
                 <div class="exchange-coins-block">
@@ -104,7 +110,7 @@
                         <div class="col s12 m12 l12">
                             <ul class="tabs">
                                 {% for pc in primary_coins %}
-                                    <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol }}</a></li>
+                                    <li class="tab col s3"><a href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol |upper }}</a></li>
                                 {% endfor %}
                             </ul>
                         </div>
@@ -124,14 +130,14 @@
                 </div>
                 <div class="exchange-coins-block">
                     <h4 class="center">Your trade pairs</h4>
-                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">
-                        {% csrf_token %}
-                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">
-                        Please, specify coefficient of depth
-                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"
-                               value="{{ user_exchange.coefficient_of_depth }}">
-                        <button type="submit" class="btn">OK</button>
-                    </form>
+{#                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">#}
+{#                        {% csrf_token %}#}
+{#                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">#}
+{#                        Please, specify coefficient of depth#}
+{#                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"#}
+{#                               value="{{ user_exchange.coefficient_of_depth }}">#}
+{#                        <button type="submit" class="btn">OK</button>#}
+{#                    </form>#}
                     <table width="100%">
                         <colgroup>
                             <col width="50%">
@@ -153,7 +159,7 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
                                         <input type="hidden" name="coin" value="{{ uc.pk }}">
-                                        <input style="width: 90%;" required type="number" name="share" step="any" placeholder="Share"
+                                        <input style="width: 80%;" required type="number" name="share" step="any" placeholder="Share"
                                                value="{{ uc.share }}">&nbsp;%
                                     </td>
                                     <td class="center">
@@ -163,7 +169,7 @@
                             </form>
                         {% empty %}
                             <tr>
-                                <td colspan="2">
+                                <td colspan="3" class="center">
                                     You don't add pairs to trade.
                                 </td>
                             </tr>
@@ -200,7 +206,7 @@
                                             </colgroup>
                                             <tbody>
                                             <tr data-pair-id="{{ pair.pk }}">
-                                                <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol }}</td>
+                                                <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol | upper }}</td>
                                                 <td>
                                                     {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
                                                 </td>
@@ -232,7 +238,7 @@
                                                        type="number"
                                                        name="rate_of_change"
                                                        max="99999999"
-                                                       value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-4' }}">
+                                                       value="{{ pair.pk | user_pair_rate_of_change | floatformat:'-8' }}">
                                                 per second.
                                                 <button>OK</button>
                                             </form>
@@ -273,5 +279,7 @@
     <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqChart.js' %}"></script>
     <script type="text/javascript" src="{% static 'js/jqRangeSlider.js' %}"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
     <script lang="javascript" type="text/javascript" src="{% static 'js/setup.js' %}"></script>
+
 {% endblock %}

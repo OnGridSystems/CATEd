@@ -13,14 +13,25 @@ from __future__ import absolute_import, unicode_literals
 import os
 
 # Celery options
+from kombu import Queue, Exchange
+
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['json']
-CELERY_RESULT_BACKEND = 'db+sqlite:///result.sqlite'
+CELERY_RESULT_BACKEND = 'db+mysql://root:123@localhost/celery_result'
 CELERY_TASK_SERIALIZER = 'json'
-# CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Europe/Moscow'
-CELERY_SEND_TASK_ERROR_EMAILS = True
+CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
+
+CELERY_ROUTES = {
+    'trade.tasks.pull_exchanges_balances': {'queue': 'high'},
+    'trade.tasks.pull_exchanges_tickers': {'queue': 'high'},
+    'monitoring.tasks.*': {'queue': 'low'},
+    'tradeBOT.tasks.start_calculate_poloniex_buy': {'queue': 'high'},
+    'tradeBOT.tasks.create_order': {'queue': 'set_orders'}
+}
+
+CELERY_CREATE_MISSING_QUEUES = True
 
 # AllAuth setting
 ACCOUNT_EMAIL_REQUIRED = True
@@ -183,7 +194,6 @@ MEDIA_ROOT = '/opt/portal_ongrid/media'
 MEDIA_URL = '/media/'
 
 # channels
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "asgi_redis.RedisChannelLayer",
@@ -196,3 +206,13 @@ CHANNEL_LAYERS = {
 
 # время очистки тикера
 TICKER_MINUTES_TO_CLEAR = 30
+
+# минимальное значение изменения цены за секунду
+MIN_CHANGE_RATE_TO_REACT = 0.000001
+DEPTH_COEFFICIENT = 0.5
+
+# активные биржи для торговли
+TRADING_EXCHANGES = ['poloniex']
+
+# Time to life order, mins
+ORDER_TTL = 5

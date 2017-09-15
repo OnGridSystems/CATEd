@@ -93,6 +93,7 @@ echo "$SSHCFG" >> /etc/ssh/ssh_config
 ```
 Setup OpenVPN client (to poll rigs)
 ```
+mkdir /etc/openvpn
 read -d "" CACRT <<"EOF"
 -----BEGIN CERTIFICATE-----
 MIIE9DCCA9ygAwIBAgIJAL7JQUNNDavTMA0GCSqGSIb3DQEBCwUAMIGsMQswCQYD
@@ -278,7 +279,6 @@ systemctl restart openvpn@client
 Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
-pip3 install --upgrade pip setuptools wheel
 cd /opt
 mkdir portal_ongrid
 cd portal_ongrid
@@ -381,61 +381,65 @@ echo "$VISOR" > /opt/portal_ongrid/configs/supervisor.conf
 cd /opt/portal_ongrid
 source /opt/portal_ongrid/env/bin/activate
 pip install --upgrade pip setuptools wheel
-git clone git@github.com:ongrid/ongrid_portal.git
+git clone -b feature-ccxt git@github.com:ongrid/ongrid_portal.git
 cd ongrid_portal
-pip install gunicorn==19.6.0
+pip install gunicorn
 pip install -r requirements.txt
 
 #
 #patching configuration
 read -d "" PATCH <<"EOF"
-50c50
+20c20
+< CELERY_RESULT_BACKEND = 'db+mysql://root:123@localhost/celery_result'
+---
+> CELERY_RESULT_BACKEND = 'db+mysql://ongrid:lGG%tts%QP@localhost/celery_result'
+64c64
 < DEBUG = True
 ---
 > DEBUG = False
-52c52
-< ALLOWED_HOSTS = ['127.0.0.1']
+66c66
+< ALLOWED_HOSTS = ['127.0.0.1', '192.168.254.247']
 ---
 > ALLOWED_HOSTS = ['portal.ongrid.pro', 'www.portal.ongrid.pro']
-127c127
+143,145c143,145
 <         'NAME': 'tradenew',
----
->         'NAME': 'trade',
-129c129
+<         'USER': 'root',
 <         'PASSWORD': '123',
 ---
->         'PASSWORD': '',   
-170c170
-< YANDEX_MONEY_CLIENT_ID = 'BDDFD147E2F62EA4827F2F28E652CEF2F5AD328D0C1575E4F0AD8E56FCADD5CF'
----
-> YANDEX_MONEY_CLIENT_ID = '1EB2214C53CF879A9BD8606934B804F93BE9C82604DD9A1ED967F8635CBCD04B'
-172c172
+>         'NAME': 'trade',
+>         'USER': 'ongrid',
+>         'PASSWORD': 'lGG%tts%QP',
+188c188
 < YANDEX_MONEY_REDIRECT_URI = 'http://78.155.218.16:8000/wallet/'
 ---
 > YANDEX_MONEY_REDIRECT_URI = 'http://portal.ongrid.pro/wallet/'
-174c174
+190c190
 < YANDEX_MONEY_CLIENT_SECRET = '211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69FEC67630EA304A4831D7813BDEC90A866ABED2C30B9F8578EFF29962B13B70187429034EA3BF59'
 ---
 > YANDEX_MONEY_CLIENT_SECRET = 'DD89A956C22739F77FDA276D64E9DF2E711DAA7645BFA5741872C0DA93DA8240EDDB6FBD2500210891396231AF4FB5B2FD90C7C0BB45F51803EAA36105CE508F'
 EOF
 echo "$PATCH" | patch djangoTrade/settings.py
 
-#
-# patching poloniex library
-read -d "" PATCH <<"EOF"
-128c128
-<             signature = _hmac.new(self._secret, request.body, _hashlib.sha512)
----
->             signature = _hmac.new(self._secret, request.body.encode(), _hashlib.sha512)
-EOF
-echo "$PATCH" | patch /opt/portal_ongrid/env/lib/python3.5/site-packages/poloniex/poloniex.py
 
+
+read -d "" SENPATCH <<"EOF"
+329c329
+< @celeryd_init.connect(sender='worker_high@')
+---
+> @celeryd_init.connect(sender='worker_high@_HOSTNAME_')
+EOF
+SENPATCH=`echo "$SENPATCH" | sed -e "s/_HOSTNAME_/$HOSTNAME/g"`
+echo "$SENPATCH" | patch /opt/portal_ongrid/ongrid_portal/tradeBOT/tasks.py
 ```
 
 set databases and mocks
 
 ```sh
-echo "create database trade character set utf8" | mysql -u root
+echo "create database trade character set utf8;" | mysql -u root
+echo "create database celery_result;" | mysql -u root
+echo "CREATE USER 'ongrid'@'localhost' IDENTIFIED BY 'lGG%tts%QP';" | mysql -u root
+echo "GRANT ALL PRIVILEGES ON *.* TO 'ongrid'@'localhost';" | mysql -u root
+echo "FLUSH PRIVILEGES;" | mysql -u root
 #
 # Migrate
 ./manage.py makemigrations 
@@ -448,9 +452,7 @@ echo "create database trade character set utf8" | mysql -u root
 read -d "" ADDMAIN<<"EOF"
 from trade import models as trade_m
 from monitoring import models as monit_m
-trade_m.Exchanges.objects.get_or_create(exchange='poloniex', url='poloniex.com', driver=1)
-trade_m.Exchanges.objects.get_or_create(exchange='bittrex', url='bittrex.com', driver=2)
-trade_m.Exchanges.objects.get_or_create(exchange='btc-e', url='btc-e.com', driver=3)
+trade_m.Exchanges.objects.get_or_create(name='poloniex', info_frozen_key='-isFrozen')
 trade_m.Wallets.objects.get_or_create(name='BTC')
 trade_m.Wallets.objects.get_or_create(name='ETH')
 trade_m.Wallets.objects.get_or_create(name='Yandex Money')
@@ -477,41 +479,46 @@ supervisorctl restart djangoTrade_web
 install and configure celery
 
 ```sh
+useradd -m celery
+mkdir /var/log/celery
+mkdir /var/run/celery
+chown -R celery:celery /var/log/celery
+chown -R celery:celery /var/run/celery
+
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
 chmod +x /etc/init.d/celeryd /etc/init.d/celerybeat
+
+#add celery config
 read -d "" CELERYD_CFG <<"EOF"
+CELERYD_NODES="worker_set_orders worker_low worker_normal worker_high"
 CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
 CELERY_APP="djangoTrade"
 CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
-CELERYD_OPTS="--time-limit=300 --concurrency=1"
+CELERYD_OPTS="-Q:worker_set_orders set_orders -Q:worker_low low -Q:worker_normal normal -Q:worker_high high -c:worker_set_orders 1 -c:worker_low 3 -c:worker_normal 3 -c:worker_high 2"
 CELERYD_LOG_FILE="/var/log/celery/%n%I.log"
 CELERYD_PID_FILE="/var/run/celery/%n.pid"
-CELERYD_USER="root"
-CELERYD_GROUP="root"
+CELERYD_USER="celery"
+CELERYD_GROUP="celery"
 DJANGO_SETTINGS_MODULE="djangoTrade.settings"
 CELERY_CREATE_DIRS=1
 SECRET_KEY="ada#qadaa2d#1232%!^&#*(&@(!&Y!&#*T!@(^F#!@&#F!@&#F!(@"
 EOF
 echo "$CELERYD_CFG" > /etc/default/celeryd
+
+read -d "" CELERYBEAT_CFG <<"EOF"
+CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
+CELERY_APP="djangoTrade"
+CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
+DJANGO_SETTINGS_MODULE="djangoTrade.settings"
+EOF
+echo "$CELERYBEAT_CFG" > /etc/default/celerybeat
+
 /etc/init.d/celeryd create-paths
 /etc/init.d/celeryd start
 /etc/init.d/celeryd stop
 sudo update-rc.d celeryd defaults
-```
-
-make all components start on boot in screens
-
-```sh
-read -d "" RCLOCAL <<"EOF"
-#!/bin/bash
-cd /opt/portal_ongrid
-source ./env/bin/activate
-screen -dmS ongrid_portal bash -c 'cd ongrid_portal; celery beat -A djangoTrade -l=INFO'
-exit 0
-EOF
-echo "$RCLOCAL" > /etc/rc.local
-#
+sudo update-rc.d celerybeat defaults
 ```
 
 Set SSL certificate (12.10.2017, 13:00:00)
@@ -622,13 +629,6 @@ from tradeBOT import tasks
 coinmarketcup = tasks.pull_coinmarketcup.delay()
 EOF
 echo "$PYTASKS" | ./manage.py shell
-
-read -d "" PYTASKS2 <<"EOF"
-from tradeBOT import tasks
-pbittrex = tasks.pull_bittrex.delay()
-ppoloniex = tasks.pull_poloniex.delay()
-EOF
-echo "$PYTASKS2" | ./manage.py shell
 ```
 
 reboot and have fun!

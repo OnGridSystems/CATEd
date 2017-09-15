@@ -1,19 +1,21 @@
 $(document).ready(function () {
+    $('select').addClass('browser-default');
     pair_id = $('.pair_tr').data('pair-id');
-    $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('yellow lighten-3');
+    $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('active_pair');
     var main_coin = $('.tabs a.active').text();
     var second_coin = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(0)').text();
+    document.title = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(1)').text() + ' ' + main_coin + "/" + second_coin;
     $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
     intervale = $('#buttons .candlestick').data('intervale');
-    zoom = $('#buttons .zoom').data('zoom');
+    zoom = $('#buttons-zoom .zoom').data('zoom');
     draw_graph();
 
     $('.pair_tr').on('click', function () {
         var main_coin = $('.tabs a.active').text();
         var second_coin = $(this).children('td:eq(0)').text();
         $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
-        $('.pair_tr').removeClass('yellow lighten-3');
-        $(this).addClass('yellow lighten-3');
+        $('.pair_tr').removeClass('active_pair');
+        $(this).addClass('active_pair');
         if ($(this).data('pair-id') != pair_id) {
             pair_id = $(this).data('pair-id');
             draw_graph();
@@ -26,8 +28,8 @@ $(document).ready(function () {
         intervale = $(this).data('intervale');
         draw_graph();
     });
-    $('#buttons .zoom').on('click', function () {
-        $('#buttons .zoom').removeClass('green');
+    $('#buttons-zoom .zoom').on('click', function () {
+        $('#buttons-zoom .zoom').removeClass('green');
         $(this).addClass('green');
         zoom = $(this).data('zoom');
         draw_graph();
@@ -177,7 +179,14 @@ $(document).ready(function () {
         })
     }
 
-    setInterval(get_new_orders_to_trade, 5000)
+    setInterval(get_new_orders_to_trade, 5000);
+
+    $('#user_orders').DataTable();
+    $('#calculated_to_trade').DataTable();
+    $.extend($.fn.dataTable.defaults, {
+        searching: false,
+        ordering: false
+    });
 });
 
 socket = new WebSocket("ws://" + window.location.host + "/trade/");

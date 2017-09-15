@@ -1,12 +1,12 @@
 from django.http import HttpResponse
-from trade.models import UserExchanges
+from trade.models import UserExchange
 from django.shortcuts import render
 
 
 # Create your views here.
 def profile(request):
     args = {'user': request.user}
-    args['user_exchanges'] = UserExchanges.objects.filter(user=args['user'])
+    args['user_exchanges'] = UserExchange.objects.filter(user=args['user'])
     args['user_active_exchanges'] = args['user_exchanges'].filter(is_active=True)
     if request.POST:
         first_name = request.POST.get('firstname')

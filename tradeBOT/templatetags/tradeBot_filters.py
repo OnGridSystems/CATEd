@@ -9,7 +9,7 @@ register = template.Library()
 def user_holdings(coin_symbol, user_exchange):
     try:
         user_hold = UserBalance.objects.get(ue_id=user_exchange, coin=coin_symbol)
-        return user_hold.balance
+        return user_hold.total
     except UserBalance.DoesNotExist:
         return 0
 
@@ -17,7 +17,7 @@ def user_holdings(coin_symbol, user_exchange):
 @register.filter(name='get_coinmarket_id')
 def get_coinmarket_id(symbol):
     try:
-        coin_market_id = CoinMarketCupCoin.objects.get(symbol=symbol)
+        coin_market_id = CoinMarketCupCoin.objects.filter(symbol=symbol).earliest('rank')
         return coin_market_id.coin_market_id
     except CoinMarketCupCoin.DoesNotExist:
         return ''
@@ -36,7 +36,8 @@ def get_user_primary_coins(user_exchange, primary_coin):
 @register.inclusion_tag('tradeBOT/get_primary_pairs.html')
 def get_primary_pairs(coin, user_exchange):
     try:
-        pairs = Pair.objects.filter(main_coin=coin).order_by('-second_coin__is_active', 'second_coin__symbol')
+        pairs = Pair.objects.filter(main_coin=coin, second_coin__rank__lte=100).order_by('is_active',
+                                                                                         'second_coin__symbol')
         return {'pairs': pairs, 'user_exchange': user_exchange}
     except Pair.DoesNotExist:
         return None
@@ -109,3 +110,8 @@ def haven_percent(coin, ue):
 @register.inclusion_tag('tradeBOT/to_trade.html')
 def get_orders_to_trade(to_trade):
     return {'to_trade': to_trade}
+
+
+@register.inclusion_tag('tradeBOT/orders.html')
+def get_user_orders(orders):
+    return {'orders': orders}

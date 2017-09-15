@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Exchanges, UserExchanges, UserBalance, Coin, Wallets, UserWallet, UserHoldings, Transaction
+from .models import Exchanges, UserExchange, UserBalance, Coin, Wallets, UserWallet, UserHoldings, Transaction
 
 
 class TransactionAdmin(admin.ModelAdmin):
@@ -18,7 +18,7 @@ class UserBalancesAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Exchanges)
-admin.site.register(UserExchanges)
+admin.site.register(UserExchange)
 admin.site.register(UserBalance, UserBalancesAdmin)
 admin.site.register(Coin)
 admin.site.register(Wallets)
