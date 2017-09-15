@@ -326,7 +326,7 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='')
+@celeryd_init.connect(sender='worker_high@')
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high')
     SetOrderTask.apply_async(queue='set_orders')
