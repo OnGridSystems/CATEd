@@ -417,8 +417,65 @@ user = root
 stdout_logfile = /opt/portal_ongrid/logs/gunicorn_supervisor.log
 redirect_stderr = true
 environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
+
+[program:telegram_bot_web]
+command = /opt/portal_ongrid/configs/telegram_bot
+user = root
+stdout_logfile = /opt/portal_ongrid/logs/telegram_bot.log
+redirect_stderr = true
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
+
+[program:slack_bot_web]
+command = /opt/portal_ongrid/configs/slack_bot
+user = root
+stdout_logfile = /opt/portal_ongrid/logs/slack_bot.log
+redirect_stderr = true
+environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
 EOF
 echo "$VISOR" > /opt/portal_ongrid/configs/supervisor.conf
+
+read -d "" SLACK <<"EOF"
+#!/bin/sh
+
+NAME="slack_bot"
+DJANGODIR=/opt/portal_ongrid/ongrid_portal/
+USER=root
+GROUP=root
+NUM_WORKERS=1
+DJANGO_SETTINGS_MODULE=djangoTrade.settings
+echo "Starting $NAME as `whoami`"
+cd $DJANGODIR
+. ../env/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+RUNDIR=$(dirname $SOCKFILE)
+test -d $RUNDIR || mkdir -p $RUNDIR
+exec /opt/portal_ongrid/ongrid_portal/manage.py slack_bot
+EOF
+echo "$SLACK" > /opt/portal_ongrid/configs/slack_bot
+chmod u+x /opt/portal_ongrid/configs/slack_bot
+read -d "" TELEG <<"EOF"
+#!/bin/sh
+
+NAME="telegramm_bot"
+DJANGODIR=/opt/portal_ongrid/ongrid_portal/
+USER=root
+GROUP=root
+NUM_WORKERS=1
+DJANGO_SETTINGS_MODULE=djangoTrade.settings
+#DJANGO_WSGI_MODULE=djangoTrade.wsgi
+echo "Starting $NAME as `whoami`"
+cd $DJANGODIR
+. ../env/bin/activate
+export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
+export PYTHONPATH=$DJANGODIR:$PYTHONPATH
+RUNDIR=$(dirname $SOCKFILE)
+test -d $RUNDIR || mkdir -p $RUNDIR
+exec /opt/portal_ongrid/ongrid_portal/manage.py telegram_bot
+EOF
+echo "$TELEG" > /opt/portal_ongrid/configs/telegram_bot
+chmod u+x /opt/portal_ongrid/configs/telegram_bot
+
 
 cd /opt/portal_ongrid
 source /opt/portal_ongrid/env/bin/activate
@@ -514,7 +571,7 @@ echo "$PYCODE" | ./manage.py shell
 ln -s /opt/portal_ongrid/configs/supervisor.conf /etc/supervisor/conf.d/djangoTrade.conf
 ln -s /opt/portal_ongrid/configs/nginx.conf /etc/nginx/sites-enabled/portal_ongrid.conf
 supervisorctl update
-supervisorctl restart djangoTrade_web
+supervisorctl restart all
 ./manage.py collectstatic --noinput
 ```
 
@@ -553,14 +610,22 @@ CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
 CELERY_APP="djangoTrade"
 CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
 DJANGO_SETTINGS_MODULE="djangoTrade.settings"
+CELERYBEAT_USER="celery"
+CELERYBEAT_GROUP="celery"
 EOF
 echo "$CELERYBEAT_CFG" > /etc/default/celerybeat
 
 /etc/init.d/celeryd create-paths
 /etc/init.d/celeryd start
 /etc/init.d/celeryd stop
+/etc/init.d/celerybeat create-paths
+/etc/init.d/celerybeat start
+/etc/init.d/celerybeat stop
 sudo update-rc.d celeryd defaults
 sudo update-rc.d celerybeat defaults
+cd /opt/portal_ongrid/ongrip_portal/
+touch celerybeat-schedule
+chown celery:celery celerybeat-schedule
 ```
 
 Set SSL certificate (12.10.2017, 13:00:00)
