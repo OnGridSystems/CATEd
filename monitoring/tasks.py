@@ -6,6 +6,7 @@ from json import JSONDecodeError
 
 from celery import shared_task
 from celery.schedules import crontab
+from celery.signals import worker_ready
 from celery.task import periodic_task
 from django.db.models import Q
 from django.shortcuts import render
@@ -19,9 +20,11 @@ from paramiko.ssh_exception import NoValidConnectionsError
 import socket
 from monitoring.models import *
 
+# запускаем по все таски
 
 @periodic_task(run_every=crontab(minute='*/5'))
 # @shared_task
+# @worker_ready.connect
 def check_ethermine():
     pool, c = Pools.objects.get_or_create(pool='ethermine')
     address_pool = UserPools.objects.filter(pool=pool)
@@ -52,7 +55,6 @@ def check_ethermine():
                     old_worker.save()
                 # TODO обновить информацию по уже существующему Воркеру
                 except Worker.DoesNotExist:
-                    print('Новый воркер')
                     new_worker = Worker()
                     new_worker.address_pool = ap
                     new_worker.name = worker
@@ -84,12 +86,46 @@ def check_nanopool():
                 try:
                     old_worker = Worker.objects.get(Q(name=name) & (Q(address_pool=ap) | Q(address_pool__isnull=True)))
                     old_worker.reported_hash_rate = reported_hash_rate
+                    old_worker.address_pool = ap
                     old_worker.save()
                 # TODO обновить информацию по уже существующему Воркеру
                 except Worker.DoesNotExist:
                     new_worker = Worker()
                     new_worker.address_pool = ap
                     new_worker.name = name
+                    new_worker.reported_hash_rate = reported_hash_rate
+                    new_worker.save()
+    return True
+
+
+@periodic_task(run_every=crontab(minute='*/5'))
+# @shared_task
+def check_expmine():
+    pool, c = Pools.objects.get_or_create(pool='expmine')
+    address_pool = UserPools.objects.filter(pool=pool)
+    if len(address_pool) > 0:
+        for ap in address_pool:
+            try:
+                response = requests.get('https://expmine.pro/api/accounts/' + ap.address).json()
+            except JSONDecodeError:
+                continue
+            workers = response['workers']
+            for worker in workers:
+                name = worker
+                last_submit_time = datetime.datetime.fromtimestamp(workers[worker]['lastBeat'])
+                reported_hash_rate = workers[worker]['hr'] / 1000000
+                try:
+                    old_worker = Worker.objects.get(Q(name=name) & (Q(address_pool=ap) | Q(address_pool__isnull=True)))
+                    old_worker.last_submit_time = last_submit_time
+                    old_worker.reported_hash_rate = reported_hash_rate
+                    old_worker.address_pool = ap
+                    old_worker.save()
+                # TODO обновить информацию по уже существующему Воркеру
+                except Worker.DoesNotExist:
+                    new_worker = Worker()
+                    new_worker.address_pool = ap
+                    new_worker.name = worker
+                    new_worker.last_submit_time = last_submit_time
                     new_worker.reported_hash_rate = reported_hash_rate
                     new_worker.save()
     return True
@@ -233,13 +269,14 @@ def check_claymore():
         worker.claymore_version = 'offline'
         worker.claymore_uptime = 0
         worker.sum_hr_base = 0
-        worker.hr_details_base = None
+        worker.hr_details_base = ''
         worker.sum_hr_sec = 0
-        worker.hr_details_sec = None
+        worker.hr_details_sec = ''
         worker.temperature = 'offline'
         worker.fun_speed = 'offline'
         worker.pools = 'offline'
         worker.reported_hash_rate = 0
         worker.uptime = 0
         worker.save()
+
     return True
