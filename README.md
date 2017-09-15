@@ -276,6 +276,48 @@ EOF
 echo "$OVPNCFG" > /etc/openvpn/client.conf
 systemctl restart openvpn@client
 ```
+Insert into hosts rigs names
+```
+echo "192.168.199.200 dialog-gw dlg-gw" > /etc/hosts
+echo "192.168.200.1 dlg-gw-internal" > /etc/hosts
+echo "192.168.200.2 dlg-wifi" > /etc/hosts
+echo "192.168.200.101 dlg-r01" > /etc/hosts
+echo "192.168.200.102 dlg-r02" > /etc/hosts
+echo "192.168.200.103 dlg-r03" > /etc/hosts
+echo "192.168.200.104 dlg-r04" > /etc/hosts
+echo "192.168.200.105 dlg-r05" > /etc/hosts
+echo "192.168.200.106 dlg-r06" > /etc/hosts
+echo "192.168.200.107 dlg-r07" > /etc/hosts
+echo "192.168.200.108 dlg-r08" > /etc/hosts
+echo "192.168.200.109 dlg-r09" > /etc/hosts
+echo "192.168.200.110 dlg-r10" > /etc/hosts
+echo "192.168.199.201 him-gw" > /etc/hosts
+echo "192.168.201.1 h1-gw-internal" > /etc/hosts
+echo "192.168.201.2 him-wifi" > /etc/hosts
+echo "192.168.201.101 h1-r01" > /etc/hosts
+echo "192.168.201.102 h1-r02" > /etc/hosts
+echo "192.168.201.103 h1-r03" > /etc/hosts
+echo "192.168.201.104 h1-r04" > /etc/hosts
+echo "192.168.201.105 h1-r05" > /etc/hosts
+echo "192.168.201.106 h1-r06" > /etc/hosts
+echo "192.168.201.107 h1-r07" > /etc/hosts
+echo "192.168.201.108 h1-r08" > /etc/hosts
+echo "192.168.201.109 h1-r09" > /etc/hosts
+echo "192.168.201.110 h1-r10" > /etc/hosts
+echo "192.168.201.151 h1-gn01" > /etc/hosts
+echo "192.168.202.1 h1-gw-internal" > /etc/hosts
+echo "192.168.202.101 h2-r01" > /etc/hosts
+echo "192.168.202.102 h2-r02" > /etc/hosts
+echo "192.168.202.103 h2-r03" > /etc/hosts
+echo "192.168.202.104 h2-r04" > /etc/hosts
+echo "192.168.202.105 h2-r05" > /etc/hosts
+echo "192.168.202.106 h2-r06" > /etc/hosts
+echo "192.168.202.107 h2-r07" > /etc/hosts
+echo "192.168.202.108 h2-r08" > /etc/hosts
+echo "192.168.202.109 h2-r09" > /etc/hosts
+echo "192.168.202.110 h2-r10" > /etc/hosts
+
+```
 Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
