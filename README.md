@@ -381,9 +381,9 @@ echo "$VISOR" > /opt/portal_ongrid/configs/supervisor.conf
 cd /opt/portal_ongrid
 source /opt/portal_ongrid/env/bin/activate
 pip install --upgrade pip setuptools wheel
-git clone git@github.com:ongrid/ongrid_portal.git
+git clone -b feature-ccxt git@github.com:ongrid/ongrid_portal.git
 cd ongrid_portal
-pip install gunicorn==19.6.0
+pip install gunicorn
 pip install -r requirements.txt
 
 #
@@ -629,12 +629,6 @@ from tradeBOT import tasks
 coinmarketcup = tasks.pull_coinmarketcup.delay()
 EOF
 echo "$PYTASKS" | ./manage.py shell
-
-read -d "" PYTASKS2 <<"EOF"
-from trade import tasks
-tasks.pull_exchanges.delay()
-EOF
-echo "$PYTASKS2" | ./manage.py shell
 ```
 
 reboot and have fun!

@@ -13,7 +13,7 @@ import requests
 from trade.models import Exchanges, UserExchange, UserBalance
 from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair, \
     ToTrade, UserMainCoinPriority, UserCoinShare, UserOrder, Сalculations
-from trade.tasks import pull_exchanges_balances
+from trade.tasks import pull_exchanges_balances, pull_exchanges
 from django.conf import settings
 from decimal import Decimal as _D
 import asyncio
@@ -67,6 +67,7 @@ def pull_coinmarketcup():
                 new_coin.available_supply = item['available_supply']
                 new_coin.total_supply = item['total_supply']
                 new_coin.save()
+        pull_exchanges.delay()
     return True
 
 
