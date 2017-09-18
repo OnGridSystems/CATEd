@@ -403,7 +403,10 @@ class PoloniexSubscriber(object):
 
             # now parse received data
             while True:
-                message = await websocket.recv()
+                try:
+                    message = await websocket.recv()
+                except websockets.ConnectionClosed:
+                    self.start_subscribe()
                 data = json.loads(message, object_pairs_hook=OrderedDict)
                 if 'error' in data:
                     raise Exception('error arrived message={}'.format(message))
