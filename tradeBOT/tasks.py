@@ -332,7 +332,7 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='worker_high@ProofX-PC')
+@celeryd_init.connect(sender='worker_high@')
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high', priority=0, retry=True, retry_policy={
         'max_retries': 5,
