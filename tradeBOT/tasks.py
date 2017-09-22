@@ -1,11 +1,15 @@
 from __future__ import absolute_import, unicode_literals
 import importlib
+from _socket import gaierror
+from urllib.error import URLError
+
 import jsonpickle
 import time
 import datetime
 import re
 from ccxt import ExchangeError
 from celery.signals import worker_ready, celeryd_init
+from channels import Group
 from django.db.models import Sum
 from celery import shared_task, Task
 from djangoTrade.celery import app
@@ -79,11 +83,8 @@ def round_down(x, s):
 @shared_task
 def rate_up_poloniex(args):
     pair = Pair.objects.get(pk=args['pair'])
-    change_rate = _D(args['change_rate'])
-
-    user_pairs = UserPair.objects.filter(pair=pair, rate_of_change__lte=change_rate,
+    user_pairs = UserPair.objects.filter(pair=pair,
                                          user_exchange__is_active_script=True,
-                                         rate_of_change__gt=0,
                                          user_exchange__exchange__name__in=settings.TRADING_EXCHANGES)
     if len(user_pairs) > 0:
         for user_pair in user_pairs:
@@ -95,12 +96,9 @@ def rate_up_poloniex(args):
 @shared_task
 def rate_down_poloniex(args):
     pair = Pair.objects.get(pk=args['pair'])
-    change_rate = _D(args['change_rate'])
-    user_pairs = UserPair.objects.filter(pair=pair, rate_of_change__lte=abs(change_rate),
+    user_pairs = UserPair.objects.filter(pair=pair,
                                          user_exchange__is_active_script=True,
-                                         user_exchange__exchange__name__in=settings.TRADING_EXCHANGES,
-                                         rate_of_change__gt=0)
-    print(user_pairs)
+                                         user_exchange__exchange__name__in=settings.TRADING_EXCHANGES)
     for user_pair in user_pairs:
         print('Отправляю на продажу')
         calculate_order_for_user.delay(user_pair.pk, args, 'sell')
@@ -110,9 +108,8 @@ def rate_down_poloniex(args):
 def calculate_order_for_user(user_pair_pk, params, type):
     try:
         user_pair = UserPair.objects.get(pk=user_pair_pk)
-        change_rate = _D(params['change_rate'])
         if type == 'buy':
-            print("Купить")
+            print("Расчитываю покупку")
             bids = params['bids']
             ticker_list = jsonpickle.decode(params['ticker'])
             try:
@@ -188,7 +185,6 @@ def calculate_order_for_user(user_pair_pk, params, type):
 
                 calculations = Сalculations()
                 calculations.user_pair = user_pair
-                calculations.rate_change = change_rate
                 calculations.type = type
                 calculations.depth_coef = settings.DEPTH_COEFFICIENT
                 calculations.price = price
@@ -204,13 +200,11 @@ def calculate_order_for_user(user_pair_pk, params, type):
                     to_trade.total = user_need_to_buy_on_prior_in_first_coin
                     to_trade.total_f = user_need_to_buy_on_prior_in_first_coin - (
                         user_need_to_buy_on_prior_in_first_coin * _D('.0015'))
-                    to_trade.percent_react = change_rate
                     to_trade.save()
                 except ToTrade.DoesNotExist:
                     new_order = ToTrade()
                     new_order.user_pair = user_pair
                     new_order.type = 'buy'
-                    new_order.percent_react = change_rate
                     new_order.price = price
                     new_order.amount = total
                     new_order.total = user_need_to_buy_on_prior_in_first_coin
@@ -220,50 +214,59 @@ def calculate_order_for_user(user_pair_pk, params, type):
                     new_order.cause = 'Change rate'
                     new_order.save()
         elif type == 'sell':
-            print('Продать')
+            print('Расчитываю продажу')
             asks = params['asks']
             user_have_second_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
                                                             coin=user_pair.pair.second_coin.symbol.lower())
             if user_have_second_coin.free > 0.001:
                 price = calculate_price(amount=user_have_second_coin.free, o_type='sell', asks=asks)
                 total = user_have_second_coin.free * _D(price)
-                print('Нашел цену: ' + str(price))
-                print('Хочу потратить {} {} чтобы купить {} {}'.format(user_have_second_coin.free,
-                                                                       user_pair.pair.second_coin.symbol.upper(),
-                                                                       total,
-                                                                       user_pair.pair.main_coin.symbol.upper()))
-
-                calculations = Сalculations()
-                calculations.user_pair = user_pair
-                calculations.rate_change = change_rate
-                calculations.type = type
-                calculations.depth_coef = settings.DEPTH_COEFFICIENT
-                calculations.price = price
-                calculations.amount = user_have_second_coin.free
-                calculations.asks = json.dumps(asks)
-                calculations.bids = None
-                calculations.save()
-
+                total_fee = total - (total * _D('.0015'))
+                need_to_sell = False
                 try:
-                    to_trade = ToTrade.objects.get(user_pair=user_pair, type='sell')
-                    to_trade.price = price
-                    to_trade.amount = user_have_second_coin.free
-                    to_trade.total = total
-                    to_trade.total_f = total - (total * _D('.0015'))
-                    to_trade.percent_react = change_rate
-                    to_trade.save()
-                except ToTrade.DoesNotExist:
-                    new_order = ToTrade()
-                    new_order.user_pair = user_pair
-                    new_order.type = 'sell'
-                    new_order.percent_react = change_rate
-                    new_order.price = price
-                    new_order.amount = user_have_second_coin.free
-                    new_order.total = total
-                    new_order.total_f = total - (total * _D('.0015'))
-                    new_order.fee = _D('.0015')
-                    new_order.cause = 'Change rate'
-                    new_order.save()
+                    last_buy_order = UserOrder.objects.filter(ue=user_pair.user_exchange, pair=user_pair.pair,
+                                                              order_type='buy').latest('date_created')
+                    if last_buy_order.total < total_fee:
+                        need_to_sell = True
+                except UserOrder.DoesNotExist:
+                    need_to_sell = True
+                if need_to_sell:
+                    print('Нашел цену: ' + str(price))
+                    print('Хочу потратить {} {} чтобы купить {} {}'.format(user_have_second_coin.free,
+                                                                           user_pair.pair.second_coin.symbol.upper(),
+                                                                           total,
+                                                                           user_pair.pair.main_coin.symbol.upper()))
+
+                    calculations = Сalculations()
+                    calculations.user_pair = user_pair
+                    calculations.type = type
+                    calculations.depth_coef = settings.DEPTH_COEFFICIENT
+                    calculations.price = price
+                    calculations.amount = user_have_second_coin.free
+                    calculations.asks = json.dumps(asks)
+                    calculations.bids = None
+                    calculations.save()
+
+                    try:
+                        to_trade = ToTrade.objects.get(user_pair=user_pair, type='sell')
+                        to_trade.price = price
+                        to_trade.amount = user_have_second_coin.free
+                        to_trade.total = total
+                        to_trade.total_f = total - (total * _D('.0015'))
+                        to_trade.save()
+                    except ToTrade.DoesNotExist:
+                        new_order = ToTrade()
+                        new_order.user_pair = user_pair
+                        new_order.type = 'sell'
+                        new_order.price = price
+                        new_order.amount = user_have_second_coin.free
+                        new_order.total = total
+                        new_order.total_f = total - (total * _D('.0015'))
+                        new_order.fee = _D('.0015')
+                        new_order.cause = 'Change rate'
+                        new_order.save()
+                else:
+                    print('Невыгодный ордер, отмена')
     except UserPair.DoesNotExist:
         pass
     return True
@@ -299,7 +302,6 @@ class BidsAsksTypeException(Exception):
     def __init__(self, value):
         self.value = value
 
-
     def __str__(self):
         return repr(self.value)
 
@@ -312,6 +314,9 @@ def calculate_full_order_book(book):
 
 class WampTickerPoloniex(Task):
     ignore_result = False
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        print('{0!r} failed: {1!r}'.format(task_id, exc))
 
     def run(self, *args, **kwargs):
         sub = PoloniexSubscriber()
@@ -327,10 +332,16 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='worker_high@')
+@celeryd_init.connect(sender='worker_high@ProofX-PC')
 def start_ticker(**kwargs):
-    WampTickerPoloniex.apply_async(queue='high')
+    WampTickerPoloniex.apply_async(queue='high', priority=0, retry=True, retry_policy={
+        'max_retries': 5,
+        'interval_start': 10,
+        'interval_step': 10,
+        'interval_max': 10,
+    })
     SetOrderTask.apply_async(queue='set_orders')
+
 
 class PoloniexSubscriber(object):
     def __init__(self):
@@ -360,6 +371,8 @@ class PoloniexSubscriber(object):
         self._last_seq_dic = {}
         self.order_books = OrderBooks()
         self.ticker_list = TickerList()
+        self.directions = {}
+        self.extremums = {}
 
     def get_tickers(self):
         return self._tickers_list
@@ -392,115 +405,194 @@ class PoloniexSubscriber(object):
         else:
             return True
 
-    async def _subscribe(self):
-        async with websockets.connect(API_LINK) as websocket:
-            await websocket.send(SUBSCRIBE_COMMAND.replace(
-                '$', str(TICKER_SUBSCRIBE)))
-            for ticker in self._markets_list:
-                req = SUBSCRIBE_COMMAND.replace(
-                    '$', '\"' + ticker + '\"')
-                await websocket.send(req)
+    def add_market_direction(self, pair_id, direction, timestamp):
+        if pair_id in self.directions:
+            if len(self.directions[pair_id]) >= settings.DIRECTIONS_COUNT:
+                self.directions[pair_id].pop(0)
+            self.directions[pair_id].append([direction, timestamp])
+        else:
+            self.directions.update({pair_id: [[direction, timestamp]]})
 
-            # now parse received data
-            while True:
-                try:
-                    message = await websocket.recv()
-                except websockets.ConnectionClosed:
-                    self.start_subscribe()
-                data = json.loads(message, object_pairs_hook=OrderedDict)
-                if 'error' in data:
-                    raise Exception('error arrived message={}'.format(message))
-
-                if data[0] == 1010:
-                    # this mean heartbeat
-                    continue
-                if len(data) < 2:
-                    raise Exception(
-                        'Short message arrived message={}'.format(message))
-                if data[1] == 1:
-                    # this mean the subscription is success
-                    continue
-                if data[1] == 0:
-                    # this mean the subscription is failure
-                    raise Exception(
-                        'subscription failed message={}'.format(message))
-                if data[0] == TICKER_SUBSCRIBE:
-                    values = data[2]
-                    ticker_id_int = values[0]
-                    if ticker_id_int in self._tickers_list:
-                        self.ticker_list.new_ticker(pair_id=self._tickers_list[ticker_id_int],
-                                                    pair=self._tickers_id[ticker_id_int],
-                                                    last=values[1],
-                                                    date=time.time())
-                        current_ticker = self.ticker_list.get_ticker_by_id(self._tickers_list[ticker_id_int])
-                        if current_ticker.last is not None and current_ticker.prev_last is not None:
-                            seconds = _D(current_ticker.date - current_ticker.prev_date)
-                            if seconds > 1:
-                                change = _D(current_ticker.last) - _D(current_ticker.prev_last)
-                                rate_of_change = change / seconds
-                                if abs(rate_of_change) >= settings.MIN_CHANGE_RATE_TO_REACT:
-                                    market = self.order_books.get_market_by_name(self._tickers_id[ticker_id_int])
-
-                                    if market is not None:
-                                        is_task_ready = self.check_pair_task_status(self._tickers_list[ticker_id_int])
-                                        if rate_of_change > 0:
-                                            if is_task_ready:
-                                                args_buy = {'pair': self._tickers_list[ticker_id_int],
-                                                            'bids': market.bids[:100],
-                                                            'change_rate': rate_of_change,
-                                                            'ticker': jsonpickle.encode(self.ticker_list)}
-                                                wor = rate_up_poloniex.delay(args_buy)
-                                                self.workers.update({self._tickers_list[ticker_id_int]: wor.task_id})
-                                        else:
-                                            if is_task_ready:
-                                                args_sell = {'pair': self._tickers_list[ticker_id_int],
-                                                             'asks': market.asks[:100],
-                                                             'change_rate': rate_of_change}
-
-                                                wor = rate_down_poloniex.delay(args_sell)
-                                                self.workers.update({self._tickers_list[ticker_id_int]: wor.task_id})
-                                                # pair_temp = {'pair_id': pair.pk, 'last': ticker.last,
-                                                #                      'percent': ticker.percent_change}
-                                                # Group("trade").send({'text': json.dumps(pair_temp)})
+    def check_directions_is_extremum(self, pair_id):
+        if pair_id in self.directions:
+            if len(self.directions[pair_id]) < settings.DIRECTIONS_COUNT:
+                return False
+            else:
+                sum_first_n_elem = sum([x[0] for x in self.directions[pair_id][:settings.UNIDIRECTIONAL_COUNT]])
+                sum_last_n_elem = sum([x[0] for x in self.directions[pair_id][settings.UNIDIRECTIONAL_COUNT:]])
+                if sum_first_n_elem >= settings.UNIDIRECTIONAL_COUNT - 1 and sum_last_n_elem == 0:
+                    return 'upper'
+                elif sum_first_n_elem <= 1 and sum_last_n_elem == settings.DIRECTIONS_COUNT - settings.UNIDIRECTIONAL_COUNT:
+                    return 'lower'
                 else:
-                    ticker_id = self._tickers_id[data[0]]
-                    seq = data[1]
-                    for update in data[2]:
-                        # this mean this is snapshot
-                        if update[0] == 'i':
-                            # UPDATE[1]['currencyPair'] is the ticker name
-                            self._last_seq_dic[ticker_id] = seq
-                            asks = []
+                    return False
+        else:
+            return False
 
-                            for price, size in update[1]['orderBook'][0].items():
-                                asks.append([price, size])
+    def check_extremum(self, pair_id, date, ext_type, last):
+        if pair_id in self.extremums:
+            if ext_type == self.extremums[pair_id][1]:
+                return False
+            else:
+                if self.extremums[pair_id][1] == 'upper':
+                    if self.extremums[pair_id][2] < last:
+                        return False
+                    else:
+                        self.extremums.update({pair_id: [date, ext_type, last]})
+                        return True
+                elif self.extremums[pair_id][1] == 'lower':
+                    if self.extremums[pair_id][2] > last:
+                        return False
+                    else:
+                        self.extremums.update({pair_id: [date, ext_type, last]})
+                        return True
+        else:
+            self.extremums.update({pair_id: [date, ext_type, last]})
+            return True
 
-                            bids = []
-                            for price, size in update[1]['orderBook'][1].items():
-                                bids.append([price, size])
+    async def _subscribe(self):
+        try:
+            async with websockets.connect(API_LINK) as websocket:
+                await websocket.send(SUBSCRIBE_COMMAND.replace(
+                    '$', str(TICKER_SUBSCRIBE)))
+                for ticker in self._markets_list:
+                    req = SUBSCRIBE_COMMAND.replace(
+                        '$', '\"' + ticker + '\"')
+                    await websocket.send(req)
+                # now parse received data
+                while True:
+                    try:
+                        message = await websocket.recv()
+                    except websockets.ConnectionClosed:
+                        WampTickerPoloniex.apply_async(queue='high', countdown=10)
+                        return True
+                    data = json.loads(message, object_pairs_hook=OrderedDict)
+                    if 'error' in data:
+                        raise Exception('error arrived message={}'.format(message))
 
-                            self.order_books.add_market(ticker_id=data[0], ticker_name=ticker_id, asks=asks, bids=bids)
-                        # this mean add or change or remove
-                        elif update[0] == 'o':
-                            if self._last_seq_dic[ticker_id] + 1 != seq:
-                                raise Exception('Problem with seq number prev_seq={},message={}'.format(
-                                    self._last_seq_dic[ticker_id], message))
+                    if data[0] == 1010:
+                        # this mean heartbeat
+                        continue
+                    if len(data) < 2:
+                        raise Exception(
+                            'Short message arrived message={}'.format(message))
+                    if data[1] == 1:
+                        # this mean the subscription is success
+                        continue
+                    if data[1] == 0:
+                        # this mean the subscription is failure
+                        raise Exception(
+                            'subscription failed message={}'.format(message))
+                    if data[0] == TICKER_SUBSCRIBE:
+                        values = data[2]
+                        # print(values)
+                        ticker_id_int = values[0]
+                        if ticker_id_int in self._tickers_list:
+                            pair_temp = {'pair_id': self._tickers_list[ticker_id_int],
+                                         'last': values[1],
+                                         'percent': values[4]}
+                            Group("trade").send({'text': json.dumps(pair_temp)})
+                            self.ticker_list.new_ticker(pair_id=self._tickers_id[ticker_id_int],
+                                                        pair=self._tickers_id[ticker_id_int],
+                                                        last=values[1],
+                                                        high=values[3],
+                                                        low=values[2],
+                                                        date=time.time())
+                            ct = self.ticker_list.get_ticker_by_id(self._tickers_id[ticker_id_int])
+                            if ct.last is not None and ct.prev_last is not None:
+                                new_direction = False
+                                if ct.low > ct.prev_low and ct.high > ct.prev_high:
+                                    self.add_market_direction(ct.pair, 1, ct.date)
+                                    new_direction = True
+                                    # with open('/opt/portal_ongrid/log/' + ct.pair + '.txt', 'a') as pair_file:
+                                    #     pair_file.write(
+                                    #         '1, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
+                                    #                                           ct.last))
+                                elif ct.low < ct.prev_low and ct.high < ct.prev_high:
+                                    self.add_market_direction(ct.pair, 0, ct.date)
+                                    new_direction = True
+                                    # with open('/opt/portal_ongrid/log/' + ct.pair + '.txt', 'a') as pair_file:
+                                    #     pair_file.write(
+                                    #         '0, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
+                                    #                                           ct.last))
+                                if new_direction:
+                                    extremum = self.check_directions_is_extremum(ct.pair)
+                                    if extremum is not False:
+                                        is_ext = self.check_extremum(ct.pair, ct.date, extremum, ct.last)
+                                        if is_ext:
+                                            # with open('/opt/portal_ongrid/log/extremums.txt', 'a') as file:
+                                            #     file.write(
+                                            #         'Пара {} найден {}, дата {} \n'.format(ct.pair, extremum,
+                                            #                                                datetime.datetime.now()))
+                                            print('Пара {} найден {}, дата {}'.format(ct.pair, extremum,
+                                                                                      datetime.datetime.now()))
+                                            market = self.order_books.get_market_by_name(
+                                                self._tickers_id[ticker_id_int])
+                                            if market is not None:
+                                                is_task_ready = self.check_pair_task_status(
+                                                    self._tickers_list[ticker_id_int])
+                                                if extremum == 'lower':
+                                                    if is_task_ready:
+                                                        args_buy = {'pair': self._tickers_list[ticker_id_int],
+                                                                    'bids': market.bids[:100],
+                                                                    'ticker': jsonpickle.encode(self.ticker_list)}
+                                                        wor = rate_up_poloniex.delay(args_buy)
+                                                        self.workers.update(
+                                                            {self._tickers_list[ticker_id_int]: wor.task_id})
+                                                elif extremum == 'upper':
+                                                    if is_task_ready:
+                                                        args_sell = {'pair': self._tickers_list[ticker_id_int],
+                                                                     'asks': market.asks[:100]}
 
-                            price = update[2]
-                            side = 'bid' if update[1] == 1 else 'ask'
-                            size = update[3]
-                            # this mean remove
-                            market = self.order_books.get_market_by_id(data[0])
-                            if size == '0.00000000':
-                                # print('\033[96mthis mean remove\033[0m')
-                                if market is not None:
-                                    market.remove_item(side=side, price=str(price))
-                            # this mean add or change
-                            else:
-                                # print('\033[96mthis mean add or change\033[0m')
-                                if market is not None:
-                                    market.add_or_change(side=side, price=price, size=size)
-                    self._last_seq_dic[ticker_id] = seq
+                                                        wor = rate_down_poloniex.delay(args_sell)
+                                                        self.workers.update(
+                                                            {self._tickers_list[ticker_id_int]: wor.task_id})
+                    else:
+                        ticker_id = self._tickers_id[data[0]]
+                        seq = data[1]
+                        for update in data[2]:
+                            # this mean this is snapshot
+                            if update[0] == 'i':
+                                # UPDATE[1]['currencyPair'] is the ticker name
+                                self._last_seq_dic[ticker_id] = seq
+                                asks = []
+
+                                for price, size in update[1]['orderBook'][0].items():
+                                    asks.append([price, size])
+
+                                bids = []
+                                for price, size in update[1]['orderBook'][1].items():
+                                    bids.append([price, size])
+
+                                self.order_books.add_market(ticker_id=data[0], ticker_name=ticker_id, asks=asks,
+                                                            bids=bids)
+                            # this mean add or change or remove
+                            elif update[0] == 'o':
+                                if self._last_seq_dic[ticker_id] + 1 != seq:
+                                    raise Exception('Problem with seq number prev_seq={},message={}'.format(
+                                        self._last_seq_dic[ticker_id], message))
+
+                                price = update[2]
+                                side = 'bid' if update[1] == 1 else 'ask'
+                                size = update[3]
+                                # this mean remove
+                                market = self.order_books.get_market_by_id(data[0])
+                                if size == '0.00000000':
+                                    # print('\033[96mthis mean remove\033[0m')
+                                    if market is not None:
+                                        market.remove_item(side=side, price=str(price))
+                                # this mean add or change
+                                else:
+                                    # print('\033[96mthis mean add or change\033[0m')
+                                    if market is not None:
+                                        market.add_or_change(side=side, price=price, size=size)
+                        self._last_seq_dic[ticker_id] = seq
+        except websockets.InvalidHandshake:
+            WampTickerPoloniex.apply_async(queue='high', countdown=10)
+            return True
+        except gaierror:
+            WampTickerPoloniex.apply_async(queue='high', countdown=10)
+            return True
 
 
 class TickerList:
@@ -519,29 +611,33 @@ class TickerList:
                 return item
         return None
 
-    def new_ticker(self, pair, pair_id, last, date):
+    def new_ticker(self, pair, pair_id, last, high, low, date):
         ticker = self.get_ticker_by_id(pair_id)
         if ticker is not None:
             ticker.prev_last = ticker.last
             ticker.prev_date = ticker.date
+            ticker.prev_high = ticker.high
+            ticker.prev_low = ticker.low
             ticker.last = last
             ticker.date = date
+            ticker.high = high
+            ticker.low = low
         else:
-            new_ticker = Ticker(pair_id, pair, last, date)
+            new_ticker = Ticker(pair_id, pair, last, high, low, date)
             self.tickers.append(new_ticker)
 
 
 class Ticker:
-    def __init__(self, pair_id, pair, last, date):
+    def __init__(self, pair_id, pair, last, high, low, date):
         self.pair = pair
         self.pair_id = pair_id
         self.prev_last = None
-        # self.prev_high = None
-        # self.prev_low = None
+        self.prev_high = None
+        self.prev_low = None
         self.prev_date = None
         self.last = last
-        # self.high = high
-        # self.low = low
+        self.high = high
+        self.low = low
         self.date = date
 
 
@@ -641,6 +737,7 @@ class CheckSetOrderTask(Task):
     def run(self, *args, **kwargs):
         task = pull_exchanges_balances.delay()
         while not AsyncResult(task.task_id).ready():
+            time.sleep(1)
             pass
         try:
             user_orders = UserOrder.objects.filter(date_cancel=None)
@@ -733,6 +830,7 @@ class CheckSetOrderTask(Task):
             if len(already_in_orders) > 0:
                 to_trade.delete()
             else:
+                print('Пытаюсь выставить ордер')
                 exchange_name = to_trade.user_pair.user_exchange.exchange.name
                 exchange_object = class_for_name('ccxt', exchange_name)({
                     'apiKey': to_trade.user_pair.user_exchange.apikey,
@@ -783,17 +881,13 @@ class CheckSetOrderTask(Task):
                         pass
                 except ExchangeError:
                     pass
-                to_trade.delete()
+            to_trade.delete()
         except ToTrade.DoesNotExist:
-            time.sleep(5)
-        except UserBalance.DoesNotExist:
-            time.sleep(2)
             pass
-        SetOrderTask.apply_async(queue='set_orders')
+        except UserBalance.DoesNotExist:
+            pass
+        SetOrderTask.apply_async(queue='set_orders', countdown=10)
         return True
 
 
 SetOrderTask = app.register_task(CheckSetOrderTask())
-
-
-

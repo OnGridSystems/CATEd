@@ -174,7 +174,6 @@ class UserOrder(models.Model):
 
 class ToTrade(models.Model):
     user_pair = models.ForeignKey(UserPair, blank=False, null=False)
-    percent_react = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     type = models.CharField(max_length=10, blank=False, null=False)
     price = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     amount = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
@@ -195,7 +194,6 @@ class ToTrade(models.Model):
 
 class Сalculations(models.Model):
     user_pair = models.ForeignKey(UserPair)
-    rate_change = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     type = models.CharField(max_length=10)
     depth_coef = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)
     price = models.DecimalField(max_digits=16, decimal_places=8, blank=False, null=False)

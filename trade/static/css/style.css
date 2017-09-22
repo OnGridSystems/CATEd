@@ -232,60 +232,8 @@ tr.balances td:last-child {
     border: 1px solid red;
 }
 
-.exchange-coins-block {
-    max-height: 600px;
-    border: 1px slategrey solid;
-    background: #fafafa;
-}
-
-.graph-block {
-    border: 1px slategrey solid;
-    background: #fafafa;
-}
-
-.exchange-coins-block-scroll {
-    overflow-y: scroll;
-    max-height: 390px;
-    font-size: 10px;
-}
-
 ::-webkit-scrollbar {
     width: 3px;
-}
-
-.priceChangeUp {
-    background-color: #ceebd3 !important;
-    border-top: 1px double #27892f;
-    border-bottom: 1px double #27892f;
-    -webkit-transition-duration: 0.1s;
-    -moz-transition-duration: 0.1s;
-    transition-duration: 0.1s;
-}
-
-.priceChangeDown {
-    background-color: #f6d4d1 !important;
-    border-top: 1px double #c02a1d;
-    border-bottom: 1px double #c02a1d;
-    -webkit-transition-duration: 0.1s;
-    -moz-transition-duration: 0.1s;
-    transition-duration: 0.1s;
-}
-
-.chart-info {
-    font-size: 0.8rem;
-    padding-top: 20px;
-    min-width: 50%;
-    float: right;
-    display: flex;
-    display: -webkit-flex;
-    -webkit-justify-content: space-around;
-    justify-content: space-around;
-}
-
-.btn-mini {
-    padding: 1px 3px;
-    height: 20px;
-    line-height: 20px;
 }
 
 #buttons, #buttons-zoom {

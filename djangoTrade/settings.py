@@ -22,11 +22,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Moscow'
 CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
+CELERY_ALWAYS_EAGER = False
 
 CELERY_ROUTES = {
     'trade.tasks.pull_exchanges_balances': {'queue': 'high'},
     'trade.tasks.pull_exchanges_tickers': {'queue': 'high'},
-    'monitoring.tasks.*': {'queue': 'low'},
     'tradeBOT.tasks.start_calculate_poloniex_buy': {'queue': 'high'},
     'tradeBOT.tasks.create_order': {'queue': 'set_orders'}
 }
@@ -77,7 +77,6 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'trade',
     'tradeBOT',
-    'monitoring',
     'user_profile',
     'django_celery_beat',
     'allauth_temp',
@@ -208,7 +207,7 @@ CHANNEL_LAYERS = {
 TICKER_MINUTES_TO_CLEAR = 30
 
 # минимальное значение изменения цены за секунду
-MIN_CHANGE_RATE_TO_REACT = 0.000001
+MIN_CHANGE_RATE_TO_REACT = 0
 DEPTH_COEFFICIENT = 0.5
 
 # активные биржи для торговли
@@ -216,3 +215,18 @@ TRADING_EXCHANGES = ['poloniex']
 
 # Time to life order, mins
 ORDER_TTL = 5
+
+# время хранения серии изменения цен
+RATE_CHANGE_SERIES_TIME = 120
+
+# процент положительных/отризательных изменений цен для покупки/продажи
+RATE_CHANGE_SERIES_PERCENT = 80
+
+# минимальное кол-во элементов серии
+RATE_CHANGE_SERIES_MIN_COUNT = 2
+
+# количество направлений
+DIRECTIONS_COUNT = 7
+
+# количество однонапрвленных (первых) направлений
+UNIDIRECTIONAL_COUNT = 4

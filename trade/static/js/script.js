@@ -3,6 +3,8 @@ $(document).ready(function () {
     $('.modal').modal();
     $('#yandex-wallet-add').hide();
 
+    $('.input-field select').addClass('material');
+
     $('.change_status').on('click', function () {
         var ue = $(this).parent('form').find('input[name="user-exchange"]').val();
         var csrf = getCookie('csrftoken');

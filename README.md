@@ -276,48 +276,6 @@ EOF
 echo "$OVPNCFG" > /etc/openvpn/client.conf
 systemctl restart openvpn@client
 ```
-Insert into hosts rigs names
-```
-echo "192.168.199.200 dialog-gw dlg-gw" > /etc/hosts
-echo "192.168.200.1 dlg-gw-internal" > /etc/hosts
-echo "192.168.200.2 dlg-wifi" > /etc/hosts
-echo "192.168.200.101 dlg-r01" > /etc/hosts
-echo "192.168.200.102 dlg-r02" > /etc/hosts
-echo "192.168.200.103 dlg-r03" > /etc/hosts
-echo "192.168.200.104 dlg-r04" > /etc/hosts
-echo "192.168.200.105 dlg-r05" > /etc/hosts
-echo "192.168.200.106 dlg-r06" > /etc/hosts
-echo "192.168.200.107 dlg-r07" > /etc/hosts
-echo "192.168.200.108 dlg-r08" > /etc/hosts
-echo "192.168.200.109 dlg-r09" > /etc/hosts
-echo "192.168.200.110 dlg-r10" > /etc/hosts
-echo "192.168.199.201 him-gw" > /etc/hosts
-echo "192.168.201.1 h1-gw-internal" > /etc/hosts
-echo "192.168.201.2 him-wifi" > /etc/hosts
-echo "192.168.201.101 h1-r01" > /etc/hosts
-echo "192.168.201.102 h1-r02" > /etc/hosts
-echo "192.168.201.103 h1-r03" > /etc/hosts
-echo "192.168.201.104 h1-r04" > /etc/hosts
-echo "192.168.201.105 h1-r05" > /etc/hosts
-echo "192.168.201.106 h1-r06" > /etc/hosts
-echo "192.168.201.107 h1-r07" > /etc/hosts
-echo "192.168.201.108 h1-r08" > /etc/hosts
-echo "192.168.201.109 h1-r09" > /etc/hosts
-echo "192.168.201.110 h1-r10" > /etc/hosts
-echo "192.168.201.151 h1-gn01" > /etc/hosts
-echo "192.168.202.1 h1-gw-internal" > /etc/hosts
-echo "192.168.202.101 h2-r01" > /etc/hosts
-echo "192.168.202.102 h2-r02" > /etc/hosts
-echo "192.168.202.103 h2-r03" > /etc/hosts
-echo "192.168.202.104 h2-r04" > /etc/hosts
-echo "192.168.202.105 h2-r05" > /etc/hosts
-echo "192.168.202.106 h2-r06" > /etc/hosts
-echo "192.168.202.107 h2-r07" > /etc/hosts
-echo "192.168.202.108 h2-r08" > /etc/hosts
-echo "192.168.202.109 h2-r09" > /etc/hosts
-echo "192.168.202.110 h2-r10" > /etc/hosts
-
-```
 Install python virtualenv, create configs, clone project from git and apply some patches
 
 ```sh
@@ -417,64 +375,8 @@ user = root
 stdout_logfile = /opt/portal_ongrid/logs/gunicorn_supervisor.log
 redirect_stderr = true
 environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
-
-[program:telegram_bot_web]
-command = /opt/portal_ongrid/configs/telegram_bot
-user = root
-stdout_logfile = /opt/portal_ongrid/logs/telegram_bot.log
-redirect_stderr = true
-environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
-
-[program:slack_bot_web]
-command = /opt/portal_ongrid/configs/slack_bot
-user = root
-stdout_logfile = /opt/portal_ongrid/logs/slack_bot.log
-redirect_stderr = true
-environment=LANG=en_US.UTF-8,LC_ALL=en_US.UTF-8
 EOF
 echo "$VISOR" > /opt/portal_ongrid/configs/supervisor.conf
-
-read -d "" SLACK <<"EOF"
-#!/bin/sh
-
-NAME="slack_bot"
-DJANGODIR=/opt/portal_ongrid/ongrid_portal/
-USER=root
-GROUP=root
-NUM_WORKERS=1
-DJANGO_SETTINGS_MODULE=djangoTrade.settings
-echo "Starting $NAME as `whoami`"
-cd $DJANGODIR
-. ../env/bin/activate
-export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
-export PYTHONPATH=$DJANGODIR:$PYTHONPATH
-RUNDIR=$(dirname $SOCKFILE)
-test -d $RUNDIR || mkdir -p $RUNDIR
-exec /opt/portal_ongrid/ongrid_portal/manage.py slack_bot
-EOF
-echo "$SLACK" > /opt/portal_ongrid/configs/slack_bot
-chmod u+x /opt/portal_ongrid/configs/slack_bot
-read -d "" TELEG <<"EOF"
-#!/bin/sh
-
-NAME="telegramm_bot"
-DJANGODIR=/opt/portal_ongrid/ongrid_portal/
-USER=root
-GROUP=root
-NUM_WORKERS=1
-DJANGO_SETTINGS_MODULE=djangoTrade.settings
-#DJANGO_WSGI_MODULE=djangoTrade.wsgi
-echo "Starting $NAME as `whoami`"
-cd $DJANGODIR
-. ../env/bin/activate
-export DJANGO_SETTINGS_MODULE=$DJANGO_SETTINGS_MODULE
-export PYTHONPATH=$DJANGODIR:$PYTHONPATH
-RUNDIR=$(dirname $SOCKFILE)
-test -d $RUNDIR || mkdir -p $RUNDIR
-exec /opt/portal_ongrid/ongrid_portal/manage.py telegram_bot
-EOF
-echo "$TELEG" > /opt/portal_ongrid/configs/telegram_bot
-chmod u+x /opt/portal_ongrid/configs/telegram_bot
 
 
 cd /opt/portal_ongrid
@@ -534,29 +436,22 @@ echo "$SENPATCH" | patch /opt/portal_ongrid/ongrid_portal/tradeBOT/tasks.py
 set databases and mocks
 
 ```sh
-echo "create database trade character set utf8;" | mysql -u root
-echo "create database celery_result;" | mysql -u root
-echo "CREATE USER 'ongrid'@'localhost' IDENTIFIED BY 'lGG%tts%QP';" | mysql -u root
-echo "GRANT ALL PRIVILEGES ON *.* TO 'ongrid'@'localhost';" | mysql -u root
-echo "FLUSH PRIVILEGES;" | mysql -u root
+echo "create database trade character set utf8; create database celery_result;CREATE USER 'ongrid'@'localhost' IDENTIFIED BY 'lGG%tts%QP';GRANT ALL PRIVILEGES ON *.* TO 'ongrid'@'localhost';FLUSH PRIVILEGES;" | mysql -u root
+
 #
 # Migrate
 ./manage.py makemigrations 
 ./manage.py makemigrations trade
 ./manage.py makemigrations tradeBOT
-./manage.py makemigrations monitoring
 ./manage.py migrate
 #
 # Add main data
 read -d "" ADDMAIN<<"EOF"
 from trade import models as trade_m
-from monitoring import models as monit_m
 trade_m.Exchanges.objects.get_or_create(name='poloniex', info_frozen_key='-isFrozen')
 trade_m.Wallets.objects.get_or_create(name='BTC')
 trade_m.Wallets.objects.get_or_create(name='ETH')
 trade_m.Wallets.objects.get_or_create(name='Yandex Money')
-monit_m.Pools.objects.get_or_create(pool='nanopool')
-monit_m.Pools.objects.get_or_create(pool='ethermine')
 EOF
 echo "$ADDMAIN" | ./manage.py shell
 #
@@ -578,12 +473,6 @@ supervisorctl restart all
 install and configure celery
 
 ```sh
-useradd -m celery
-mkdir /var/log/celery
-mkdir /var/run/celery
-chown -R celery:celery /var/log/celery
-chown -R celery:celery /var/run/celery
-
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celerybeat -O /etc/init.d/celerybeat
 chmod +x /etc/init.d/celeryd /etc/init.d/celerybeat
@@ -597,8 +486,8 @@ CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
 CELERYD_OPTS="-Q:worker_set_orders set_orders -Q:worker_low low -Q:worker_normal normal -Q:worker_high high -c:worker_set_orders 1 -c:worker_low 3 -c:worker_normal 3 -c:worker_high 2"
 CELERYD_LOG_FILE="/var/log/celery/%n%I.log"
 CELERYD_PID_FILE="/var/run/celery/%n.pid"
-CELERYD_USER="celery"
-CELERYD_GROUP="celery"
+CELERYD_USER="root"
+CELERYD_GROUP="root"
 DJANGO_SETTINGS_MODULE="djangoTrade.settings"
 CELERY_CREATE_DIRS=1
 SECRET_KEY="ada#qadaa2d#1232%!^&#*(&@(!&Y!&#*T!@(^F#!@&#F!@&#F!(@"
@@ -610,8 +499,8 @@ CELERY_BIN="/opt/portal_ongrid/env/bin/python -m celery"
 CELERY_APP="djangoTrade"
 CELERYD_CHDIR="/opt/portal_ongrid/ongrid_portal"
 DJANGO_SETTINGS_MODULE="djangoTrade.settings"
-CELERYBEAT_USER="celery"
-CELERYBEAT_GROUP="celery"
+CELERYBEAT_USER="root"
+CELERYBEAT_GROUP="root"
 EOF
 echo "$CELERYBEAT_CFG" > /etc/default/celerybeat
 
@@ -623,9 +512,6 @@ echo "$CELERYBEAT_CFG" > /etc/default/celerybeat
 /etc/init.d/celerybeat stop
 sudo update-rc.d celeryd defaults
 sudo update-rc.d celerybeat defaults
-cd /opt/portal_ongrid/ongrip_portal/
-touch celerybeat-schedule
-chown celery:celery celerybeat-schedule
 ```
 
 Set SSL certificate (12.10.2017, 13:00:00)

@@ -3,7 +3,7 @@ from tradeBOT import models
 
 
 class CalculationsAdmin(admin.ModelAdmin):
-    list_display = ['user_pair', 'rate_change', 'type', 'depth_coef', 'price', 'amount', 'date_created']
+    list_display = ['user_pair', 'type', 'depth_coef', 'price', 'amount', 'date_created']
 
     class Meta:
         model = models.Сalculations

@@ -33,10 +33,6 @@
             <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
             <td>{{ item.date_updated | date:'d.m.Y H:i:s' }}</td>
         </tr>
-    {% empty %}
-        <tr>
-            <td colspan="10" class="center">Empty</td>
-        </tr>
     {% endfor %}
     </tbody>
 </table>

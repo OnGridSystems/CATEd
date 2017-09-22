@@ -2606,7 +2606,7 @@ a {
 }
 
 blockquote {
-    margin: 20px 0;
+    margin: 0 0;
     padding-left: 1.5rem;
     border-left: 5px solid #ee6e73;
 }
@@ -3268,7 +3268,7 @@ nav ul a span.badge {
 .row .col {
     float: left;
     box-sizing: border-box;
-    /*padding: 0 0.75rem;*/
+    padding: 0 0.3rem;
     min-height: 1px;
 }
 
@@ -6782,7 +6782,7 @@ input[type=checkbox]:not(:disabled).tabbed:focus ~ .lever::after {
 
 /* Select Field
    ========================================================================== */
-select {
+select.material {
     display: none;
 }
 
@@ -6792,11 +6792,11 @@ select.browser-default {
 
 select {
     background-color: rgba(255, 255, 255, 0.9);
-    width: 100%;
-    padding: 5px;
+    /*width: 100%;*/
+    /*padding: 5px;*/
     border: 1px solid #f2f2f2;
     border-radius: 2px;
-    height: 3rem;
+    /*height: 3rem;*/
 }
 
 .select-label {

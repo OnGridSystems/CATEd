@@ -1,14 +1,19 @@
 $(document).ready(function () {
+
+    var directions = {};
+    // directions[418] = [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0];
+    // directions[391] = [1, 1, 1, 1, 1, 2, 0, 0, 0, 1, 0, 1];
     $('select').addClass('browser-default');
     pair_id = $('.pair_tr').data('pair-id');
     $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('active_pair');
     var main_coin = $('.tabs a.active').text();
     var second_coin = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(0)').text();
     document.title = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(1)').text() + ' ' + main_coin + "/" + second_coin;
-    $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
+    $('#preview_coins h5 b').text(main_coin + '_' + second_coin);
     intervale = $('#buttons .candlestick').data('intervale');
-    zoom = $('#buttons-zoom .zoom').data('zoom');
+    zoom = 3;
     draw_graph();
+    // createResh(directions[pair_id]);
 
     $('.pair_tr').on('click', function () {
         var main_coin = $('.tabs a.active').text();
@@ -18,6 +23,7 @@ $(document).ready(function () {
         $(this).addClass('active_pair');
         if ($(this).data('pair-id') != pair_id) {
             pair_id = $(this).data('pair-id');
+            // createResh(directions[pair_id]);
             draw_graph();
         }
     });
@@ -26,12 +32,6 @@ $(document).ready(function () {
         $('#buttons .candlestick').removeClass('green');
         $(this).addClass('green');
         intervale = $(this).data('intervale');
-        draw_graph();
-    });
-    $('#buttons-zoom .zoom').on('click', function () {
-        $('#buttons-zoom .zoom').removeClass('green');
-        $(this).addClass('green');
-        zoom = $(this).data('zoom');
         draw_graph();
     });
     $('.tooltipped').tooltip({
@@ -179,7 +179,7 @@ $(document).ready(function () {
         })
     }
 
-    setInterval(get_new_orders_to_trade, 5000);
+    // setInterval(get_new_orders_to_trade, 5000);
 
     $('#user_orders').DataTable();
     $('#calculated_to_trade').DataTable();
@@ -187,32 +187,134 @@ $(document).ready(function () {
         searching: false,
         ordering: false
     });
+
+
+    function cl(value) {
+        console.log(value)
+    }
+
+    function createResh(arr) {
+        cl(arr);
+        var c_canvas = $("#directions");
+        var context = c_canvas[0].getContext("2d");
+        if (arr == 'undefined') {
+            c_canvas[0].width = (c_canvas.parent('div').width());
+            c_canvas[0].height = (c_canvas.parent('div').height());
+
+            context.font = "bold 12px sans-serif";
+            context.fillText("No data available", c_canvas[0].width / 2 - 20, c_canvas[0].height / 2);
+            context.stroke();
+            return false;
+        }
+        if (arr.length * 7 < c_canvas.parent('div').width()) {
+            c_canvas[0].width = c_canvas.parent('div').width()
+        } else {
+            c_canvas[0].width = (arr.length * 7);
+        }
+        var high = 0;
+        var depth = 0;
+        var max_depth = 0;
+        var max_high = 0;
+        for (var d = 0; d < arr.length; d++) {
+            if (arr[d] === 1) {
+                high += 10;
+            } else if (arr[d] === 0) {
+                depth -= 10;
+            }
+            if (max_high < high) {
+                max_high = high;
+            }
+            if (max_depth > depth) {
+                max_depth = depth;
+            }
+        }
+        if ((Math.max(Math.abs(max_depth), max_high) - Math.min(Math.abs(max_depth), max_high)) < c_canvas.parent('div').height()) {
+            c_canvas[0].height = c_canvas.parent('div').height();
+        } else {
+            c_canvas[0].height = (Math.max(Math.abs(max_depth), max_high) - Math.min(Math.abs(max_depth), max_high)) * 2;
+        }
+        var start_dot = [1, c_canvas[0].height / 2 - 100];
+        // var context = c_canvas[0].getContext("2d");
+        context.strokeStyle = "#eee";
+        for (var x = 0.5; x < c_canvas.width(); x += 10) {
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, c_canvas.height());
+            context.stroke();
+        }
+        for (var y = c_canvas.height(); y > 0; y -= 10) {
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(c_canvas.width(), y);
+            context.stroke();
+        }
+        context.strokeStyle = "#000000";
+        context.beginPath();
+        context.moveTo(start_dot[0], start_dot[1]);
+        var start_x = start_dot[0];
+        var start_y = start_dot[1];
+        for (var i in arr) {
+            if (arr[i] === 0) {
+                context.lineTo(start_x + 7, start_y + 7);
+                start_x += 7;
+                start_y += 7;
+            } else if (arr[i] === 1) {
+                context.lineTo(start_x + 7, start_y - 7);
+                start_x += 7;
+                start_y -= 7;
+
+            } else if (arr[i] === 2) {
+                context.arc(start_x, start_y, 3, Math.PI * 2, false);
+                context.moveTo(start_x, start_y);
+            }
+        }
+        context.stroke();
+    }
+
+    // $(window).resize(function () {
+    //     createResh(directions[pair_id])
+    // });
 });
+
+var ticker = {};
 
 socket = new WebSocket("ws://" + window.location.host + "/trade/");
 socket.onmessage = function (message) {
     var item = JSON.parse(message.data);
-    row = $('.pair_last#last_' + item.pair_id).parent('tr');
-    $('.pair_last#last_' + item.pair_id).text(item.last);
-    $('.pair_last#percent_' + item.pair_id).text(Math.floor(item.percent * 100) / 100 + '%');
-    if (item.percent > 0) {
-        $('.pair_last#percent_' + item.pair_id).removeClass('red-text').addClass('green-text');
-        $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeUp');
-        $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>');
-    } else if (item.percent < 0) {
-        $('.pair_last#percent_' + item.pair_id).removeClass('green-text').addClass('red-text');
-        $('.pair_last#last_' + item.pair_id).parent('tr').addClass('priceChangeDown');
-        $('.pair_last#arrow_' + item.pair_id).html('<i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>');
+    if (item.pair_id in ticker) {
+        if (item.last !== ticker[pair_id].last) {
+            ticker[pair_id].last = item.last;
+            ticker[pair_id].percent = item.percent;
+        }
     } else {
-        $('.pair_last#percent_' + item.pair_id).removeClass('green-text red-text');
-        $('.pair_last#arrow_' + item.pair_id).html('');
+        ticker[pair_id] = {'last': item.last, 'percent': item.percent}
     }
-
-    setTimeout(function () {
-        row.removeClass('priceChangeDown priceChangeUp');
-    }, 600);
+    ticker[item.pair_id] = {'last': item.last, 'percent': item.percent};
     // draw_graph();
 };
+
+setInterval(function () {
+    for (var item in ticker) {
+        var prev_last = Number($('.pair_last#last_' + item).text());
+        if (ticker[item].last > prev_last) {
+            $('.pair_last#last_' + item).text(ticker[item].last).parent('tr').addClass('priceChangeUp');
+            $('.pair_last#arrow_' + item).html('<i class="fa fa-arrow-up fa-1x green-text" aria-hidden="true"></i>');
+        } else if (ticker[item].last < prev_last) {
+            $('.pair_last#last_' + item).text(ticker[item].last).parent('tr').addClass('priceChangeDown');
+            $('.pair_last#arrow_' + item).html('<i class="fa fa-arrow-down fa-1x red-text" aria-hidden="true"></i>');
+        } else {
+            $('.pair_last#arrow_' + item).html('');
+        }
+        if (ticker[item].percent > 0) {
+            $('.pair_last#percent_' + item).text(Math.floor(ticker[item].percent * 100) / 100 + '%').removeClass('red-text').addClass('green-text');
+        } else {
+            $('.pair_last#percent_' + item).text(Math.floor(ticker[item].percent * 100) / 100 + '%').addClass('red-text').removeClass('green-text');
+        }
+        setTimeout(function () {
+            $('.pair_last').parent('tr').removeClass('priceChangeDown priceChangeUp ');
+        }, 600);
+    }
+}, 2000);
 
 function getCookie(name) {
     var cookieValue = null;
@@ -246,7 +348,7 @@ function draw_graph() {
         }
         $('#jqChart').jqChart({
             legend: {visible: false},
-            border: {lineWidth: 1, padding: 0},
+            border: {lineWidth: 0, padding: 0},
             tooltips: {
                 disabled: false,
                 type: 'shared',
