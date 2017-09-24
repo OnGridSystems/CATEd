@@ -10,7 +10,7 @@ import re
 from ccxt import ExchangeError
 from celery.signals import worker_ready, celeryd_init
 from channels import Group
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from celery import shared_task, Task
 from djangoTrade.celery import app
 import requests
@@ -332,7 +332,7 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='worker_high@')
+@celeryd_init.connect(sender='worker_high@ProofX-PC')
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high', priority=0, retry=True, retry_policy={
         'max_retries': 5,
@@ -340,7 +340,11 @@ def start_ticker(**kwargs):
         'interval_step': 10,
         'interval_max': 10,
     })
-    SetOrderTask.apply_async(queue='set_orders')
+    # SetOrderTask.apply_async(queue='set_orders')
+
+
+def cancel_user_orders(marker_id, type):
+    UserOrder.objects.filter(pair_id=marker_id, order_type=type, date_cancel=None).update(to_close=True)
 
 
 class PoloniexSubscriber(object):
@@ -418,6 +422,7 @@ class PoloniexSubscriber(object):
             if len(self.directions[pair_id]) < settings.DIRECTIONS_COUNT:
                 return False
             else:
+                print(self.directions[pair_id])
                 sum_first_n_elem = sum([x[0] for x in self.directions[pair_id][:settings.UNIDIRECTIONAL_COUNT]])
                 sum_last_n_elem = sum([x[0] for x in self.directions[pair_id][settings.UNIDIRECTIONAL_COUNT:]])
                 if sum_first_n_elem >= settings.UNIDIRECTIONAL_COUNT - 1 and sum_last_n_elem == 0:
@@ -429,10 +434,23 @@ class PoloniexSubscriber(object):
         else:
             return False
 
-    def check_extremum(self, pair_id, date, ext_type, last):
+    def check_extremum(self, pair_id, date, ext_type, last, market_id):
         if pair_id in self.extremums:
             if ext_type == self.extremums[pair_id][1]:
-                return False
+                if ext_type == 'upper':
+                    if last <= self.extremums[pair_id][2]:
+                        return False
+                    else:
+                        cancel_user_orders(marker_id=market_id, type='sell')
+                        self.extremums.update({pair_id: [date, ext_type, last]})
+                        return True
+                elif ext_type == 'lower':
+                    if last >= self.extremums[pair_id][2]:
+                        return False
+                    else:
+                        cancel_user_orders(marker_id=market_id, type='buy')
+                        self.extremums.update({pair_id: [date, ext_type, last]})
+                        return True
             else:
                 if self.extremums[pair_id][1] == 'upper':
                     if self.extremums[pair_id][2] < last:
@@ -504,21 +522,22 @@ class PoloniexSubscriber(object):
                                 if ct.low > ct.prev_low and ct.high > ct.prev_high:
                                     self.add_market_direction(ct.pair, 1, ct.date)
                                     new_direction = True
-                                    # with open('/opt/portal_ongrid/log/' + ct.pair + '.txt', 'a') as pair_file:
+                                    # with open('/opt/portal_ongrid/log/markets/' + ct.pair + '.txt', 'a') as pair_file:
                                     #     pair_file.write(
                                     #         '1, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
                                     #                                           ct.last))
                                 elif ct.low < ct.prev_low and ct.high < ct.prev_high:
                                     self.add_market_direction(ct.pair, 0, ct.date)
                                     new_direction = True
-                                    # with open('/opt/portal_ongrid/log/' + ct.pair + '.txt', 'a') as pair_file:
+                                    # with open('/opt/portal_ongrid/log/markets/' + ct.pair + '.txt', 'a') as pair_file:
                                     #     pair_file.write(
                                     #         '0, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
                                     #                                           ct.last))
                                 if new_direction:
                                     extremum = self.check_directions_is_extremum(ct.pair)
                                     if extremum is not False:
-                                        is_ext = self.check_extremum(ct.pair, ct.date, extremum, ct.last)
+                                        is_ext = self.check_extremum(ct.pair, ct.date, extremum, ct.last,
+                                                                     self._tickers_list[ticker_id_int])
                                         if is_ext:
                                             # with open('/opt/portal_ongrid/log/extremums.txt', 'a') as file:
                                             #     file.write(
@@ -742,7 +761,8 @@ class CheckSetOrderTask(Task):
         try:
             user_orders = UserOrder.objects.filter(date_cancel=None)
             orders_to_close = user_orders.filter(
-                date_created__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL))
+                Q(date_created__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL)) | Q(
+                    to_close=True))
             print('Ордера пользователей {}'.format(user_orders))
             print('Ордера к закрытию {}'.format(orders_to_close))
             for uo in user_orders:

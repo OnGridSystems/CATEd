@@ -163,6 +163,7 @@ class UserOrder(models.Model):
     date_cancel = models.DateTimeField(default=None, blank=True, null=True)
     cancel_desc = models.CharField(max_length=100, blank=True, null=True, default=None)
     date_updated = models.DateTimeField(auto_now=True)
+    to_close = models.BooleanField(default=False)
 
     def __str__(self):
         return self.ue.user.username + ' ' + self.ue.exchange.name + ': ' + self.order_type + ' ' + self.pair.main_coin.symbol.upper() + '_' + self.pair.second_coin.symbol.upper()

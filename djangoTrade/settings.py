@@ -79,7 +79,6 @@ INSTALLED_APPS = [
     'tradeBOT',
     'user_profile',
     'django_celery_beat',
-    'allauth_temp',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
