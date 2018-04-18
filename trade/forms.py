@@ -1,5 +1,5 @@
 from django.forms import ModelForm
-from trade.models import UserExchanges, UserWallet
+from trade.models import UserExchange, UserWallet
 from django.contrib.auth.models import User
 from django import forms
 from django.forms.extras.widgets import SelectDateWidget
@@ -13,5 +13,5 @@ class UserWalletForm(ModelForm):
 
 class UserExchangesForm(ModelForm):
     class Meta:
-        model = UserExchanges
+        model = UserExchange
         fields = ['exchange', 'apikey', 'apisecret']

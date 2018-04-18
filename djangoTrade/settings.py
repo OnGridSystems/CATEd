@@ -13,16 +13,22 @@ from __future__ import absolute_import, unicode_literals
 import os
 
 # Celery options
+from kombu import Queue, Exchange
 
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost//'
 CELERY_ACCEPT_CONTENT = ['json']
-CELERY_RESULT_BACKEND = 'db+sqlite:///result.sqlite'
+CELERY_RESULT_BACKEND = 'db+mysql://root:@localhost/celery_result'
 CELERY_TASK_SERIALIZER = 'json'
-# CELERYBEAT_SCHEDULER = 'djcelery.schedulers.DatabaseScheduler'
 CELERY_TIMEZONE = 'Europe/Moscow'
-CELERY_SEND_TASK_ERROR_EMAILS = True
-ADMINS = (('Сергей', 'achievement008@gmail.com'),)
+CELERY_SEND_TASK_ERROR_EMAILS = False
 CELERYD_MAX_TASKS_PER_CHILD = 5
+
+CELERY_ROUTES = {
+    'trade.tasks.pull_exchanges_balances': {'queue': 'low'},
+    'trade.tasks.pull_exchanges_tickers': {'queue': 'low'},
+}
+
+CELERY_CREATE_MISSING_QUEUES = True
 
 # AllAuth setting
 ACCOUNT_EMAIL_REQUIRED = True
@@ -32,10 +38,15 @@ LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 
+# redis sessions
+SESSION_ENGINE = 'redis_sessions.session'
+
 # Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_INDEX_TABLESPACE = 10
+
+ADMINS = (('Сергей', 'achievement008@gmail.com'),)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,7 +60,7 @@ SECRET_KEY = '1j&=q!62_%51y9!=97n=)bel8+#y+lup1bsy31d%s=sm!9q_c+'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -65,21 +76,13 @@ INSTALLED_APPS = [
     'tradeBOT',
     'user_profile',
     'django_celery_beat',
-    'allauth_temp',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'monitoring',
     'django.contrib.humanize',
-    # ... include the providers you want to enable:
-    # 'allauth.socialaccount.providers.facebook',
-    # 'allauth.socialaccount.providers.google',
-    # 'allauth.socialaccount.providers.instagram',
-    # 'allauth.socialaccount.providers.odnoklassniki',
-    # 'allauth.socialaccount.providers.pinterest',
-    # 'allauth.socialaccount.providers.twitter',
-    # 'allauth.socialaccount.providers.vk',
-    # 'allauth.socialaccount.providers.windowslive',
+    'ticker_app',
+    'django_extensions',
+    'channels',
 ]
 
 SITE_ID = 1
@@ -125,12 +128,20 @@ WSGI_APPLICATION = 'djangoTrade.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'tradenew',
+        'NAME': 'trade',
         'USER': 'root',
-        'PASSWORD': '123',
+        'PASSWORD': '',
         'default-character-set': 'utf-8',
+    },
+    'portal_ticker': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'portal_ticker',
+        'USER': 'root',
+        'PASSWORD': '',
     }
 }
+
+DATABASE_ROUTERS = ['ticker_app.routers.DBRouter', 'ticker_app.routers.PrimaryRouter']
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
@@ -168,12 +179,41 @@ STATIC_URL = '/static/'
 LOGIN_URL = '/accounts/login/'
 
 # yandex money settings
-YANDEX_MONEY_CLIENT_ID = '1EB2214C53CF879A9BD8606934B804F93BE9C82604DD9A1ED967F8635CBCD04B'
+YANDEX_MONEY_CLIENT_ID = None  # set before start
 
-YANDEX_MONEY_REDIRECT_URI = 'http://78.155.218.16:8000/wallet/'
+YANDEX_MONEY_REDIRECT_URI = None  # set before start
 
-YANDEX_MONEY_CLIENT_SECRET = '211A8533870D422A3EAB307B20897DB1A76EFD1379263CFD69FEC67630EA304A4831D7813BDEC90A866ABED2C30B9F8578EFF29962B13B70187429034EA3BF59'
+YANDEX_MONEY_CLIENT_SECRET = None  # set before start
 
 STATIC_ROOT = '/opt/portal_ongrid/static'
 MEDIA_ROOT = '/opt/portal_ongrid/media'
 MEDIA_URL = '/media/'
+
+# channels
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "asgi_redis.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("localhost", 6379)],
+        },
+        "ROUTING": "djangoTrade.routing.channel_routing",
+    },
+}
+
+# минимальное значение изменения цены за секунду
+DEPTH_COEFFICIENT = 0.5
+
+# активные биржи для торговли
+TRADING_EXCHANGES = ['poloniex']
+
+# Time to life order, mins
+ORDER_TTL = 5
+
+# минимальное кол-во элементов серии
+RATE_CHANGE_SERIES_MIN_COUNT = 2
+
+# количество направлений
+DIRECTIONS_COUNT = 7
+
+# количество однонапрвленных (первых) направлений
+UNIDIRECTIONAL_COUNT = 4

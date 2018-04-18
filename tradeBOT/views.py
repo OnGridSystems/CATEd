@@ -1,123 +1,110 @@
-from django.db.models import Sum
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Max, Min
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
-from trade.models import UserExchanges, Exchanges
-from tradeBOT.models import UserCoin, ExchangeCoin, UserDeactivatedPairs, Pair, ExchangeMainCoin, UserMainCoinPriority
+from trade.models import UserExchange, Exchanges
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, UserMainCoinPriority, UserPair, ToTrade, \
+    UserCoinShare, UserOrder
 
 
-def main(request):
-    args = {'user_coins': UserCoin.objects.all()}
-    return render(request, 'tradeBOT/index.html', args)
-
-
+@login_required
 def setup(request, pk):
-    # args = {'ue': UserExchanges.objects.values('exchange__exchange').filter(user=request.user).distinct()}
     args = {}
     try:
-        args['user_exchange'] = UserExchanges.objects.get(pk=pk, user=request.user)
-        args['coins'] = ExchangeCoin.objects.filter(exchange=args['user_exchange'].exchange).order_by('-is_active',
-                                                                                                      'name')
-        args['user_coins'] = UserCoin.objects.filter(user_exchange__pk=pk, user=request.user).order_by('-rank')
-        args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange)
-    except UserExchanges.DoesNotExist:
+        args['user_exchange'] = UserExchange.objects.get(pk=pk)
+        # args['user_exchange'] = UserExchange.objects.get(pk=pk, user=request.user)
+        # args['user_pairs'] = UserPair.objects.filter(user=request.user,
+        #                                              user_exchange=args['user_exchange']).order_by(
+        #     '-rank')
+        args['user_pairs'] = UserPair.objects.filter(user_exchange=args['user_exchange']).order_by(
+            '-rank')
+        args['primary_coins'] = ExchangeMainCoin.objects.filter(coin__exchange=args['user_exchange'].exchange).order_by(
+            'coin__symbol')
+        args['to_trade'] = ToTrade.objects.filter(user_pair__user_exchange=args['user_exchange']).order_by(
+            'date_updated')
+        args['orders'] = UserOrder.objects.filter(ue=args['user_exchange'])
+        args['user_coins'] = UserCoinShare.objects.filter(user_exchange=args['user_exchange'])
+    except UserExchange.DoesNotExist:
         return redirect('index')
     return render(request, 'tradeBOT/setup.html', args)
 
 
-def add_user_coin(request):
+def add_user_pair(request):
     if request.method == 'POST':
-        coin_pk = request.POST.get('coin')
+        pair_pk = request.POST.get('pair')
         user_exchange_pk = request.POST.get('user-exchange')
         try:
-            user_exchange = UserExchanges.objects.get(pk=user_exchange_pk)
-            coin = ExchangeCoin.objects.get(pk=coin_pk)
-            user_coin = UserCoin.objects.get(coin=coin, user_exchange=user_exchange, user=request.user)
-        except ExchangeCoin.DoesNotExist:
+            pair = Pair.objects.get(pk=pair_pk)
+            UserPair.objects.get_or_create(user=request.user, pair=pair, user_exchange_id=user_exchange_pk)
+            UserCoinShare.objects.get_or_create(user_exchange_id=user_exchange_pk, coin=pair.second_coin)
+        except Pair.DoesNotExist:
             pass
-        except UserExchanges.DoesNotExist:
-            pass
-        except UserCoin.DoesNotExist:
-            new_user_coin = UserCoin()
-            new_user_coin.coin = coin
-            new_user_coin.user = request.user
-            new_user_coin.user_exchange = user_exchange
-            new_user_coin.save()
         return redirect('/trade/setup/' + str(user_exchange_pk) + '/')
 
 
-def changerank(request):
+def change_rank(request):
     if request.is_ajax():
-        coin_id = request.POST.get('coin_id')
+        pair_id = request.POST.get('pair_id')
         type_c = request.POST.get('type')
         try:
-            user_coin = UserCoin.objects.get(pk=coin_id, user=request.user)
-        except UserCoin.DoesNotExist:
+            user_pair = UserPair.objects.get(pk=pair_id, user=request.user)
+            if type_c == 'up':
+                user_pair.rank = user_pair.rank + 1
+                user_pair.save()
+            elif type_c == 'down':
+                if user_pair.rank > 1:
+                    user_pair.rank = user_pair.rank - 1
+                    user_pair.save()
+        except UserPair.DoesNotExist:
             return HttpResponse('false', status=200)
-        if type_c == 'up':
-            user_coin.rank = user_coin.rank + 1
-            user_coin.save()
-        elif type_c == 'down':
-            if user_coin.rank > 1:
-                user_coin.rank = user_coin.rank - 1
-                user_coin.save()
     return HttpResponse('ok', status=200)
 
 
-def toggle_pair(request):
-    if request.is_ajax():
-        pair_id = request.POST.get('pair_id')
-        user_exch_pk = request.POST.get('user_exch')
-        try:
-            pair = Pair.objects.get(pk=pair_id)
-            user_exch = UserExchanges.objects.get(pk=user_exch_pk, user=request.user)
-            user_deactive_pair = UserDeactivatedPairs.objects.get(pair=pair, user_exchange=user_exch).delete()
-        except Pair.DoesNotExist:
-            return HttpResponse('Pair doesn\'t found!', status=200)
-        except UserExchanges.DoesNotExist:
-            return HttpResponse('Exchange doesn\'t found!', status=200)
-        except UserDeactivatedPairs.DoesNotExist:
-            new_user_deactive_pair = UserDeactivatedPairs()
-            new_user_deactive_pair.pair = pair
-            new_user_deactive_pair.user_exchange = user_exch
-            new_user_deactive_pair.save()
-        return HttpResponse('ok', status=200)
-
-
 def set_share(request):
-    if request.is_ajax():
-        user_coin_id = request.POST.get('coin_id')
-        share = request.POST.get('share')
-        user_exch = request.POST.get('user_exch')
-        if int(share) == 0:
-            try:
-                user_coin = UserCoin.objects.get(pk=user_coin_id, user=request.user)
-                user_coin.share = share
-                user_coin.save()
-            except UserCoin.DoesNotExist:
-                return HttpResponse('Not your coin', status=200)
-            return HttpResponse('ok', status=200)
-        user_coins_share_summ = UserCoin.objects.filter(user=request.user, user_exchange__pk=user_exch).exclude(pk=user_coin_id).aggregate(Sum('share'))['share__sum']
-        if user_coins_share_summ is None:
-            user_coins_share_summ = 0
-        if float(user_coins_share_summ) + float(share) > 100:
-            return HttpResponse('Sum shares cant be more than 100', status=200)
+    user_coin_id = request.POST.get('coin')
+    share = request.POST.get('share')
+    user_exchange_pk = request.POST.get('user-exchange')
+    if float(share) < 0:
+        return HttpResponse('Invalid request', status=200)
+    if float(share) == 0:
         try:
-            user_coin = UserCoin.objects.get(pk=user_coin_id, user=request.user)
-            user_coin.share = share
+            user_coin = UserCoinShare.objects.get(pk=user_coin_id, user_exchange_id=user_exchange_pk,
+                                                  user_exchange__user=request.user)
+            user_coin.share = 0
             user_coin.save()
-        except UserCoin.DoesNotExist:
+        except UserCoinShare.DoesNotExist:
             return HttpResponse('Not your coin', status=200)
         return HttpResponse('ok', status=200)
+    user_coin_share_summ = \
+        UserCoinShare.objects.filter(user_exchange__user=request.user, user_exchange_id=user_exchange_pk).exclude(
+            pk=user_coin_id).aggregate(
+            Sum('share'))['share__sum']
+    if user_coin_share_summ is None:
+        user_coin_share_summ = 0
+    if float(user_coin_share_summ) + float(share) > 100:
+        return HttpResponse('Sum shares cant be more than 100', status=200)
+    try:
+        user_coin = UserCoinShare.objects.get(pk=user_coin_id, user_exchange__user=request.user)
+        user_coin.share = share
+        user_coin.save()
+    except UserCoinShare.DoesNotExist:
+        return HttpResponse('Not your coin', status=200)
+    return redirect('/trade/setup/' + str(user_exchange_pk) + '/')
 
 
-def delete_user_coin(request):
+def delete_user_pair(request):
     if request.is_ajax():
-        user_coin_id = request.POST.get('coin_id')
+        user_pair_id = request.POST.get('pair_id')
         try:
-            user_coin = UserCoin.objects.get(pk=user_coin_id, user=request.user).delete()
-        except UserCoin.DoesNotExist:
-            return HttpResponse('Not your coin', status=200)
-        return HttpResponse('ok', status=200)
+            user_pair = UserPair.objects.get(pk=user_pair_id, user=request.user)
+            user_pairs_with_this_coin = UserPair.objects.filter(pair__second_coin=user_pair.pair.second_coin)
+            if len(user_pairs_with_this_coin) == 1:
+                UserCoinShare.objects.get(coin=user_pair.pair.second_coin,
+                                          user_exchange=user_pair.user_exchange).delete()
+            user_pair.delete()
+        except UserPair.DoesNotExist:
+            return HttpResponse('Not your pair', status=200)
+    return HttpResponse('ok', status=200)
 
 
 def relations(request):
@@ -129,18 +116,18 @@ def change_user_exchange_script_activity(request):
     if request.is_ajax():
         user_exch_id = request.POST.get('user_exch')
         try:
-            user_exch = UserExchanges.objects.get(pk=user_exch_id, user=request.user)
+            user_exch = UserExchange.objects.get(pk=user_exch_id, user=request.user)
             user_exch.is_active_script = not user_exch.is_active_script
             user_exch.save()
             return HttpResponse('true', status=200)
-        except UserExchanges.DoesNotExist:
+        except UserExchange.DoesNotExist:
             return HttpResponse('false', status=200)
 
 
 def change_primary_coin(request):
     if request.is_ajax():
         user_exch_pk = request.POST.get('user_exch')
-        ue = UserExchanges.objects.get(pk=user_exch_pk)
+        ue = UserExchange.objects.get(pk=user_exch_pk)
         coin_pk = request.POST.get('coin')
         coin = ExchangeMainCoin.objects.get(pk=coin_pk)
         try:
@@ -162,7 +149,7 @@ def change_primary_coin_rank(request):
         type_r = request.POST.get('type')
         ue_pk = request.POST.get('user_exch')
         coin_pk = request.POST.get('coin')
-        ue = UserExchanges.objects.get(pk=ue_pk)
+        ue = UserExchange.objects.get(pk=ue_pk)
         coin = ExchangeMainCoin.objects.get(pk=coin_pk)
         try:
             user_primary_coin = UserMainCoinPriority.objects.get(user_exchange=ue, main_coin=coin)
@@ -183,3 +170,48 @@ def change_primary_coin_rank(request):
             new_user_primary_coin.is_active = True
             new_user_primary_coin.save()
         return HttpResponse('ok', status=200)
+
+
+def set_pair_add(request):
+    if request.method == 'POST':
+        pair_pk = request.POST.get('pair-pk')
+        user_exchange_pk = request.POST.get('user-exchange-pk')
+        rate_of_change = request.POST.get('rate_of_change')
+        if rate_of_change == '':
+            rate_of_change = 0
+        try:
+            UserPair.objects.filter(pk=pair_pk, user_exchange_id=user_exchange_pk).update(
+                rate_of_change=rate_of_change)
+        except UserPair.DoesNotExist:
+            pass
+        return redirect('/trade/setup/' + str(user_exchange_pk) + '/')
+    else:
+        return redirect('/')
+
+
+def get_new_to_trade(request):
+    if request.is_ajax():
+        ue_pk = request.POST.get('user_exch')
+        already = request.POST.get('already')
+        to_trade = ToTrade.objects.filter(user_pair__user_exchange_id=ue_pk)
+        if len(to_trade) != int(already):
+            return render(request, 'tradeBOT/to_trade.html', {'to_trade': to_trade})
+        else:
+            return HttpResponse('ok', status=200)
+
+
+def exchange_depth_to_trade(request):
+    if request.method == 'POST':
+        depth = request.POST.get('depth')
+        exchange_pk = request.POST.get('user-exchange-pk')
+        if depth == '':
+            depth = 0
+        try:
+            ue = UserExchange.objects.get(user=request.user, pk=exchange_pk)
+            ue.coefficient_of_depth = depth
+            ue.save()
+        except UserExchange.DoesNotExist:
+            pass
+        return redirect('/trade/setup/' + str(exchange_pk) + '/')
+    else:
+        return HttpResponse('Please use POST request', status=200)

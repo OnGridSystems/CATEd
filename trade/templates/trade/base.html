@@ -3,10 +3,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <link rel="shortcut icon" href="https://avatars5.githubusercontent.com/u/7992612?v=4&s=400">
+    <link rel="shortcut icon" href="https://avatars1.githubusercontent.com/u/37157262?s=200&v=4">
     <title>TradeOnGrid</title>
     <link rel="stylesheet" href="{% static 'css/materialize.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/jquery-ui-1.10.4.css' %}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     {% block style %}{% endblock %}
@@ -16,15 +17,11 @@
     <div class="nav-wrapper main-nav">
         <ul id="nav-mobile" class="right hide-on-med-and-down">
             <li><a href="{% url 'index' %}"><b>Home</b></a></li>
-            <li><a href="{% url 'monitoring' %}"><b>Pools</b></a></li>
-{#            <li><a href="{% url 'tradeBotMain' %}">Trade Bot</a></li>#}
                 {% if user.is_authenticated %}
                     <li><a href="{% url 'account_logout' %}"><i class="material-icons left tiny">input</i>LogOut</a></li>
                 {% else %}
                     <li><a href="{% url 'account_login' %}"><i class="material-icons left tiny">input</i>LogIn</a></li>
                 {% endif %}
-{#            <li><a href="{% url 'user_profile' %}"><i class="material-icons left tiny">perm_identity</i>Мой кабинет</a>#}
-
         </ul>
     </div>
 </nav>
@@ -33,5 +30,4 @@
 <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <script type="text/javascript" src="{% static 'js/materialize.js' %}"></script>
 {% block script %}{% endblock %}
-<script type="text/javascript" src="{% static 'js/script.js' %}"></script>
 </html>

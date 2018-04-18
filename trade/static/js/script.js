@@ -1,22 +1,9 @@
 $(document).ready(function () {
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = jQuery.trim(cookies[i]);
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
     $('select').material_select();
     $('.modal').modal();
     $('#yandex-wallet-add').hide();
+
+    $('.input-field select').addClass('material');
 
     $('.change_status').on('click', function () {
         var ue = $(this).parent('form').find('input[name="user-exchange"]').val();
@@ -102,122 +89,86 @@ $(document).ready(function () {
         delay: 50,
         html: true
     });
-    $('.add_coin').on('click', function (e) {
-        $(this).parent('form').submit();
-        return false;
-    });
-    $('.rank-up').on('click', function () {
-        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
-        change_rank(user_coin_id, 'up');
-    });
-    $('.rank-down').on('click', function () {
-        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
-        change_rank(user_coin_id, 'down');
-    });
-
-    function change_rank(coin_id, type) {
-        $.ajax({
-            url: '/trade/changerank/',
-            dataType: 'html',
-            type: 'post',
-            data: {
-                coin_id: coin_id,
-                csrfmiddlewaretoken: getCookie('csrftoken'),
-                type: type
-            },
-            success: function (data) {
-                if ('false' === data) {
-                    Materialize.toast('Error while changing rank', 1000)
-                } else if ('ok' === data) {
-                    location.reload();
-                }
-            }
-        })
-    }
-
-    $('.pair').on('click', function () {
-        var pair_id = $(this).attr('data-pair-id');
-
-        if (!$(this).hasClass('unactive')) {
-            if (confirm('Are you really want to deactivate pair ' + $(this).text())) {
-                toggle_pair(pair_id)
-            }
-        } else {
-            toggle_pair(pair_id)
-        }
-    });
-
-    function toggle_pair(pair_id) {
-        var user_exch = $('#exchange').val();
-        $.post('/trade/toggle_pair/', {
-            pair_id: pair_id,
-            user_exch: user_exch,
-            csrfmiddlewaretoken: getCookie('csrftoken')
-        }, function (data) {
-            'ok' === data ? location.reload() : Materialize.toast(data, 1500)
-        });
-    }
-
-    $('.pair-share').keypress(function (e) {
-        if (e.which === 13) {
-            var share = $(this).val();
-            var user_exch = $('#exchange').val();
-            if ('' !== share) {
-                var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
-                $.post('/trade/set_share/', {
-                        coin_id: user_coin_id,
-                        share: share,
-                        user_exch: user_exch,
-                        csrfmiddlewaretoken: getCookie('csrftoken')
-                    },
-                    function (data) {
-                        'ok' === data ? location.reload() : Materialize.toast(data, 1000);
-                    });
-            }
-        }
-    });
-    $('.delete-user-coin').on('click', function () {
-        var user_coin_id = $(this).parent('td').parent('tr').attr('data-coin-id');
-        $.post('/trade/delete_user_coin/', {
-            coin_id: user_coin_id,
-            csrfmiddlewaretoken: getCookie('csrftoken')
-        }, function (data) {
-            'ok' === data ? location.reload() : Materialize.toast(data, 1000);
-        })
-    });
-    $('#disable-script').on('change', function () {
-        $.post('/trade/exchange_script_activity/', {
-            user_exch: $('#exchange').val(),
-            csrfmiddlewaretoken: getCookie('csrftoken')
-        }, function (data) {
-            if (data) {
-                location.reload()
-            } else Materialize.toast('Error while change script status', 1500)
-        })
-    });
-    $('.change-primary-coin-status').on('change', function () {
-        var pc = $(this).parent('.primary-coin').data('primary-coin');
-        $.post('/trade/change_primary_coin/', {
-            user_exch: $('#exchange').val(),
-            csrfmiddlewaretoken: getCookie('csrftoken'),
-            coin: pc
-        }, function (data) {
-            'ok' === data ? location.reload() : Materialize.toast('Error while changing status', 1000)
-        })
-    });
-
-    $('.primary-rank').on('click', function () {
-        change_primary_coin($(this).data('type'), $(this).parent('.primary-coin').data('primary-coin'));
-    });
-
-    function change_primary_coin(type, coin) {
-        $.post('/trade/change_primary_coin_rank/', {
-            user_exch: $('#exchange').val(),
-            csrfmiddlewaretoken: getCookie('csrftoken'),
-            coin: coin,
-            type: type
-        }, function (data) {
-            'ok' === data ? location.reload() : Materialize.toast('Error while changing rank', 1000)
-        })
-    }
 });
+
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+var grid = document.getElementById('grid');
+
+grid.onclick = function (e) {
+    if (e.target.tagName != 'TH') return;
+    sortGrid(e.target.cellIndex, e.target.getAttribute('data-type'));
+};
+
+function sortGrid(colNum, type) {
+    var tbody = grid.getElementsByTagName('tbody')[0];
+    var rowsArray = [].slice.call(tbody.rows);
+    var compare;
+    switch (type) {
+        case 'number':
+            compare = function (rowA, rowB) {
+                return rowA.cells[colNum].innerHTML - rowB.cells[colNum].innerHTML;
+            };
+            break;
+        case 'string':
+            compare = function (rowA, rowB) {
+                return rowA.cells[colNum].innerHTML > rowB.cells[colNum].innerHTML ? 1 : -1;
+            };
+            break;
+    }
+    rowsArray.sort(compare);
+    grid.removeChild(tbody);
+    for (var i = 0; i < rowsArray.length; i++) {
+        tbody.appendChild(rowsArray[i]);
+    }
+    grid.appendChild(tbody);
+}
+
+Storage.prototype.setObject = function (key, value) {
+    this.setItem(key, JSON.stringify(value));
+};
+
+Storage.prototype.getObject = function (key) {
+    var value = this.getItem(key);
+    try {
+        return JSON.parse(value);
+    }
+    catch(err) {
+        console.log("JSON parse failed for lookup of ", key, "\n error was: ", err);
+        return null;
+    }
+};
+
+
+// function initHashChanges() {
+// 	var h = window.location.hash;
+// 	var pair = h.toUpperCase();
+// 	pair = pair.substr(1, pair.length); // trim #
+//
+// 	// trace('on load hash is [' + h + ']');
+// 	// set this so we know not to override it with localStorage or default currencyPair
+// 	if (currencyPairArray.indexOf(pair) != -1) {
+// 		hasHashCurrencyPair = true;
+// 	}
+//
+// 	evaluateHash(h);
+//
+// 	window.onhashchange = function() {
+// 		// trace("hash changed: " + window.location.hash);
+// 		clearTimeout(hashTimer);
+// 		evaluateHash(window.location.hash);
+// 	};
+// }

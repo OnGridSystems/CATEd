@@ -1,346 +1,246 @@
 from __future__ import absolute_import, unicode_literals
-import os
+import importlib
 import re
-
+import binascii
+from json import JSONDecodeError
+from djangoTrade.celery import app
+from ccxt import ExchangeNotAvailable, RequestTimeout
 from celery.schedules import crontab
 from celery.task import periodic_task
 import datetime
-from http.client import HTTPException
-from celery import shared_task
 import time
 import requests
-from decimal import Decimal
+from decimal import Decimal as _D
 from django.contrib.auth.models import User
-
-from trade.drivers.btce_driver import APIError
-from trade.models import UserExchanges, UserBalance, Coin, Exchanges, Wallets, UserWallet, Transaction, UserHoldings
-from trade.drivers import btce_trader, bittrex_driver
-from poloniex import Poloniex, PoloniexCommandException
-from yandex_money.api import Wallet, ExternalPayment
+from trade.models import UserExchange, UserBalance, Coin, Exchanges, Wallets, UserWallet, Transaction, UserHoldings
+from yandex_money.api import Wallet
+from tradeBOT.models import ExchangeCoin, Pair, CoinMarketCupCoin, ExchangeMainCoin
+from ticker_app.models import ExchangeTicker
 
 
-@periodic_task(run_every=crontab(minute='*/5'))
-def start_trade_btce():
-    exchange = Exchanges.objects.get(exchange='btc-e')
-    btce_ue = UserExchanges.objects.filter(is_active=True, exchange=exchange)
-    if len(btce_ue) > 0:
-        for ue in btce_ue:
-            totalBtc = float(0)
-            try:
-                driver = btce_trader.BtceTrader(secret=ue.apisecret, key=ue.apikey)
-                try:
-                    balances = driver.pull_balances()
-                    if balances is not None:
-                        for item in balances['funds']:
-                            try:
-                                user_coin = UserBalance.objects.get(ue=ue, coin=item.lower())
-                            except UserBalance.DoesNotExist:
-                                user_coin = None
-                            if user_coin is None:
-                                new_user_coin = UserBalance()
-                                new_user_coin.ue = ue
-                                new_user_coin.coin = item
-                                new_user_coin.balance = balances['funds'][item]
-                                btc_value = get_btc_value(coin_name=item, count=balances['funds'][item])
-                                new_user_coin.btc_value = btc_value
-                                totalBtc += btc_value
-                                new_user_coin.save()
-                            else:
-                                if user_coin.balance != balances['funds'][item]:
-                                    user_coin.balance = balances['funds'][item]
-                                    btc_value = get_btc_value(coin_name=item, count=balances['funds'][item])
-                                    user_coin.btc_value = btc_value
-                                    totalBtc += btc_value
-                                else:
-                                    totalBtc += float(user_coin.btc_value)
-                                user_coin.save()
-                        if 'open_orders' in balances:
-                            if balances['open_orders'] > 1:
-                                on_orders_in_btc = add_money_on_orders(driver, ue)
-                            else:
-                                on_orders_in_btc = 0
-                        else:
-                            on_orders_in_btc = 0
-                        ue.total_btc = totalBtc + on_orders_in_btc
-                        ue.total_usd = get_usd_value('btc', totalBtc + on_orders_in_btc)
-                        ue.save()
-                except APIError as error:
-                    print(error)
-                    pass
-                    # print("Убираю накуй, неверно че-то")
-                    # ue.error = error
-                    # ue.is_active = False
-                    # ue.is_correct = False
-                    # ue.save()
-                try:
-                    transactions = driver.trade_api.call('TransHistory')
-                    print(transactions)
-                    if len(transactions) > 0:
-                        for item in transactions:
-                            if int(transactions[item]['type']) == 1 or int(transactions[item]['type']) == 2:
-                                try:
-                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
-                                                                          hash=item)
-                                except Transaction.MultipleObjectsReturned:
-                                    pass
-                                except Transaction.DoesNotExist:
-                                    new_trans = Transaction()
-                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
-                                    new_trans.t_type = 'exchange'
-                                    new_trans.number = item
-                                    new_trans.hash = item
-                                    new_trans.details = transactions[item]['desc']
-                                    new_trans.date = datetime.datetime.fromtimestamp(
-                                        int(transactions[item]['timestamp'])).strftime(
-                                        '%Y-%m-%d %H:%M:%S')
-                                    new_trans.t_from = '-'
-                                    new_trans.t_to = '-'
-                                    if int(transactions[item]['type']) == 1:
-                                        new_trans.type = 'in'
-                                    elif int(transactions[item]['type']) == 2:
-                                        new_trans.type = 'out'
-                                    else:
-                                        new_trans.type = 'unknown'
-                                    new_trans.value = transactions[item]['amount']
-                                    new_trans.currency = transactions[item]['currency']
-                                    new_trans.usd_value = get_usd_value(transactions[item]['currency'],
-                                                                        transactions[item]['amount'])
-                                    new_trans.save()
-                except Exception as error:
-                    print(error)
-            except HTTPException:
-                print('Ошибка, начинаем заново')
+def class_for_name(module_name, class_name):
+    m = importlib.import_module(module_name)
+    c = getattr(m, class_name)
+    return c
+
+
+@app.task()
+def pull_exchanges_balances(ue_pk=None):
+    unnecessary_keys = ['free', 'total', 'used', 'info']
+    if ue_pk is None:
+        user_exchanges = UserExchange.objects.filter(is_active=True)
     else:
-        print("Никто не включил скрипт")
+        user_exchanges = UserExchange.objects.filter(pk=ue_pk)
+    if len(user_exchanges) > 0:
+        for user_exchange in user_exchanges:
+            exchange_object = class_for_name('ccxt', user_exchange.exchange.name)(
+                {'apiKey': user_exchange.apikey, 'secret': user_exchange.apisecret})
+            try:
+                try:
+                    balances = exchange_object.fetch_balance()
+                except binascii.Error:
+                    user_exchange.error = 'Incorrect apikey or secret'
+                    user_exchange.is_correct = False
+                    user_exchange.is_active = False
+                    user_exchange.save()
+                    continue
+                if balances:
+                    total_btc = _D(0)
+                    for item in balances.items():
+                        if item[0] not in unnecessary_keys:
+                            try:
+                                user_coin = UserBalance.objects.get(ue=user_exchange, coin=item[0].lower())
+                                user_coin.total = (item[1]['total'] if item[1]['total'] is not None else 0)
+                                user_coin.btc_value, user_coin.conversions = fetch_btc_value(user_exchange.exchange,
+                                                                                             item[0].lower(),
+                                                                                             item[1]['total'])
+                                user_coin.used = (item[1]['used'] if item[1]['used'] is not None else 0)
+                                user_coin.free = (item[1]['free'] if item[1]['free'] is not None else 0)
+                                user_coin.save()
+                                total_btc += _D(user_coin.btc_value)
+                            except UserBalance.DoesNotExist:
+                                new_user_coin = UserBalance()
+                                new_user_coin.ue = user_exchange
+                                new_user_coin.coin = item[0].lower()
+                                new_user_coin.total = (item[1]['total'] if not item[1]['total'] is None else 0)
+                                new_user_coin.btc_value, new_user_coin.conversions = fetch_btc_value(
+                                    user_exchange.exchange,
+                                    item[0].lower(), item[1]['total'])
+                                new_user_coin.used = (item[1]['used'] if item[1]['used'] is not None else 0)
+                                new_user_coin.free = (item[1]['free'] if item[1]['free'] is not None else 0)
+                                new_user_coin.save()
+                                total_btc += _D(new_user_coin.btc_value)
+                    user_exchange.total_btc = total_btc
+                    user_exchange.total_usd = get_usd_value('btc', total_btc)
+                    user_exchange.save()
+            except ExchangeNotAvailable as e:
+                # user_exchange.is_active = False
+                # user_exchange.is_active_script = False
+                user_exchange.error = e
+                user_exchange.save()
+            except RequestTimeout:
+                continue
     return True
 
 
-def add_money_on_orders(driver, ue):
-    orders = driver.pull_orders()
-    on_orders_in_btc = float(0)
-    for item in orders:
-        amount = orders[item]['amount'] * orders[item]['rate']
-        m = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', orders[item]['pair'])
-        coin_name = m.group(2)
-        coin_on_orders_in_btc = get_btc_value(coin_name, amount)
+def fetch_btc_value(exchange, coin, amount=None, convertations=None):
+    if amount is None:
+        amount = 0
+    if _D(amount) == _D(0):
+        return 0, 'Null balance'
+    if convertations is None:
+        convertations = [coin + ' (' + str(_D(str(amount)).quantize(_D('.00000001'))) + ')']
+    if coin.lower() == 'btc':
+        return amount, '->'.join(convertations)
+    try:
+        coin = ExchangeCoin.objects.get(symbol=coin.lower(), exchange=exchange)
+        # print('Нашел валюту: {}'.format(coin.symbol.upper()))
         try:
-            user_coin = UserBalance.objects.get(ue=ue, coin=coin_name.lower())
-            user_coin.balance += Decimal(amount)
-            user_coin.btc_value += Decimal(coin_on_orders_in_btc)
-            user_coin.save()
-        except UserBalance.DoesNotExist:
-            pass
-        on_orders_in_btc += coin_on_orders_in_btc
-    return on_orders_in_btc
-
-
-@periodic_task(run_every=crontab(minute='*/5'))
-def start_trade_poloniex():
-    exchange = Exchanges.objects.get(exchange='poloniex')
-    poloniex_ue = UserExchanges.objects.filter(is_active=True, exchange=exchange)
-    if len(poloniex_ue) > 0:
-        for ue in poloniex_ue:
-            totalBtc = float(0)
+            # print('1Ищу пару BTC_{}'.format(coin.symbol.upper()))
+            pair = Pair.objects.get(main_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
+                                    second_coin=coin)
+            # print('1Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
+            ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
+            # print('1Нашел тикер {} {}'.format(ticker, ticker.last))
+            new_amount = _D(amount).quantize(_D('.00000001')) * _D(ticker.last).quantize(_D('.00000001'))
+            convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
+            return new_amount, '->'.join(convertations)
+        except Pair.DoesNotExist:
             try:
-                ue_apisecret = ue.apisecret.encode()
-                driver = Poloniex(secret=ue_apisecret, apikey=ue.apikey)
+                # print('2Ищу пару {}_BTC'.format(coin.symbol.upper()))
+                pair = Pair.objects.get(second_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
+                                        main_coin=coin)
+                # print('2Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
+                ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
+                # print('2Нашел тикер {} {}'.format(ticker, ticker.last))
+                new_amount = _D(amount).quantize(_D('.00000001')) / _D(ticker.last).quantize(_D('.00000001'))
+                convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
+                return new_amount, '->'.join(convertations)
+            except Pair.DoesNotExist:
                 try:
-                    balances = driver.returnCompleteBalances()
-                    if balances is not None:
-                        for c in balances.keys():
-                            try:
-                                user_coin = UserBalance.objects.get(ue=ue, coin=c.lower())
-                            except UserBalance.DoesNotExist:
-                                user_coin = None
-                            if user_coin is None:
-                                new_user_coin = UserBalance()
-                                new_user_coin.ue = ue
-                                new_user_coin.coin = c.lower()
-                                new_user_coin.balance = float(balances[c]['available'])
-                                new_user_coin.btc_value = float(balances[c]['btcValue'])
-                                totalBtc += float(balances[c]['btcValue'])
-                                new_user_coin.save()
-                            else:
-                                user_coin.balance = float(balances[c]['available'])
-                                user_coin.btc_value = float(balances[c]['btcValue'])
-                                totalBtc += float(balances[c]['btcValue'])
-                                user_coin.save()
-                    ue.total_btc = totalBtc
-                    ue.total_usd = get_usd_value('btc', totalBtc)
-                    ue.save()
-                except PoloniexCommandException as error:
-                    pass
-                    # if error != 'Connection timed out. Please try again.':
-                    #     ue.error = error
-                    #     ue.is_active = False
-                    #     ue.is_correct = False
-                    #     ue.save()
-                try:
-                    deposits_and_withdrawals = driver.returnDepositsWithdrawals()
-                    if len(deposits_and_withdrawals) > 0:
-                        deposits = deposits_and_withdrawals['deposits']
-                        if len(deposits) > 0:
-                            for item in deposits:
-                                try:
-                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
-                                                                          hash=item['txid'])
-                                except Transaction.MultipleObjectsReturned:
-                                    pass
-                                except Transaction.DoesNotExist:
-                                    new_trans = Transaction()
-                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
-                                    new_trans.t_type = 'exchange'
-                                    new_trans.number = item['confirmations']
-                                    new_trans.hash = item['txid']
-                                    new_trans.date = datetime.datetime.fromtimestamp(int(item['timestamp'])).strftime(
-                                        '%Y-%m-%d %H:%M:%S')
-                                    new_trans.t_from = '-'
-                                    new_trans.t_to = item['address']
-                                    new_trans.type = 'in'
-                                    new_trans.value = item['amount']
-                                    new_trans.currency = item['currency']
-                                    new_trans.usd_value = get_usd_value(item['currency'], item['amount'])
-                                    new_trans.save()
-                        withdrawals = deposits_and_withdrawals['withdrawals']
-                        # print(withdrawals)
-                        if len(withdrawals) > 0:
-                            for item in withdrawals:
-                                try:
-                                    transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
-                                                                          hash=item['withdrawalNumber'])
-                                except Transaction.MultipleObjectsReturned:
-                                    pass
-                                except Transaction.DoesNotExist:
-                                    new_trans = Transaction()
-                                    new_trans.name = ue.exchange.exchange + str(ue.pk)
-                                    new_trans.t_type = 'exchange'
-                                    new_trans.number = item['withdrawalNumber']
-                                    new_trans.hash = item['withdrawalNumber']
-                                    new_trans.date = datetime.datetime.fromtimestamp(int(item['timestamp'])).strftime(
-                                        '%Y-%m-%d %H:%M:%S')
-                                    new_trans.t_from = '-'
-                                    new_trans.t_to = item['address']
-                                    new_trans.type = 'out'
-                                    new_trans.value = item['amount']
-                                    new_trans.currency = item['currency']
-                                    new_trans.usd_value = get_usd_value(item['currency'], item['amount'])
-                                    new_trans.save()
-                except Exception as error:
-                    print(error)
+                    # print('3Ищу пару где вторая валюта {}'.format(coin.symbol.upper()))
+                    pair = Pair.objects.get(second_coin=coin)
+                    # print('3Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
+                    ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
+                    # print('3Нашел тикер {} {}'.format(ticker, ticker.last))
+                    in_first_coin = _D(ticker.last) * _D(amount)
+                    convertations.append(
+                        pair.main_coin.symbol + ' (' + str(_D(str(in_first_coin)).quantize(_D('.00000001'))) + ')')
+                    fetch_btc_value(exchange, pair.main_coin.symbol, in_first_coin, convertations)
+                except Pair.DoesNotExist:
+                    # print('3Пара на найдена')
+                    return 0, 'Not found'
+                except ExchangeTicker.DoesNotExist:
+                    # print("3Тикер не найден")
+                    return 0, 'Not found'
+            except ExchangeTicker.DoesNotExist:
+                # print("2Тикер не найден")
+                return 0, 'Not found'
+        except ExchangeTicker.DoesNotExist:
+            # print("1Тикер не найден")
+            return 0, 'Not found'
+    except ExchangeCoin.DoesNotExist:
+        # print('Валюта не найдена')
+        return 0, 'Not found'
 
-            except HTTPException:
-                print('Ошибка, начинаем заново')
-    else:
-        print("Никто не включил скрипт")
+
+@periodic_task(run_every=datetime.timedelta(minutes=5))
+def pull_exchanges_tickers():
+    exchanges = Exchanges.objects.all()
+    for exchange in exchanges:
+        exchange_object = class_for_name('ccxt', exchange.name)()
+        try:
+            for item, value in exchange_object.fetch_tickers().items():
+                pair = re.match(r'([a-zA-Z0-9]+)/([a-zA-Z0-9]+)', item)
+                try:
+                    main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(2))
+                    second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
+                    pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+                    new_ticker = ExchangeTicker()
+                    new_ticker.exchange_id = exchange.pk
+                    new_ticker.pair_id = pair.pk
+                    new_ticker.high = value['high']
+                    new_ticker.low = value['low']
+                    new_ticker.bid = value['bid']
+                    new_ticker.ask = value['ask']
+                    new_ticker.base_volume = value['baseVolume']
+                    new_ticker.last = value['last']
+                    new_ticker.date_time = value['datetime']
+                    new_ticker.save()
+                except ExchangeCoin.DoesNotExist:
+                    pass
+                except Pair.DoesNotExist:
+                    pass
+        except ExchangeNotAvailable:
+            continue
+    # pull_exchanges_balances.delay()
     return True
 
 
-@periodic_task(run_every=crontab(minute='*/5'))
-def start_trade_bittrex():
-    exchange = Exchanges.objects.get(exchange='bittrex')
-    bittrex_ue = UserExchanges.objects.filter(is_active=True, exchange=exchange)
-    if len(bittrex_ue) > 0:
-        for ue in bittrex_ue:
-            totalBtc = float(0)
-            try:
-                driver = bittrex_driver.Bittrex(api_secret=ue.apisecret, api_key=ue.apikey)
+@app.task()
+def pull_exchanges():
+    get_all_coins.delay()
+    exchanges = Exchanges.objects.all()
+    for exchange in exchanges:
+        exchange_object = class_for_name('ccxt', exchange.name)()
+        markets = exchange_object.fetch_markets()
+        for item in markets:
+            coins = [item['quote'], item['base']]
+            for coin in coins:
                 try:
-                    balances = driver.get_balances()
-                    if balances['result'] is not None:
-                        for c in balances['result']:
-                            try:
-                                user_coin = UserBalance.objects.get(ue=ue, coin=c['Currency'].lower())
-                            except UserBalance.DoesNotExist:
-                                user_coin = None
-                            if user_coin is None:
-                                new_user_coin = UserBalance()
-                                new_user_coin.ue = ue
-                                new_user_coin.coin = c['Currency'].lower()
-                                new_user_coin.balance = float(c['Available'])
-                                btc_value = get_btc_value(coin_name=c['Currency'].lower(), count=c['Balance'])
-                                new_user_coin.btc_value = btc_value
-                                totalBtc += btc_value
-                                new_user_coin.save()
-                            else:
-                                user_coin.balance = float(c['Available'])
-                                btc_value = get_btc_value(coin_name=c['Currency'].lower(), count=c['Balance'])
-                                user_coin.btc_value = btc_value
-                                totalBtc += btc_value
-                                user_coin.save()
-                    ue.total_btc = totalBtc
-                    ue.total_usd = get_usd_value('btc', totalBtc)
-                    ue.save()
-                except Exception as error:
-                    print(error)
+                    market_cup_coin = CoinMarketCupCoin.objects.filter(symbol=coin.lower()).earliest('rank')
+                    if market_cup_coin:
+                        try:
+                            old_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=coin.lower())
+                            old_coin.rank = market_cup_coin.rank
+                            old_coin.save()
+                        except ExchangeCoin.DoesNotExist:
+                            new_coin = ExchangeCoin()
+                            new_coin.exchange = exchange
+                            new_coin.symbol = coin.lower()
+                            new_coin.rank = market_cup_coin.rank
+                            new_coin.save()
+                except CoinMarketCupCoin.DoesNotExist:
                     pass
-                    # print("Убираю накуй, неверно че-то")
-                    # ue.error = error
-                    # ue.is_active = False
-                    # ue.is_correct = False
-                    # ue.save()
+            try:
+                coin = ExchangeCoin.objects.get(exchange=exchange, symbol=coins[0].lower())
+                ExchangeMainCoin.objects.get_or_create(coin=coin)
+            except ExchangeCoin.DoesNotExist:
+                pass
+            try:
+                main_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=coins[0].lower())
+                second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=coins[1].lower())
                 try:
-                    deposits = driver.get_deposithistory()
-                    for item in deposits['result']:
-                        try:
-                            transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
-                                                                  hash=item['TxId'])
-                        except Transaction.MultipleObjectsReturned:
-                            pass
-                        except Transaction.DoesNotExist:
-                            new_trans = Transaction()
-                            new_trans.name = ue.exchange.exchange + str(ue.pk)
-                            new_trans.t_type = 'exchange'
-                            new_trans.number = item['Confirmations']
-                            new_trans.hash = item['TxId']
-                            trans_time = int(time.mktime(datetime.datetime.strptime(item['LastUpdated'],
-                                                                                    "%Y-%m-%dT%H:%M:%S.%f").timetuple())) + 10800
-                            new_trans.date = datetime.datetime.fromtimestamp(trans_time).strftime('%Y-%m-%d %H:%M:%S')
-                            new_trans.t_from = '-'
-                            new_trans.t_to = item['CryptoAddress']
-                            new_trans.type = 'in'
-                            new_trans.value = item['Amount']
-                            new_trans.currency = item['Currency']
-                            new_trans.usd_value = get_usd_value(item['Currency'], item['Amount'])
-                            new_trans.save()
-                except Exception as error:
-                    print(error)
-                try:
-                    withdrawals = driver.get_withdrawalhistory()
-                    for item in withdrawals['result']:
-                        try:
-                            transaction = Transaction.objects.get(name=ue.exchange.exchange + str(ue.pk),
-                                                                  hash=item['TxId'])
-                        except Transaction.MultipleObjectsReturned:
-                            pass
-                        except Transaction.DoesNotExist:
-                            new_trans = Transaction()
-                            new_trans.name = ue.exchange.exchange + str(ue.pk)
-                            new_trans.t_type = 'exchange'
-                            new_trans.number = item['Confirmations']
-                            new_trans.hash = item['TxId']
-                            new_trans.date = item['LastUpdated']
-                            new_trans.t_from = '-'
-                            new_trans.t_to = item['CryptoAddress']
-                            new_trans.type = 'in'
-                            new_trans.value = item['Amount']
-                            new_trans.currency = item['Currency']
-                            new_trans.usd_value = get_usd_value(item['Currency'], item['Amount'])
-                            new_trans.save()
-                except Exception as error:
-                    print(error)
-            except HTTPException:
-                print('Ошибка, начинаем заново')
-    else:
-        print("Никто не включил скрипт")
+                    old_pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
+                    frozen = exchange.info_frozen_key
+                    field = frozen.replace('-', '')
+                    if frozen.startswith('-'):
+                        old_pair.is_active = not bool(int(item['info'][field]))
+                    else:
+                        old_pair.is_active = bool(int(item['info'][field]))
+                    old_pair.save()
+                except Pair.DoesNotExist:
+                    pair = Pair()
+                    pair.main_coin = main_coin
+                    pair.second_coin = second_coin
+                    frozen = exchange.info_frozen_key
+                    field = frozen.replace('-', '')
+                    if frozen.startswith('-'):
+                        pair.is_active = not bool(int(item['info'][field]))
+                    else:
+                        pair.is_active = bool(int(item['info'][field]))
+                    pair.save()
+            except ExchangeCoin.DoesNotExist:
+                pass
     return True
 
 
-@shared_task
+@app.task()
 def get_all_coins():
     response = requests.get('https://poloniex.com/public?command=returnCurrencies').json()
     for item in response:
         try:
-            coin = Coin.objects.get(short_name=item)
+            Coin.objects.get(short_name=item)
         except Coin.DoesNotExist:
             new_coin = Coin()
             new_coin.short_name = item
@@ -351,7 +251,7 @@ def get_all_coins():
 
 @periodic_task(run_every=crontab(minute='*/2'))
 def get_eth_wallet_history():
-    wallet = Wallets.objects.get(name='ETH')
+    wallet, c = Wallets.objects.get_or_create(name='ETH')
     eth_uw = UserWallet.objects.filter(wallet=wallet)
     eth_to_btc = CryptoConvert('btc', 'eth')
     eth_to_usd = CryptoConvert('usd', 'eth')
@@ -369,7 +269,7 @@ def get_eth_wallet_history():
             if history['status'] == str(1):
                 for item in history['result']:
                     try:
-                        transaction = Transaction.objects.get(hash=item['hash'], name=uw.wallet.name + str(uw.pk))
+                        Transaction.objects.get(hash=item['hash'], name=uw.wallet.name + str(uw.pk))
                     except Transaction.MultipleObjectsReturned:
                         pass
                     except Transaction.DoesNotExist:
@@ -382,9 +282,9 @@ def get_eth_wallet_history():
                         transaction.t_from = item['from']
                         transaction.t_to = item['to']
                         transaction.currency = 'ETH'
-                        if item['to'] == uw.address:
+                        if item['to'] == uw.address.lower():
                             transaction.type = 'in'
-                        elif item['from'] == uw.address:
+                        elif item['from'] == uw.address.lower():
                             transaction.type = 'out'
                         else:
                             transaction.type = 'unknown'
@@ -402,60 +302,54 @@ def get_eth_wallet_history():
 
 @periodic_task(run_every=crontab(minute='*/2'))
 def get_btc_wallet_history():
-    wallet = Wallets.objects.get(name='BTC')
+    wallet, c = Wallets.objects.get_or_create(name='BTC')
     btc_uw = UserWallet.objects.filter(wallet=wallet)
     if len(btc_uw) > 0:
         for uw in btc_uw:
             btc_to_usd = CryptoConvert('usd', 'btc')
-            balance = requests.get('http://btc.blockr.io/api/v1/address/balance/' + uw.address).json()
-            if balance['status'] == 'success':
-                uw.balance = balance['data']['balance']
-                # uw.total_usd = get_usd_value('btc', balance['data']['balance'])
-                uw.total_usd = btc_to_usd.convert('usd', 'btc', balance['data']['balance'])
-                uw.total_btc = balance['data']['balance']
-                uw.save()
-            history = requests.get(
-                'http://btc.blockr.io/api/v1/address/txs/' + uw.address).json()
-            if history['status'] == 'success':
-                for item in history['data']['txs']:
-                    try:
-                        transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), hash=item['tx'])
-                    except Transaction.MultipleObjectsReturned:
-                        pass
-                    except Transaction.DoesNotExist:
-                        tx_his = requests.get('https://btc.blockr.io/api/v1/tx/info/' + item['tx']).json()
-                        if tx_his['status'] == 'success':
+            data = requests.get('https://blockchain.info/ru/rawaddr/' + uw.address)
+            try:
+                transactions = data.json()
+                if transactions:
+                    uw.balance = transactions['final_balance'] / 100000000
+                    uw.total_usd = btc_to_usd.convert('usd', 'btc', uw.balance)
+                    uw.total_btc = uw.balance
+                    uw.save()
+                    for item in transactions['txs']:
+                        try:
+                            transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), hash=item['hash'])
+                        except Transaction.MultipleObjectsReturned:
+                            pass
+                        except Transaction.DoesNotExist:
                             transaction = Transaction()
                             transaction.name = uw.wallet.name + str(uw.pk)
                             transaction.t_type = 'wallet'
-                            transaction.number = tx_his['data']['block']
-                            transaction.date = tx_his['data']['time_utc']
+                            transaction.number = item['tx_index']
+                            transaction.date = datetime.datetime.fromtimestamp(item['time'])
                             transaction.currency = 'BTC'
-                            if float(item['amount']) > 0:
-                                t_from = ''
-                                for item_from in tx_his['data']['trade']['vins']:
-                                    t_from += item_from['address'] + '<br/>'
-                                t_to = uw.address
-                            else:
-                                t_from = uw.address
-                                t_to = ''
-                                for item_to in tx_his['data']['trade']['vouts']:
-                                    t_to += item_to['address'] + '<br/>'
+                            t_from = ''
+                            transaction.type = 'unknown'
+                            for item_from in item['inputs']:
+                                t_from += item_from['prev_out']['addr'] + '<br/>'
+                                if item_from['prev_out']['addr'] == uw.address:
+                                    transaction.type = 'out'
+                                    transaction.value = _D(item_from['prev_out']['value']) / _D(100000000)
+                            t_to = ''
+                            for item_to in item['out']:
+                                t_to += item_to['addr'] + '<br/>'
+                                if item_to['addr'] == uw.address:
+                                    transaction.type = 'in'
+                                    transaction.value = _D(item_to['value']) / _D(100000000)
                             transaction.t_to = t_to
                             transaction.t_from = t_from
-                            if t_to == uw.address:
-                                transaction.type = 'in'
-                            elif t_from == uw.address:
-                                transaction.type = 'out'
-                            else:
-                                transaction.type = 'unknown'
-                            transaction.value = item['amount']
-                            # transaction.usd_value = get_usd_value('btc', float(item['amount']))
-                            transaction.usd_value = btc_to_usd.convert('usd', 'btc', float(item['amount']))
-                            transaction.hash = item['tx']
+                            transaction.usd_value = btc_to_usd.convert('usd', 'btc', _D(transaction.value))
+                            transaction.hash = item['hash']
                             transaction.block_hash = '-'
                             transaction.save()
-        print('ok')
+            except JSONDecodeError as json_er:
+                print('Ошибка разбора ответа: {}'.format(json_er))
+                continue
+
     else:
         print("Кошельки отсутствуют")
     return True
@@ -463,7 +357,7 @@ def get_btc_wallet_history():
 
 @periodic_task(run_every=crontab(minute='*/2'))
 def get_yandex_wallet_history():
-    wallet = Wallets.objects.get(name='Yandex Money')
+    wallet, c = Wallets.objects.get_or_create(name='Yandex Money')
     yandex_uw = UserWallet.objects.filter(wallet=wallet)
     if len(yandex_uw) > 0:
         for uw in yandex_uw:
@@ -490,7 +384,7 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
     rur_to_usd = CryptoConvert('usd', 'rur')
     for t in transactions['operations']:
         try:
-            transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), number=t['operation_id'])
+            Transaction.objects.get(name=uw.wallet.name + str(uw.pk), number=t['operation_id'])
         except Transaction.MultipleObjectsReturned:
             pass
         except Transaction.DoesNotExist:
@@ -535,12 +429,12 @@ def calculate_holdings_history():
                 holdings.total_usd = wallet.total_usd
                 holdings.date_time = date
                 holdings.save()
-        exchanges = UserExchanges.objects.filter(user=user)
+        exchanges = UserExchange.objects.filter(user=user)
         if len(exchanges) > 0:
             for exchange in exchanges:
                 holdings = UserHoldings()
                 holdings.user = user
-                holdings.type = 'Exchange@' + exchange.exchange.exchange + '(' + str(exchange.pk) + ')'
+                holdings.type = 'Exchange@' + exchange.exchange.name + '(' + str(exchange.pk) + ')'
                 holdings.total_btc = exchange.total_btc
                 holdings.total_usd = exchange.total_usd
                 holdings.date_time = date
@@ -572,18 +466,6 @@ def get_usd_value(coin_name=None, count=None):
         response = requests.get('https://api.cryptonator.com/api/ticker/usd-' + coin_name.lower()).json()
         if response['success']:
             return float(count) / float(response['ticker']['price'])
-        else:
-            return 0
-
-
-def get_btc_value_from_btce(coin_name=None, count=None):
-    if not coin_name or not count:
-        return 0
-    else:
-        response = requests.get('https://btc-e.nz/api/3/ticker/btc_' + coin_name.lower()).json()
-        if response:
-            print(float(count) / float(response['btc_' + coin_name.lower()]['last']))
-            return float(count) / float(response['btc_' + coin_name.lower()]['last'])
         else:
             return 0
 

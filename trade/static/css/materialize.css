@@ -2606,7 +2606,7 @@ a {
 }
 
 blockquote {
-    margin: 20px 0;
+    margin: 0 0;
     padding-left: 1.5rem;
     border-left: 5px solid #ee6e73;
 }
@@ -3268,7 +3268,7 @@ nav ul a span.badge {
 .row .col {
     float: left;
     box-sizing: border-box;
-    padding: 0 0.75rem;
+    padding: 0 0.3rem;
     min-height: 1px;
 }
 
@@ -4456,19 +4456,19 @@ html {
 
 @media only screen and (min-width: 0) {
     html {
-        font-size: 12px;
+        font-size: 11px;
     }
 }
 
 @media only screen and (min-width: 992px) {
     html {
-        font-size: 12.5px;
+        font-size: 11.5px;
     }
 }
 
 @media only screen and (min-width: 1200px) {
     html {
-        font-size: 13px;
+        font-size: 12px;
     }
 }
 
@@ -5115,10 +5115,10 @@ small {
     border: none;
     border-radius: 2px;
     display: inline-block;
-    height: 36px;
-    line-height: 36px;
-    padding: 0 2rem;
-    text-transform: uppercase;
+    /*height: 36px;*/
+    /*line-height: 36px;*/
+    /*padding: 0 2rem;*/
+    /*text-transform: uppercase;*/
     vertical-align: middle;
     -webkit-tap-highlight-color: transparent;
 }
@@ -5186,7 +5186,7 @@ small {
 .btn, .btn-large {
     text-decoration: none;
     color: #fff;
-    background-color: #26a69a;
+    background-color: grey;
     text-align: center;
     letter-spacing: .5px;
     transition: .2s ease-out;
@@ -5194,7 +5194,7 @@ small {
 }
 
 .btn:hover, .btn-large:hover {
-    background-color: #2bbbad;
+    background-color: darkgray;
 }
 
 .btn-floating {
@@ -5215,7 +5215,7 @@ small {
 }
 
 .btn-floating:hover {
-    background-color: #26a69a;
+    background-color: grey;
 }
 
 .btn-floating:before {
@@ -5712,7 +5712,7 @@ button.btn-floating {
     display: none;
     border-bottom: 1px solid #ddd;
     box-sizing: border-box;
-    padding: 2rem;
+    /*padding: 2rem;*/
 }
 
 .side-nav .collapsible,
@@ -6782,7 +6782,7 @@ input[type=checkbox]:not(:disabled).tabbed:focus ~ .lever::after {
 
 /* Select Field
    ========================================================================== */
-select {
+select.material {
     display: none;
 }
 
@@ -6792,11 +6792,11 @@ select.browser-default {
 
 select {
     background-color: rgba(255, 255, 255, 0.9);
-    width: 100%;
-    padding: 5px;
+    /*width: 100%;*/
+    /*padding: 5px;*/
     border: 1px solid #f2f2f2;
     border-radius: 2px;
-    height: 3rem;
+    /*height: 3rem;*/
 }
 
 .select-label {
@@ -7202,11 +7202,11 @@ input[type=range]:focus::-ms-fill-upper {
 }
 
 .side-nav li > a.btn:hover, .side-nav li > a.btn-large:hover, .side-nav li > a.btn-large:hover {
-    background-color: #2bbbad;
+    background-color: grey;
 }
 
 .side-nav li > a.btn-floating:hover {
-    background-color: #26a69a;
+    background-color: grey;
 }
 
 .side-nav li > a > i,

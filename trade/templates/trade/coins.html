@@ -1,13 +1,15 @@
 {% load coin_full_name humanize %}
 {% if coins %}
-    <table class="exchange user_coins">
+    <table class="exchange user_coins" id="grid" cellspacing="0" cellpadding="0">
         <thead>
         <tr>
             <th width="5%" style="text-align: left">Coin</th>
             <th width="10%">Name</th>
-            <th width="15%">Available</th>
+            <th width="10%">Available</th>
+            <th width="10%">On trade</th>
+            <th width="10%">Total</th>
             <th></th>
-            <th width="15%">Btc value</th>
+            <th width="15%">Btc value (~)</th>
             <th width="15%" style="text-align: right">Last update</th>
         </tr>
         </thead>
@@ -16,9 +18,11 @@
             <tr class="balances">
                 <td>{{ coin.coin }}</td>
                 <td>{{ coin.coin | get_full_name }}</td>
-                <td class="balance">{{ coin.balance }}</td>
+                <td class="balance">{{ coin.free }}</td>
+                <td class="balance">{{ coin.used }}</td>
+                <td class="balance">{{ coin.total }}</td>
                 <td></td>
-                <td>{{ coin.btc_value }}</td>
+                <td class="tooltipped" data-position="bottom" data-delay="50" data-tooltip="{{ coin.conversions }}">{{ coin.btc_value }}</td>
                 <td>{{ coin.last_update | naturaltime }}</td>
             </tr>
         {% endfor %}
@@ -36,7 +40,7 @@
         </thead>
         <tbody>
         <tr>
-            <td colspan="4">Ещё не запускали скрипт для данного аккаунта</td>
+            <td colspan="40" style="text-transform: none; text-align: center">Coins not ready yet</td>
         </tr>
         </tbody>
     </table>

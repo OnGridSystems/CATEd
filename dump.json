@@ -1,0 +1,1 @@
+[{"model": "trade.exchanges", "pk": 1, "fields": {"name": "poloniex", "info_frozen_key": "-isFrozen"}}, {"model": "trade.wallets", "pk": 1, "fields": {"name": "BTC"}}, {"model": "trade.wallets", "pk": 2, "fields": {"name": "ETH"}}, {"model": "trade.wallets", "pk": 3, "fields": {"name": "Yandex Money"}}]

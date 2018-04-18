@@ -19,7 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from trade import views as tradeViews
 from tradeBOT import views as tradeBOTViews
-from monitoring import views as monitor_views
+from ticker_app import views as tickerViews
 from allauth import urls as allauth_urls
 from user_profile import views as user_profile_views
 from django.contrib.auth.decorators import permission_required
@@ -36,19 +36,20 @@ urlpatterns = [
                   url(r'^api/$', tradeViews.get_holding, name='get_holding'),
                   url(r'^transaction/new_comment/$',
                       permission_required('is_superuser')(tradeViews.add_new_transaction_comment), name='new_comment'),
-                  url(r'^trade/$', tradeBOTViews.main, name='tradeBotMain'),
                   url(r'^trade/setup/(?P<pk>[0-9]+)/$', tradeBOTViews.setup, name='tradeBotSetup'),
-                  url(r'^trade/addusercoin/$', tradeBOTViews.add_user_coin, name='add_user_coin'),
-                  url(r'^trade/changerank/$', tradeBOTViews.changerank, name='changerank'),
-                  url(r'^trade/toggle_pair/$', tradeBOTViews.toggle_pair, name='toggle_pair'),
+                  url(r'^trade/addusercoin/$', tradeBOTViews.add_user_pair, name='add_user_pair'),
+                  url(r'^trade/changerank/$', tradeBOTViews.change_rank, name='changerank'),
                   url(r'^trade/set_share/$', tradeBOTViews.set_share, name='set_share'),
-                  url(r'^trade/delete_user_coin/$', tradeBOTViews.delete_user_coin, name='delete_user_coin'),
+                  url(r'^trade/set_pair_add/$', tradeBOTViews.set_pair_add, name='set_pair_add'),
+                  url(r'^trade/delete_user_pair/$', tradeBOTViews.delete_user_pair, name='delete_user_pair'),
                   url(r'^trade/change_primary_coin/$', tradeBOTViews.change_primary_coin, name='change_primary_coin'),
                   url(r'^trade/change_primary_coin_rank/$', tradeBOTViews.change_primary_coin_rank,
                       name='change_primary_coin_rank'),
                   url(r'^trade/relations/$', tradeBOTViews.relations, name='relations'),
                   url(r'^trade/exchange_script_activity/$', tradeBOTViews.change_user_exchange_script_activity,
                       name='change_user_exchange_script_activity'),
-                  url(r'^monitor/$', monitor_views.monitor, name='monitoring'),
-                  url(r'^monitor/api/get_history/', monitor_views.get_holding, name='get_workers_history'),
+                  url(r'^trade/exchange_depth_to_trade/$', tradeBOTViews.exchange_depth_to_trade,
+                      name='exchange_depth_to_trade'),
+                  url(r'^trade/get_ticker/$', tickerViews.get_ticker, name='get_ticker'),
+                  url(r'^trade/get_new_orders_to_trade/$', tradeBOTViews.get_new_to_trade, name='get_new_to_trade'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

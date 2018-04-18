@@ -1,145 +1,265 @@
 {% extends 'trade/base.html' %}
-{% load static humanize get_exchange_coins get_coin_pairs get_coin_info tradeBot_filters %}
+{% load static humanize get_exchange_coins get_coin_info tradeBot_filters %}
+{% block style %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="{% static 'css/setup.css' %}">
+    <style>
+        body {
+            background: #dff9d6;
+        }
+    </style>
+{% endblock %}
 {% block content %}
-    <h3 class="center">Exchange: {{ user_exchange.exchange.exchange }}</h3>
-    <div class="switch center">
-        <label>
-            Off
-            <input id="disable-script" type="checkbox" {% if user_exchange.is_active_script %}checked{% endif %}>
-            <span class="lever"></span>
-            On
-        </label>
-    </div>
-    <div class="row">
-        <div class="col s12 m12 l10 push-l1">
-            <div class="row">
-                <div class="col s6 m6 l6">
+    {% autoescape on %}
+        <h3 class="center">Exchange: {{ user_exchange.exchange.name }}</h3>
+        <div class="switch center">
+            <label>
+                Off
+                <input id="disable-script" type="checkbox" {% if user_exchange.is_active_script %}checked{% endif %}>
+                <span class="lever"></span>
+                On
+            </label>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col l9 s12 m12">
+                <div class="graph-block hide-on-med-and-down z-depth-2">
+                    <div class="preview_coins header light-green white-text" id="preview_coins">
+                        <blockquote>
+                            <h5><b></b></h5>
+                        </blockquote>
+                        <div class="chart-info">
+                            <div class="chart-info-item left">
+                                <b></b>
+                            </div>
+                            <div class="chart-info-item">
+                                <span style="font-weight: bolder;" id="date"></span>
+                            </div>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+
+                    <div>
+                        <div>
+                            <div id="jqChart" style="width: 100%; height: 402px;">
+                            </div>
+                        </div>
+                        <div class="clearfix"></div>
+                        <div class="col s6 m6 l6">
+                            <div id="buttons-zoom" class="center">
+                                <b>Zoom</b>
+                                <div>
+                                    <button data-zoom="3" class="zoom btn waves-effect btn-mini green">3h
+                                    </button>
+                                    <button data-zoom="6" class="zoom btn waves-effect btn-mini ">6h</button>
+                                    <button data-zoom="24" class="zoom btn waves-effect btn-mini ">1d</button>
+                                    <button data-zoom="48" class="zoom btn waves-effect btn-mini ">2d</button>
+                                    <button data-zoom="96" class="zoom btn waves-effect btn-mini ">4d</button>
+                                    <button data-zoom="168" class="zoom btn waves-effect btn-mini ">1w
+                                    </button>
+                                    <button data-zoom="336" class="zoom btn waves-effect btn-mini ">2w
+                                    </button>
+                                    <button data-zoom="720" class="zoom btn waves-effect btn-mini ">1m
+                                    </button>
+                                    <button data-zoom="all" class="zoom btn waves-effect btn-mini ">all
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col s6 m6 l6">
+                            <div id="buttons" class="center">
+                                <b>Candlestick</b>
+                                <div>
+                                    <button data-intervale="5"
+                                            class="candlestick btn waves-effect btn-mini  green">5
+                                        min
+                                    </button>
+                                    <button data-intervale="15"
+                                            class="candlestick btn waves-effect btn-mini ">15
+                                        min
+                                    </button>
+                                    <button data-intervale="30"
+                                            class="candlestick btn waves-effect btn-mini ">30
+                                        min
+                                    </button>
+                                    <button data-intervale="120"
+                                            class="candlestick btn waves-effect btn-mini ">2
+                                        hours
+                                    </button>
+                                    <button data-intervale="240"
+                                            class="candlestick btn waves-effect btn-mini ">4
+                                        hours
+                                    </button>
+                                    <button data-intervale="1440"
+                                            class="candlestick btn waves-effect btn-mini ">1
+                                        day
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="clearfix"></div>
+                    </div>
+                </div>
+                {#                <br>#}
+                {#                <div class="header green white-text z-depth-2">#}
+                {#                        <h5>Directions</h5>#}
+                {#                    </div>#}
+                {#                <div class="order_table directions_block z-depth-2">#}
+                {#                    <canvas id="directions"></canvas>#}
+                {#                </div>#}
+                <br>
+                <div class="order_table z-depth-2">
+                    <div class="header  light-green white-text">
+                        <h5 class="center">Preparing to set</h5>
+                    </div>
+                    {% include 'tradeBOT/to_trade.html' %}
+                </div>
+                <br>
+                <div class="order_table z-depth-2">
+                    <div class="header  light-green white-text">
+                        <h5 class="center">Your orders</h5>
+                    </div>
+                    {% include 'tradeBOT/orders.html' %}
+                </div>
+
+            </div>
+            <div class="col s12 m12 l3">
+                <div class="exchange-coins-block z-depth-2">
                     <input type="hidden" id="exchange" value="{{ user_exchange.pk }}">
-                    <table width="100%">
-                        <colgroup>
-                            <col width="40%">
-                            <col width="20%">
-                            <col width="20%">
-                            <col width="20%">
-                        </colgroup>
-                        <thead>
-                        <tr>
-                            <th>Coin name</th>
-                            <th>Have</th>
-                            <th>Is active</th>
-                            <th>Add to trade</th>
-                        </tr>
-                        </thead>
-                    </table>
-                    <ul class="collapsible" data-collapsible="expandable">
-                        {% for coin in coins %}
-                            <li>
-                                <div class="collapsible-header">
-                                    <table class="center" width="100%">
-                                        <colgroup>
-                                            <col width="40%">
-                                            <col width="20%">
-                                            <col width="20%">
-                                            <col width="20%">
-                                        </colgroup>
-                                        <tbody>
-                                        <tr {% for p_coin in primary_coins %}{% if coin.symbol == p_coin.coin.symbol %} class="green lighten-4" {% endif %}{% endfor %}>
-                                            <td><b>{{ coin.name }} ({{ coin.symbol }})</b></td>
-                                            <td>{{ coin.symbol | user_have_coin:user_exchange | floatformat:"-8" }} {{ coin.symbol }}</td>
-                                            <td>{{ coin.is_active }}</td>
-                                            <td class="center">
-                                                <form action="{% url 'add_user_coin' %}" method="post">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="user-exchange"
-                                                           value="{{ user_exchange.pk }}">
-                                                    <input type="hidden" name="coin" value="{{ coin.pk }}">
-                                                    <i class="add_coin fa fa-plus-square-o fa-1x"
-                                                       aria-hidden="true"></i>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="collapsible-body">
-                                    <div class="coinmarketcap-currency-widget" data-secondary="BTC"
-                                         data-currency="{{ coin.symbol | get_coinmarket_id }}"
-                                         data-base="USD"></div>
-                                    {#                                    {% coin_info coin.symbol %}#}
-                                </div>
-                            </li>
+                    <div class="header green white-text">
+                        <h5 class="center">Exchange Coins</h5>
+                        <h6 class="center"><i class="fa fa-question-circle-o tooltipped"
+                                              data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the www.coinmarketchup.com"
+                                              data-position="top"
+                                              aria-hidden="true"></i> Where is my coin?</h6>
+                    </div>
+                    <ul class="tabs">
+                        {% for pc in primary_coins %}
+                            <li class="tab col s3"><a
+                                    href="#{{ pc.coin.symbol }}">{{ pc.coin.symbol |upper }}</a></li>
                         {% endfor %}
                     </ul>
-                    <i class="fa fa-question-circle-o tooltipped"
-                       data-tooltip="The script trades only in those currencies that are <br>included in the top 100 on the website www.coinmarketchup.com"
-                       data-position="right"
-                       aria-hidden="true"></i> Where is my coin?
+                    <div class="exchange-coins-block-scroll">
+                        {% for pc in primary_coins %}
+                            <div id="{{ pc.coin.symbol }}">
+                                <ul class="collapsible">
+                                    {% get_primary_pairs pc.coin user_exchange %}
+                                </ul>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="col s6 m6 l6 ">
-
-                    <table class="center" width="100%">
+                <br>
+                <div class="exchange-coins-block z-depth-2">
+                    <div class="header green white-text">
+                        <h5 class="center">Your trade pairs</h5>
+                    </div>
+                    {#                    <form method="post" action="{% url 'exchange_depth_to_trade' %}">#}
+                    {#                        {% csrf_token %}#}
+                    {#                        <input value="{{ user_exchange.pk }}" type="hidden" name="user-exchange-pk">#}
+                    {#                        Please, specify coefficient of depth#}
+                    {#                        <input type="number" step="1" name="depth" placeholder="Coefficient of depth"#}
+                    {#                               value="{{ user_exchange.coefficient_of_depth }}">#}
+                    {#                        <button type="submit" class="btn">OK</button>#}
+                    {#                    </form>#}
+                    <table width="100%">
                         <colgroup>
-                            <col width="40%">
-                            <col width="20%">
-                            <col width="20%">
+                            <col width="50%">
+                            <col width="30%">
                             <col width="20%">
                         </colgroup>
                         <thead>
                         <tr>
-                            <th>Coin name</th>
-                            <th>Share (%)</th>
+                            <th>Coin</th>
+                            <th colspan="2">Share</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for uc in user_coins %}
+                            <form action="{% url 'set_share' %}" method="post">
+                                <tr>
+                                    <td><b>{{ uc.coin.symbol | upper }}</b></td>
+                                    <td>
+                                        {% csrf_token %}
+                                        <input type="hidden" name="user-exchange" value="{{ user_exchange.pk }}">
+                                        <input type="hidden" name="coin" value="{{ uc.pk }}">
+                                        <input style="width: 80%;" required type="number" name="share" step="any"
+                                               placeholder="Share"
+                                               value="{{ uc.share }}">&nbsp;%
+                                    </td>
+                                    <td class="center">
+                                        <button type="submit" class="btn">OK</button>
+                                    </td>
+                                </tr>
+                            </form>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3" class="center">
+                                    You don't add pairs to trade.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    <table class="center" width="100%" cellspacing="1" cellpadding="0">
+                        <colgroup>
+                            <col width="50%">
+                            <col width="30%">
+                            <col width="15%">
+                            <col width="5%">
+                        </colgroup>
+                        <thead>
+                        <tr>
+                            <th>Pair</th>
+                            <th>Have (% BTC)</th>
                             <th>Priority</th>
                             <th>Del</th>
                         </tr>
                         </thead>
                     </table>
-                    <ul class="collapsible" data-collapsible="expandable">
-                        {% for coin in user_coins %}
-                            <li>
-                                <div class="collapsible-header active">
-                                    <table class="center" width="100%">
-                                        <colgroup>
-                                            <col width="40%">
-                                            <col width="20%">
-                                            <col width="20%">
-                                            <col width="20%">
-                                        </colgroup>
-                                        <tbody>
-                                        <tr data-coin-id="{{ coin.pk }}">
-                                            <td>{{ coin.coin.name }} ({{ coin.coin.symbol }})</td>
-                                            <td class="center">
-                                                <input class="pair-share" type="number" name="share"
-                                                       value="{{ coin.share | floatformat:'-1' }}"
-                                                       placeholder="Coin share">
-                                                %
-                                            </td>
-                                            <td>
-                                                {{ coin.rank }}
-                                                <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
-                                                <i class="fa rank-down fa-long-arrow-down red"
-                                                   aria-hidden="true"></i>
-                                            </td>
-                                            <td class="center">
-                                                <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
-                                            </td>
-                                        </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="collapsible-body">
-                                    {% coin_pairs coin user user_exchange.pk %}
-                                </div>
-                            </li>
+                    <div class="exchange-coins-block-scroll">
+                        {% for pair in user_pairs %}
+                            <div class="collapsible-header">
+                                <table class="center" width="100%" cellspacing="1" cellpadding="0">
+                                    <colgroup>
+                                        <col width="50%">
+                                        <col width="30%">
+                                        <col width="15%">
+                                        <col width="5%">
+                                    </colgroup>
+                                    <tbody>
+                                    <tr data-pair-id="{{ pair.pk }}">
+                                        <td class="{% if not pair|is_pair_active:user_exchange.pk %}red-text{% else %}green-text{% endif %}">{{ pair.pair.main_coin.symbol | upper }}-{{ pair.pair.second_coin.symbol | upper }}</td>
+                                        <td>
+                                            {{ pair.pair.second_coin|haven_percent:user_exchange | floatformat:'3' }}
+                                        </td>
+                                        <td>
+                                            {{ pair.rank }}
+                                            <i class="fa rank-up fa-long-arrow-up green" aria-hidden="true"></i>
+                                            <i class="fa rank-down fa-long-arrow-down red"
+                                               aria-hidden="true"></i>
+                                        </td>
+                                        <td class="center">
+                                            <i class="fa fa-times delete-user-coin" aria-hidden="true"></i>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         {% empty %}
-                            <li>
-                                <div class="collapsible-header">
-                                    <h6 class="center">Add coins from the list on the left, set the share, coin
-                                        trade
-                                        priority to start using the script.</h6>
-                                </div>
-                            </li>
+                            <div class="collapsible-header">
+                                <h6 class="center">Add coins from the list on the top, set the share, coin
+                                    trade priority to start using the script.</h6>
+                            </div>
                         {% endfor %}
-                    </ul>
+
+                    </div>
+                </div>
+                <br>
+                <div class="exchange-coins-block z-depth-2">
+                    <div class="header green white-text">
+                        <h5 class="center">Exchange Main Coins</h5>
+                    </div>
                     <div class="primary-coins">
                         {% for pc in primary_coins %}
                             <div class="primary-coin rank z-depth-1" data-primary-coin="{{ pc.pk }}">
@@ -154,8 +274,13 @@
                 </div>
             </div>
         </div>
-    </div>
+    {% endautoescape %}
 {% endblock %}
 {% block script %}
     <script type="text/javascript" src="{% static 'js/coinmarketcup.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jqChart.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/jqRangeSlider.js' %}"></script>
+    <script type="text/javascript" src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+    <script lang="javascript" type="text/javascript" src="{% static 'js/setup.js' %}"></script>
+
 {% endblock %}

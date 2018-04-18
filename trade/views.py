@@ -9,9 +9,10 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from trade.forms import UserExchangesForm, UserWalletForm
-from trade.models import UserExchanges, Exchanges, UserBalance, UserWallet, Wallets, Transaction, UserHoldings
+from trade.models import UserExchange, Exchanges, UserBalance, UserWallet, Wallets, Transaction, UserHoldings
 from yandex_money.api import Wallet, ExternalPayment
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 @login_required
@@ -30,7 +31,7 @@ def index(request):
         transactions = None
     args = {'exchange_form': UserExchangesForm(),
             'wallet_form': UserWalletForm(),
-            'ue': UserExchanges.objects.all(),
+            'ue': UserExchange.objects.all(),
             'uw': UserWallet.objects.all(),
             'trans': transactions}
     return render(request, 'trade/home.html', args)
@@ -38,7 +39,7 @@ def index(request):
 
 def change_status(request):
     try:
-        ue = UserExchanges.objects.get(pk=request.POST['ue'])
+        ue = UserExchange.objects.get(pk=request.POST['ue'])
     except ObjectDoesNotExist:
         return HttpResponse('none', status=200)
     ue.is_active = not ue.is_active
@@ -46,60 +47,16 @@ def change_status(request):
     return HttpResponse('ok', status=200)
 
 
-def get_exchange_coins(ue=None):
-    if ue.exchange.exchange == 'bittrex':
-        coins = requests.get('https://bittrex.com/api/v1.1/public/getcurrencies').json()
-        for coin in coins['result']:
-            new_user_coin = UserBalance()
-            new_user_coin.ue = ue
-            new_user_coin.coin = coin['Currency'].lower()
-            new_user_coin.save()
-    elif ue.exchange.exchange == 'poloniex':
-        coins = requests.get('https://poloniex.com/public?command=returnCurrencies').json()
-        for coin in coins:
-            new_user_coin = UserBalance()
-            new_user_coin.ue = ue
-            new_user_coin.coin = coin.lower()
-            new_user_coin.save()
-    elif ue.exchange.exchange == 'btc-e':
-        coins = requests.get('https://btc-e.nz/api/3/info').json()
-        pairs = list(coins['pairs'].keys())
-        for item in pairs:
-            m = re.match(r'([a-zA-Z0-9]+)_([a-zA-Z0-9]+)', item)
-            if m:
-                coin_one_name = m.group(1)
-                try:
-                    user_coin = UserBalance.objects.get(ue=ue, coin=coin_one_name.lower())
-                except UserBalance.DoesNotExist:
-                    user_coin = None
-                if user_coin is None:
-                    new_user_coin = UserBalance()
-                    new_user_coin.ue = ue
-                    new_user_coin.coin = coin_one_name.lower()
-                    new_user_coin.save()
-                coin_two_name = m.group(2)
-                try:
-                    user_coin = UserBalance.objects.get(ue=ue, coin=coin_two_name.lower())
-                except UserBalance.DoesNotExist:
-                    user_coin = None
-                if user_coin is None:
-                    new_user_coin = UserBalance()
-                    new_user_coin.ue = ue
-                    new_user_coin.coin = coin_two_name.lower()
-                    new_user_coin.save()
-
-
 @login_required
 def exchange(request):
     if request.method == 'POST':
-        ue = UserExchanges()
+        ue = UserExchange()
         ue.user = request.user
         ue.exchange = Exchanges.objects.get(pk=request.POST.get('exchange'))
         ue.apikey = request.POST.get('apikey')
         ue.apisecret = request.POST.get('apisecret')
         ue.total_btc = float(0)
         ue.save()
-        get_exchange_coins(ue=ue)
     return redirect(index)
 
 
@@ -108,6 +65,9 @@ def wallet(request):
     if request.method == 'POST':
         wallet = Wallets.objects.get(pk=request.POST.get('wallet'))
         if wallet.name == 'Yandex Money':
+            if not settings.YANDEX_MONEY_CLIENT_ID or not settings.YANDEX_MONEY_REDIRECT_URI or not \
+                    settings.YANDEX_MONEY_CLIENT_SECRET:
+                return HttpResponse('You must define yandex money settings', status=404)
             scope = ['account-info', 'operation-history', 'operation-details']
             auth_url = Wallet.build_obtain_token_url(
                 client_id=settings.YANDEX_MONEY_CLIENT_ID,
@@ -121,6 +81,9 @@ def wallet(request):
             uw.wallet = wallet
             uw.save()
     elif request.method == 'GET':
+        if not settings.YANDEX_MONEY_CLIENT_ID or not settings.YANDEX_MONEY_REDIRECT_URI or not \
+                settings.YANDEX_MONEY_CLIENT_SECRET:
+            return HttpResponse('You must define yandex money settings', status=404)
         access_token = Wallet.get_access_token(
             client_id=settings.YANDEX_MONEY_CLIENT_ID,
             redirect_uri=settings.YANDEX_MONEY_REDIRECT_URI,
@@ -156,7 +119,7 @@ def get_holding(request):
         else:
             holdings = UserHoldings.objects.filter(type=type_r).order_by('date_time')
             list_hold = [obj.as_list() for obj in holdings]
-            return HttpResponse(json.dumps(list_hold), status=200)
+            return HttpResponse(json.dumps(list_hold, cls=DjangoJSONEncoder), status=200)
 
 
 def add_new_transaction_comment(request):
