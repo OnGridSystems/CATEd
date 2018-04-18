@@ -1,33 +1,35 @@
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
 
-### Overview
+## Overview
 
-CATEd is a bot, for the automation of trade in crypto currency.
+[HabraHabr article in Russian](https://habrahabr.ru/users/proofx/posts/)
+
+CATEd is the cryptocurrency trading bot written on Python 3 with feature-rich management Web interface (Django, Celery).
 
 Main features:
-* View the status of exchange accounts, transactions and orders on them
-* View the status of cold wallets and transactional (with details)
-* History of savings, with the summation of funds on all accounts.
+* View the status of exchange accounts, transactions and orders on them;
+* View the status of cold wallets and transactions details;
+* History of deposits and withdrawals on graphical diagram;
+* Configurable buy/sell/hodl logic, (allowed tokens and proportions);
+* Keeping the balances of different tokens at the configured levels;
 
 ![home_page](https://github.com/OnGridSystems/CATEd/blob/master/images/home_page.jpg)
 
-* Automatic calculation of orders, taking into account the configuration
-* Maintaining balances of different tokens at the established level
-
 ![main_bot_page](https://github.com/OnGridSystems/CATEd/blob/master/images/final_screen.jpg)
-### Install
 
-For use bot you must have python3, mysql-server, rabbitmq-server and redis-server installed.
+## Install
 
-Create virtual env and activate it, in your favorite way ;)
+You need python3, mysql-server, rabbitmq-server and redis-server to be installed.
+
+Create python virtual env and activate it in your favorite way.
 
 Clone project
 ```sh
-git clone https://github.com/ongrid/ongrid_portal.git
+git clone git@github.com:OnGridSystems/CATEd.git
 ```
 Go to project dir
 ```sh
-cd ongrid_portal
+cd CATEd
 ```
 Create mysql databases
 ```sh
@@ -65,12 +67,11 @@ Now you can add your api keys.
 
 To do this open http://127.0.0.1:8000/ in your browser, login and click red "plus" button in the lower right corner.
 
-
 Bot uses several celery queues for trade, and main is triggered by a signal from a first worker named celery@worker_high.
-Another one worker - worker_set_orders check already exists orders and try to expose new calculated.
-There are also queues low and normal, for calculate orders for users and pull balances. More information about the logic of the bot can be read by reference on [Habraharb](https://habrahabr.ru/post/353732/)
+Another worker - worker_set_orders checks for already existing orders and try keeps them up to date.
+There are also queues low and normal, for calculating users' orders and pulling their balances. 
 
-You can run celery in several terminal windows:
+You can run celery in several terminal windows or screen sessions:
 ```sh
 celery worker -A djangoTrade -n worker_high -l info -c 1 -Q high
 celery worker -A djangoTrade -n worker_set_orders -l info -c 1 -Q set_orders
@@ -78,7 +79,7 @@ celery worker -A djangoTrade -n worker_low -l info -c 2 -Q low
 celery worker -A djangoTrade -n worker_normal -l info -c 2 -Q normal
 ```
 
-Example of setting celery to work with supervisor:
+Example of running celery with supervisor daemon:
 
 ```sh
 wget https://raw.githubusercontent.com/celery/celery/4.0/extra/generic-init.d/celeryd -O /etc/init.d/celeryd
