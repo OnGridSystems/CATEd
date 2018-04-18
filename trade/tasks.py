@@ -3,20 +3,19 @@ import importlib
 import re
 import binascii
 from json import JSONDecodeError
-
+from djangoTrade.celery import app
 from ccxt import ExchangeNotAvailable, RequestTimeout
 from celery.schedules import crontab
 from celery.task import periodic_task
 import datetime
-from celery import shared_task
 import time
 import requests
 from decimal import Decimal as _D
-from django.conf import settings
 from django.contrib.auth.models import User
 from trade.models import UserExchange, UserBalance, Coin, Exchanges, Wallets, UserWallet, Transaction, UserHoldings
-from yandex_money.api import Wallet, ExternalPayment
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeTicker, CoinMarketCupCoin, ExchangeMainCoin
+from yandex_money.api import Wallet
+from tradeBOT.models import ExchangeCoin, Pair, CoinMarketCupCoin, ExchangeMainCoin
+from ticker_app.models import ExchangeTicker
 
 
 def class_for_name(module_name, class_name):
@@ -25,8 +24,9 @@ def class_for_name(module_name, class_name):
     return c
 
 
-@shared_task
+@app.task()
 def pull_exchanges_balances(ue_pk=None):
+    unnecessary_keys = ['free', 'total', 'used', 'info']
     if ue_pk is None:
         user_exchanges = UserExchange.objects.filter(is_active=True)
     else:
@@ -38,7 +38,6 @@ def pull_exchanges_balances(ue_pk=None):
             try:
                 try:
                     balances = exchange_object.fetch_balance()
-                    # print(balances)
                 except binascii.Error:
                     user_exchange.error = 'Incorrect apikey or secret'
                     user_exchange.is_correct = False
@@ -48,7 +47,7 @@ def pull_exchanges_balances(ue_pk=None):
                 if balances:
                     total_btc = _D(0)
                     for item in balances.items():
-                        if item[0] != 'info':
+                        if item[0] not in unnecessary_keys:
                             try:
                                 user_coin = UserBalance.objects.get(ue=user_exchange, coin=item[0].lower())
                                 user_coin.total = (item[1]['total'] if item[1]['total'] is not None else 0)
@@ -101,7 +100,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
             pair = Pair.objects.get(main_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
                                     second_coin=coin)
             # print('1Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
-            ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+            ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
             # print('1Нашел тикер {} {}'.format(ticker, ticker.last))
             new_amount = _D(amount).quantize(_D('.00000001')) * _D(ticker.last).quantize(_D('.00000001'))
             convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
@@ -112,7 +111,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
                 pair = Pair.objects.get(second_coin=ExchangeCoin.objects.get(symbol='btc', exchange=exchange),
                                         main_coin=coin)
                 # print('2Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
-                ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+                ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
                 # print('2Нашел тикер {} {}'.format(ticker, ticker.last))
                 new_amount = _D(amount).quantize(_D('.00000001')) / _D(ticker.last).quantize(_D('.00000001'))
                 convertations.append('btc (' + str(_D(str(new_amount)).quantize(_D('.00000001'))) + ')')
@@ -122,7 +121,7 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
                     # print('3Ищу пару где вторая валюта {}'.format(coin.symbol.upper()))
                     pair = Pair.objects.get(second_coin=coin)
                     # print('3Нашел пару {}_{}'.format(pair.main_coin.symbol, pair.second_coin.symbol))
-                    ticker = ExchangeTicker.objects.filter(pair=pair, exchange=exchange).latest('date_time')
+                    ticker = ExchangeTicker.objects.filter(pair_id=pair.pk, exchange_id=exchange.pk).latest('id')
                     # print('3Нашел тикер {} {}'.format(ticker, ticker.last))
                     in_first_coin = _D(ticker.last) * _D(amount)
                     convertations.append(
@@ -145,10 +144,8 @@ def fetch_btc_value(exchange, coin, amount=None, convertations=None):
         return 0, 'Not found'
 
 
-@periodic_task(run_every=crontab(minute='*/1'))
+@periodic_task(run_every=datetime.timedelta(minutes=5))
 def pull_exchanges_tickers():
-    ExchangeTicker.objects.filter(
-        date_time__lt=datetime.datetime.now() - datetime.timedelta(minutes=settings.TICKER_MINUTES_TO_CLEAR)).delete()
     exchanges = Exchanges.objects.all()
     for exchange in exchanges:
         exchange_object = class_for_name('ccxt', exchange.name)()
@@ -160,8 +157,8 @@ def pull_exchanges_tickers():
                     second_coin = ExchangeCoin.objects.get(exchange=exchange, symbol=pair.group(1))
                     pair = Pair.objects.get(main_coin=main_coin, second_coin=second_coin)
                     new_ticker = ExchangeTicker()
-                    new_ticker.exchange = exchange
-                    new_ticker.pair = pair
+                    new_ticker.exchange_id = exchange.pk
+                    new_ticker.pair_id = pair.pk
                     new_ticker.high = value['high']
                     new_ticker.low = value['low']
                     new_ticker.bid = value['bid']
@@ -180,7 +177,7 @@ def pull_exchanges_tickers():
     return True
 
 
-@shared_task
+@app.task()
 def pull_exchanges():
     get_all_coins.delay()
     exchanges = Exchanges.objects.all()
@@ -238,12 +235,12 @@ def pull_exchanges():
     return True
 
 
-@shared_task
+@app.task()
 def get_all_coins():
     response = requests.get('https://poloniex.com/public?command=returnCurrencies').json()
     for item in response:
         try:
-            coin = Coin.objects.get(short_name=item)
+            Coin.objects.get(short_name=item)
         except Coin.DoesNotExist:
             new_coin = Coin()
             new_coin.short_name = item
@@ -272,7 +269,7 @@ def get_eth_wallet_history():
             if history['status'] == str(1):
                 for item in history['result']:
                     try:
-                        transaction = Transaction.objects.get(hash=item['hash'], name=uw.wallet.name + str(uw.pk))
+                        Transaction.objects.get(hash=item['hash'], name=uw.wallet.name + str(uw.pk))
                     except Transaction.MultipleObjectsReturned:
                         pass
                     except Transaction.DoesNotExist:
@@ -310,7 +307,7 @@ def get_btc_wallet_history():
     if len(btc_uw) > 0:
         for uw in btc_uw:
             btc_to_usd = CryptoConvert('usd', 'btc')
-            data = requests.get('https://blockchain.info/ru/rawaddr/'+uw.address)
+            data = requests.get('https://blockchain.info/ru/rawaddr/' + uw.address)
             try:
                 transactions = data.json()
                 if transactions:
@@ -387,7 +384,7 @@ def get_yandex_records(wallet=None, uw=None, next_record=0):
     rur_to_usd = CryptoConvert('usd', 'rur')
     for t in transactions['operations']:
         try:
-            transaction = Transaction.objects.get(name=uw.wallet.name + str(uw.pk), number=t['operation_id'])
+            Transaction.objects.get(name=uw.wallet.name + str(uw.pk), number=t['operation_id'])
         except Transaction.MultipleObjectsReturned:
             pass
         except Transaction.DoesNotExist:

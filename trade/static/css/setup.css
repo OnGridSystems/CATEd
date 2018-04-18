@@ -9,7 +9,7 @@
 }
 
 .btn-mini {
-    padding: 1px 3px;
+    padding: 1px 6px;
     height: 20px;
     line-height: 20px;
 }
@@ -65,4 +65,32 @@
     -ms-transition: all .3s;
     -o-transition: all .3s;
     transition: all .3s;
+}
+
+#buttons-zoom button, #buttons button {
+    margin: -2px;
+    border-radius: 0;
+    background-image: linear-gradient(#ffffff, #c4d5db);
+    background-color: white;
+    box-shadow: none;
+    border: 1px solid #91abac;
+    color: black;
+    border-left-width: 0;
+    font-size: 11px;
+}
+
+#buttons-zoom div button:first-child, #buttons div button:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+#buttons-zoom div button:last-child, #buttons div button:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
+
+.ui-jqchart-toolbar.ui-widget.ui-widget-content.ui-corner-all {
+    position: absolute;
+    right: 100px !important;
+    left: auto !important;
 }

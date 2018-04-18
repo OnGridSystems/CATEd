@@ -1,40 +1,39 @@
 {% load tradeBot_filters %}
 {% if orders %}
-    <h5>Your orders</h5>
-{% endif %}
-<table width="100%" id="user_orders" class="orders">
-    <thead>
-    <tr>
-        <th>Pair</th>
-        <th>Type</th>
-        <th>Order number</th>
-        <th>Price</th>
-        <th>Amount</th>
-        <th>Total</th>
-        <th>Fee</th>
-        <th>Fact total</th>
-        <th>Fact fee</th>
-        <th>Status</th>
-        <th>Created</th>
-        <th>Canceled/Closed</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for item in orders %}
-        <tr class="orders {% if item.cancel_desc %}{% else %}green lighten-3{% endif %}">
-            <td>{{ item.pair.main_coin.symbol.upper }}_{{ item.pair.second_coin.symbol.upper }}</td>
-            <td>{{ item.order_type }}</td>
-            <td>{{ item.order_number }}</td>
-            <td>{{ item.price }}</td>
-            <td>{{ item.amount }}</td>
-            <td>{{ item.total }}</td>
-            <td>{{ item.fee }}</td>
-            <td>{{ item.fact_total }}</td>
-            <td>{{ item.fact_fee }}</td>
-            <td>{% if item.cancel_desc %}{{ item.cancel_desc }}{% else %}Working{% endif %}</td>
-            <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
-            <td>{% if item.date_cancel %}{{ item.date_cancel | date:'d.m.Y H:i:s' }}{% else %}-{% endif %}</td>
+    <table width="100%" id="user_orders" class="orders">
+        <thead>
+        <tr>
+            <th>Pair</th>
+            <th>Type</th>
+            <th>Order number</th>
+            <th>Price</th>
+            <th>Amount</th>
+            <th>Total</th>
+            <th>Fee</th>
+            <th>Fact total</th>
+            <th>Fact fee</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Canceled/Closed</th>
         </tr>
-    {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+        {% for item in orders %}
+            <tr class="orders {% if item.cancel_desc %}{% else %}green lighten-3{% endif %}">
+                <td>{{ item.pair.main_coin.symbol.upper }}_{{ item.pair.second_coin.symbol.upper }}</td>
+                <td>{{ item.order_type }}</td>
+                <td>{{ item.order_number }}</td>
+                <td>{{ item.price }}</td>
+                <td>{{ item.amount }}</td>
+                <td>{{ item.total }}</td>
+                <td>{{ item.fee }}</td>
+                <td>{{ item.fact_total }}</td>
+                <td>{{ item.fact_fee }}</td>
+                <td>{% if item.cancel_desc %}{{ item.cancel_desc }}{% else %}Working{% endif %}</td>
+                <td>{{ item.date_created | date:'d.m.Y H:i:s' }}</td>
+                <td>{% if item.date_cancel %}{{ item.date_cancel | date:'d.m.Y H:i:s' }}{% else %}-{% endif %}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endif %}

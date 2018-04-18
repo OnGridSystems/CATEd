@@ -1,8 +1,5 @@
 $(document).ready(function () {
 
-    var directions = {};
-    // directions[418] = [0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0];
-    // directions[391] = [1, 1, 1, 1, 1, 2, 0, 0, 0, 1, 0, 1];
     $('select').addClass('browser-default');
     pair_id = $('.pair_tr').data('pair-id');
     $('.pair_tr[data-pair-id=' + pair_id + ']').addClass('active_pair');
@@ -11,27 +8,32 @@ $(document).ready(function () {
     document.title = $('.pair_tr[data-pair-id=' + pair_id + ']').children('td:eq(1)').text() + ' ' + main_coin + "/" + second_coin;
     $('#preview_coins h5 b').text(main_coin + '_' + second_coin);
     intervale = $('#buttons .candlestick').data('intervale');
-    zoom = 3;
+    zoom = $('#buttons-zoom .zoom').data('zoom');
     draw_graph();
-    // createResh(directions[pair_id]);
 
     $('.pair_tr').on('click', function () {
         var main_coin = $('.tabs a.active').text();
         var second_coin = $(this).children('td:eq(0)').text();
-        $('#preview_coins h4 b').text(main_coin + '_' + second_coin);
+        $('#preview_coins h5 b').text(main_coin + '_' + second_coin);
         $('.pair_tr').removeClass('active_pair');
         $(this).addClass('active_pair');
         if ($(this).data('pair-id') != pair_id) {
             pair_id = $(this).data('pair-id');
-            // createResh(directions[pair_id]);
             draw_graph();
         }
     });
 
     $('#buttons .candlestick').on('click', function () {
-        $('#buttons .candlestick').removeClass('green');
+        $('#buttons div .candlestick').removeClass('green');
         $(this).addClass('green');
         intervale = $(this).data('intervale');
+        draw_graph();
+    });
+
+    $('#buttons-zoom .zoom').on('click', function () {
+        $('#buttons-zoom div .zoom').removeClass('green');
+        $(this).addClass('green');
+        zoom = $(this).data('zoom');
         draw_graph();
     });
     $('.tooltipped').tooltip({
@@ -72,27 +74,6 @@ $(document).ready(function () {
         })
     }
 
-    // $('.pair').on('click', function () {
-    //     var pair_id = $(this).attr('data-pair-id');
-    //     if (!$(this).hasClass('unactive')) {
-    //         if (confirm('Are you really want to deactivate pair ' + $(this).text())) {
-    //             toggle_pair(pair_id)
-    //         }
-    //     } else {
-    //         toggle_pair(pair_id)
-    //     }
-    // });
-
-    // function toggle_pair(pair_id) {
-    //     var user_exch = $('#exchange').val();
-    //     $.post('/trade/toggle_pair/', {
-    //         pair_id: pair_id,
-    //         user_exch: user_exch,
-    //         csrfmiddlewaretoken: getCookie('csrftoken')
-    //     }, function (data) {
-    //         'ok' === data ? location.reload() : Materialize.toast(data, 1500)
-    //     });
-    // }
 
     $('.pair-share').keypress(function (e) {
         if (e.which === 13) {
@@ -193,87 +174,6 @@ $(document).ready(function () {
         console.log(value)
     }
 
-    function createResh(arr) {
-        cl(arr);
-        var c_canvas = $("#directions");
-        var context = c_canvas[0].getContext("2d");
-        if (arr == 'undefined') {
-            c_canvas[0].width = (c_canvas.parent('div').width());
-            c_canvas[0].height = (c_canvas.parent('div').height());
-
-            context.font = "bold 12px sans-serif";
-            context.fillText("No data available", c_canvas[0].width / 2 - 20, c_canvas[0].height / 2);
-            context.stroke();
-            return false;
-        }
-        if (arr.length * 7 < c_canvas.parent('div').width()) {
-            c_canvas[0].width = c_canvas.parent('div').width()
-        } else {
-            c_canvas[0].width = (arr.length * 7);
-        }
-        var high = 0;
-        var depth = 0;
-        var max_depth = 0;
-        var max_high = 0;
-        for (var d = 0; d < arr.length; d++) {
-            if (arr[d] === 1) {
-                high += 10;
-            } else if (arr[d] === 0) {
-                depth -= 10;
-            }
-            if (max_high < high) {
-                max_high = high;
-            }
-            if (max_depth > depth) {
-                max_depth = depth;
-            }
-        }
-        if ((Math.max(Math.abs(max_depth), max_high) - Math.min(Math.abs(max_depth), max_high)) < c_canvas.parent('div').height()) {
-            c_canvas[0].height = c_canvas.parent('div').height();
-        } else {
-            c_canvas[0].height = (Math.max(Math.abs(max_depth), max_high) - Math.min(Math.abs(max_depth), max_high)) * 2;
-        }
-        var start_dot = [1, c_canvas[0].height / 2 - 100];
-        // var context = c_canvas[0].getContext("2d");
-        context.strokeStyle = "#eee";
-        for (var x = 0.5; x < c_canvas.width(); x += 10) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x, c_canvas.height());
-            context.stroke();
-        }
-        for (var y = c_canvas.height(); y > 0; y -= 10) {
-            context.beginPath();
-            context.moveTo(0, y);
-            context.lineTo(c_canvas.width(), y);
-            context.stroke();
-        }
-        context.strokeStyle = "#000000";
-        context.beginPath();
-        context.moveTo(start_dot[0], start_dot[1]);
-        var start_x = start_dot[0];
-        var start_y = start_dot[1];
-        for (var i in arr) {
-            if (arr[i] === 0) {
-                context.lineTo(start_x + 7, start_y + 7);
-                start_x += 7;
-                start_y += 7;
-            } else if (arr[i] === 1) {
-                context.lineTo(start_x + 7, start_y - 7);
-                start_x += 7;
-                start_y -= 7;
-
-            } else if (arr[i] === 2) {
-                context.arc(start_x, start_y, 3, Math.PI * 2, false);
-                context.moveTo(start_x, start_y);
-            }
-        }
-        context.stroke();
-    }
-
-    // $(window).resize(function () {
-    //     createResh(directions[pair_id])
-    // });
 });
 
 var ticker = {};
@@ -282,15 +182,13 @@ socket = new WebSocket("ws://" + window.location.host + "/trade/");
 socket.onmessage = function (message) {
     var item = JSON.parse(message.data);
     if (item.pair_id in ticker) {
-        if (item.last !== ticker[pair_id].last) {
-            ticker[pair_id].last = item.last;
-            ticker[pair_id].percent = item.percent;
+        if (item.last !== ticker[item.pair_id].last) {
+            ticker[item.pair_id].last = item.last;
+            ticker[item.pair_id].percent = item.percent;
         }
     } else {
-        ticker[pair_id] = {'last': item.last, 'percent': item.percent}
+        ticker[item.pair_id] = {'last': item.last, 'percent': item.percent}
     }
-    ticker[item.pair_id] = {'last': item.last, 'percent': item.percent};
-    // draw_graph();
 };
 
 setInterval(function () {
@@ -333,18 +231,23 @@ function getCookie(name) {
 
 function draw_graph() {
     var ohlcData = [];
-    // var volumeData = [];
+    var extremums = [];
     $.post('/trade/get_ticker/', {
         pair_id: pair_id,
         csrfmiddlewaretoken: getCookie('csrftoken'),
         intervale: intervale,
         zoom: zoom
-    }, function (ticker) {
-        // console.log(ticker);
-        for (var i = 1; i < ticker.length; i++) {
-            ohlcData.push([new Date(Date.parse(ticker[i].date)), round(ticker[i].high), round(ticker[i].low), round(ticker[i].open), round(ticker[i].close)]);
-            // var volume = 100 + 15 * Math.random();
-            // volumeData.push([new Date(Date.parse(ticker[i].date)), round(volume)]);
+    }, function (data) {
+        console.log(data)
+        for (var i = 1; i < data['ticker'].length; i++) {
+            ohlcData.push([new Date(Date.parse(data['ticker'][i].date)), round(data['ticker'][i].high), round(data['ticker'][i].low), round(data['ticker'][i].open), round(data['ticker'][i].close)]);
+        }
+        for (var j = 0; j < data['extremums'].length; j++) {
+            extremums.push([
+                new Date(Date.parse(data['extremums'][j][0])),
+                round(data['extremums'][j][1]),
+                data['extremums'][j][2]
+            ]);
         }
         $('#jqChart').jqChart({
             legend: {visible: false},
@@ -364,14 +267,37 @@ function draw_graph() {
                 vLine: {strokeStyle: '#9c9b96'},
                 snapToDataPoints: false
             },
+            toolbar: {
+                visibility: 'visible', // auto, visible, hidden
+                resetZoomTooltipText: 'Reset Zoom (100%)',
+                zoomingTooltipText: 'Zoom in to selection area',
+                panningTooltipText: 'Pan the chart'
+            },
+            mouseInteractionMode: 'zooming', // zooming, panning
             animation: {duration: 0.0001},
             axes: [
                 {
+                    type: 'dateTime',
+                    location: 'bottom',
+                    zoomEnabled: false
+                },
+                {
                     type: 'linear',
                     location: 'right',
-                    width: 80
+                    zoomEnabled: false
                 }
             ],
+            // axes: [
+            //     {
+            //         type: 'linear',
+            //         location: 'right',
+            //         width: 80
+            //     }
+            // ],
+            shadows: {
+                enabled: true
+            },
+
             series: [
                 {
                     type: 'candlestick',
@@ -379,100 +305,35 @@ function draw_graph() {
                     priceUpFillStyle: '#4caf50',
                     priceDownFillStyle: '#f44336',
                     strokeStyle: 'black',
-                    pointWidth: 0.8
+                    pointWidth: 0.8,
+                    stringFormat: '%d'
+                },
+                {
+                    type: 'scatter',
+                    data: extremums,
+                    title: 'Extremum',
+                    markers: {
+                        size: 10,
+                        type: 'triangle',
+                        strokeStyle: 'black',
+                        lineWidth: 1,
+                        fillStyle: 'black'
+                    },
+                    labels: {
+                        fillStyle: 'black',
+                        stringFormat: '%d'
+                    }
                 }
+
             ]
         });
-        // $('#jqChartVolume').jqChart({
-        //     legend: {visible: false},
-        //     border: {lineWidth: 1, padding: 0},
-        //     tooltips: {
-        //         disabled: false,
-        //         type: 'shared',
-        //         borderColor: 'black',
-        //         snapArea: 100,
-        //         highlighting: true,
-        //         highlightingFillStyle: 'rgba(204, 204, 204, 0.5)',
-        //         highlightingStrokeStyle: 'rgba(204, 204, 204, 0.5)'
-        //     },
-        //     crosshairs: {
-        //         enabled: true,
-        //         hLine: {strokeStyle: '#9c9b96'},
-        //         vLine: {strokeStyle: '#9c9b96'},
-        //         snapToDataPoints: false
-        //     },
-        //     animation: {duration: 0.0001},
-        //     axes: [
-        //         {
-        //             type: 'dateTime',
-        //             location: 'bottom'
-        //         },
-        //         {
-        //             type: 'linear',
-        //             location: 'right',
-        //             width: 80
-        //         }
-        //     ],
-        //     series: [
-        //         {
-        //             type: 'column',
-        //             data: volumeData,
-        //             fillStyle: 'lightgrey'
-        //         }
-        //     ]
-        // });
-        var isHighlighting = false;
 
-        $('#jqChart').bind('dataHighlighting', function (event, data) {
-
-            if (!data) {
-                $('#jqChartVolume').jqChart('highlightData', null);
-                return;
-            }
-
-            $('#open').html(data.open);
-            $('#high').html(data.high);
-            $('#low').html(data.low);
-            $('#close').html(data.close);
-
-            var date = data.chart.stringFormat(data.x, "dd.mm.yyyy HH:MM");
-
-            $('#date').html(date);
-
-            // if (!isHighlighting) {
-            //
-            //     isHighlighting = true;
-            //
-            //     var index = $.inArray(data.dataItem, ohlcData);
-            //     $('#jqChartVolume').jqChart('highlightData', [volumeData[index]]);
-            // }
-
-            isHighlighting = false;
-        });
-
-        // $('#jqChartVolume').bind('dataHighlighting', function (event, data) {
-        //
-        //     if (!data) {
-        //         $('#jqChart').jqChart('highlightData', null);
-        //         return;
-        //     }
-        //
-        //     $('#volume').html(data.y);
-        //
-        //     if (!isHighlighting) {
-        //
-        //         isHighlighting = true;
-        //
-        //         var index = $.inArray(data.dataItem, volumeData);
-        //         $('#jqChart').jqChart('highlightData', [ohlcData[index]]);
-        //     }
-        //
-        //     isHighlighting = false;
-        // });
-
-        $('#jqChart').jqChart('highlightData', [ohlcData[0]]);
-        // $('#jqChartVolume').jqChart('highlightData', [volumeData[0]]);
     }, 'json');
+    $('#jqChart').bind('dataPointLabelCreating', function (e, data) {
+        console.log(data);
+        var context = data.context;
+        data.text = context.dataItem[2];
+    });
 }
 
 function round(d) {

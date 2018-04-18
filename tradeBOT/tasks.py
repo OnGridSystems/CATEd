@@ -1,22 +1,20 @@
 from __future__ import absolute_import, unicode_literals
 import importlib
 from _socket import gaierror
-from urllib.error import URLError
-
+import os
 import jsonpickle
-import time
-import datetime
+from django.utils import timezone
 import re
 from ccxt import ExchangeError
-from celery.signals import worker_ready, celeryd_init
+from celery.signals import celeryd_init
 from channels import Group
 from django.db.models import Sum, Q
 from celery import shared_task, Task
 from djangoTrade.celery import app
 import requests
-from trade.models import Exchanges, UserExchange, UserBalance
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, CoinMarketCupCoin, ExchangeTicker, Order, UserPair, \
-    ToTrade, UserMainCoinPriority, UserCoinShare, UserOrder, Сalculations
+from trade.models import Exchanges, UserBalance
+from tradeBOT.models import ExchangeCoin, Pair, CoinMarketCupCoin, UserPair, \
+    ToTrade, UserMainCoinPriority, UserCoinShare, UserOrder, Сalculations, Extremum
 from trade.tasks import pull_exchanges_balances, pull_exchanges
 from django.conf import settings
 from decimal import Decimal as _D
@@ -29,7 +27,7 @@ import urllib.request
 from collections import OrderedDict
 import websockets
 from celery.result import AsyncResult
-from ccxt import CCXTError
+from ticker_app.models import ExchangeTicker
 
 GET_TICKERS_URL = 'https://poloniex.com/public?command=returnTicker'
 API_LINK = 'wss://api2.poloniex.com'
@@ -37,6 +35,7 @@ SUBSCRIBE_COMMAND = '{"command":"subscribe","channel":$}'
 TICKER_SUBSCRIBE = 1002
 TICKER_OUTPUT = 'TICKER UPDATE {}={}(last),{}(lowestAsk),{}(highestBid),{}(percentChange),{}(baseVolume),{}(quoteVolume),{}(isFrozen),{}(high24hr),{}(low24hr)'
 TRADE_OUTPUT = 'TRADE {}={}(tradeId),{}(bookSide),{}(price),{}(size),{}(timestamp)'
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 def class_for_name(module_name, class_name):
@@ -52,14 +51,6 @@ def pull_coinmarketcup():
         for item in response:
             try:
                 old_coinmarket_coin = CoinMarketCupCoin.objects.get(coin_market_id=item['id'])
-                old_coinmarket_coin.coin_market_id = item['id']
-                old_coinmarket_coin.name = item['name']
-                old_coinmarket_coin.price_usd = item['price_usd']
-                old_coinmarket_coin.rank = item['rank']
-                old_coinmarket_coin.volume_usd_24h = item['24h_volume_usd']
-                old_coinmarket_coin.available_supply = item['available_supply']
-                old_coinmarket_coin.total_supply = item['total_supply']
-                old_coinmarket_coin.save()
             except CoinMarketCupCoin.DoesNotExist:
                 new_coin = CoinMarketCupCoin()
                 new_coin.coin_market_id = item['id']
@@ -71,6 +62,15 @@ def pull_coinmarketcup():
                 new_coin.available_supply = item['available_supply']
                 new_coin.total_supply = item['total_supply']
                 new_coin.save()
+            else:
+                old_coinmarket_coin.coin_market_id = item['id']
+                old_coinmarket_coin.name = item['name']
+                old_coinmarket_coin.price_usd = item['price_usd']
+                old_coinmarket_coin.rank = item['rank']
+                old_coinmarket_coin.volume_usd_24h = item['24h_volume_usd']
+                old_coinmarket_coin.available_supply = item['available_supply']
+                old_coinmarket_coin.total_supply = item['total_supply']
+                old_coinmarket_coin.save()
         pull_exchanges.delay()
     return True
 
@@ -123,7 +123,7 @@ def calculate_order_for_user(user_pair_pk, params, type):
                                                                    coin=user_pair.pair.second_coin.symbol.lower())
                 user_balance_second_coin_in_btc = user_balance_second_coin.btc_value
                 user_second_coin_percent = user_balance_second_coin_in_btc / (
-                    user_pair.user_exchange.total_btc / 100)
+                        user_pair.user_exchange.total_btc / 100)
                 user_coin_share = UserCoinShare.objects.get(user_exchange=user_pair.user_exchange,
                                                             coin=user_pair.pair.second_coin)
                 user_need_second_coin_in_percent = user_coin_share.share
@@ -135,12 +135,11 @@ def calculate_order_for_user(user_pair_pk, params, type):
                                                                    pair__second_coin=user_pair.pair.second_coin).aggregate(
                     Sum('rank'))['rank__sum']
                 user_need_to_buy_on_prior_in_percent_of_btc = _D(user_nehvataen_in_percent_of_btc) * (
-                    _D(user_pair.rank) / _D(sum_priority_second_coin))
+                        _D(user_pair.rank) / _D(sum_priority_second_coin))
 
                 user_need_to_buy_on_prior_in_btc = (user_pair.user_exchange.total_btc / 100) * \
                                                    user_need_to_buy_on_prior_in_percent_of_btc
                 print('Надо взять в BTC: {}'.format(user_need_to_buy_on_prior_in_btc))
-                user_need_to_buy_on_prior_in_first_coin = 0
 
                 # сколько нужно взять в первой валюте
                 if user_pair.pair.main_coin.symbol.upper() == 'BTC':
@@ -199,7 +198,7 @@ def calculate_order_for_user(user_pair_pk, params, type):
                     to_trade.amount = total
                     to_trade.total = user_need_to_buy_on_prior_in_first_coin
                     to_trade.total_f = user_need_to_buy_on_prior_in_first_coin - (
-                        user_need_to_buy_on_prior_in_first_coin * _D('.0015'))
+                            user_need_to_buy_on_prior_in_first_coin * _D('.0015'))
                     to_trade.save()
                 except ToTrade.DoesNotExist:
                     new_order = ToTrade()
@@ -209,7 +208,7 @@ def calculate_order_for_user(user_pair_pk, params, type):
                     new_order.amount = total
                     new_order.total = user_need_to_buy_on_prior_in_first_coin
                     new_order.total_f = user_need_to_buy_on_prior_in_first_coin - (
-                        user_need_to_buy_on_prior_in_first_coin * _D('.0015'))
+                            user_need_to_buy_on_prior_in_first_coin * _D('.0015'))
                     new_order.fee = _D('.0015')
                     new_order.cause = 'Change rate'
                     new_order.save()
@@ -218,16 +217,23 @@ def calculate_order_for_user(user_pair_pk, params, type):
             asks = params['asks']
             user_have_second_coin = UserBalance.objects.get(ue=user_pair.user_exchange,
                                                             coin=user_pair.pair.second_coin.symbol.lower())
+            print('первой валюты {}'.format(user_have_second_coin.free))
             if user_have_second_coin.free > 0.001:
                 price = calculate_price(amount=user_have_second_coin.free, o_type='sell', asks=asks)
                 total = user_have_second_coin.free * _D(price)
                 total_fee = total - (total * _D('.0015'))
+                print(
+                    'Второй валюты: {} * найденная цена: {} = итого: {}'.format(user_have_second_coin.free, price,
+                                                                                total))
                 need_to_sell = False
                 try:
                     last_buy_order = UserOrder.objects.filter(ue=user_pair.user_exchange, pair=user_pair.pair,
                                                               order_type='buy').latest('date_created')
+                    print('последний ордер на покупку № {}, итого: {}'.format(last_buy_order.pk, last_buy_order.total))
                     if last_buy_order.total < total_fee:
                         need_to_sell = True
+                    else:
+                        print('не буду продавать, купил {} продам на {}'.format(last_buy_order.total, total_fee))
                 except UserOrder.DoesNotExist:
                     need_to_sell = True
                 if need_to_sell:
@@ -332,7 +338,7 @@ class WampTickerPoloniex(Task):
 WampTickerPoloniex = app.register_task(WampTickerPoloniex())
 
 
-@celeryd_init.connect(sender='worker_high@ProofX-PC')
+@celeryd_init.connect(sender='celery@worker_high')
 def start_ticker(**kwargs):
     WampTickerPoloniex.apply_async(queue='high', priority=0, retry=True, retry_policy={
         'max_retries': 5,
@@ -340,7 +346,7 @@ def start_ticker(**kwargs):
         'interval_step': 10,
         'interval_max': 10,
     })
-    # SetOrderTask.apply_async(queue='set_orders')
+    SetOrderTask.apply_async(queue='set_orders')
 
 
 def cancel_user_orders(marker_id, type):
@@ -377,6 +383,7 @@ class PoloniexSubscriber(object):
         self.ticker_list = TickerList()
         self.directions = {}
         self.extremums = {}
+        self.bulk_models = []
 
     def get_tickers(self):
         return self._tickers_list
@@ -422,7 +429,6 @@ class PoloniexSubscriber(object):
             if len(self.directions[pair_id]) < settings.DIRECTIONS_COUNT:
                 return False
             else:
-                print(self.directions[pair_id])
                 sum_first_n_elem = sum([x[0] for x in self.directions[pair_id][:settings.UNIDIRECTIONAL_COUNT]])
                 sum_last_n_elem = sum([x[0] for x in self.directions[pair_id][settings.UNIDIRECTIONAL_COUNT:]])
                 if sum_first_n_elem >= settings.UNIDIRECTIONAL_COUNT - 1 and sum_last_n_elem == 0:
@@ -503,9 +509,22 @@ class PoloniexSubscriber(object):
                             'subscription failed message={}'.format(message))
                     if data[0] == TICKER_SUBSCRIBE:
                         values = data[2]
-                        # print(values)
                         ticker_id_int = values[0]
                         if ticker_id_int in self._tickers_list:
+                            self.bulk_models.append(
+                                ExchangeTicker(exchange_id=self.exchange.pk,
+                                               pair_id=self._tickers_list[values[0]],
+                                               last=values[1],
+                                               bid=values[3],
+                                               ask=values[2],
+                                               high=values[8],
+                                               low=values[9],
+                                               base_volume=values[5],
+                                               percent_change=values[4],
+                                               date_time=timezone.now()))
+                            if len(self.bulk_models) > 100:
+                                ExchangeTicker.objects.bulk_create(self.bulk_models)
+                                self.bulk_models.clear()
                             pair_temp = {'pair_id': self._tickers_list[ticker_id_int],
                                          'last': values[1],
                                          'percent': values[4]}
@@ -522,29 +541,31 @@ class PoloniexSubscriber(object):
                                 if ct.low > ct.prev_low and ct.high > ct.prev_high:
                                     self.add_market_direction(ct.pair, 1, ct.date)
                                     new_direction = True
-                                    # with open('/opt/portal_ongrid/log/markets/' + ct.pair + '.txt', 'a') as pair_file:
-                                    #     pair_file.write(
-                                    #         '1, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
-                                    #                                           ct.last))
+                                    with open(BASE_DIR + '/logs/markets/' + ct.pair + '.txt', 'a') as pair_file:
+                                        pair_file.write(
+                                            '1, date: {}, last: {} \n'.format(timezone.datetime.fromtimestamp(ct.date),
+                                                                              ct.last))
                                 elif ct.low < ct.prev_low and ct.high < ct.prev_high:
                                     self.add_market_direction(ct.pair, 0, ct.date)
                                     new_direction = True
-                                    # with open('/opt/portal_ongrid/log/markets/' + ct.pair + '.txt', 'a') as pair_file:
-                                    #     pair_file.write(
-                                    #         '0, date: {}, last: {} \n'.format(datetime.datetime.fromtimestamp(ct.date),
-                                    #                                           ct.last))
+                                    with open(BASE_DIR + '/logs/markets/' + ct.pair + '.txt', 'a') as pair_file:
+                                        pair_file.write(
+                                            '0, date: {}, last: {} \n'.format(timezone.datetime.fromtimestamp(ct.date),
+                                                                              ct.last))
                                 if new_direction:
                                     extremum = self.check_directions_is_extremum(ct.pair)
                                     if extremum is not False:
                                         is_ext = self.check_extremum(ct.pair, ct.date, extremum, ct.last,
                                                                      self._tickers_list[ticker_id_int])
                                         if is_ext:
-                                            # with open('/opt/portal_ongrid/log/extremums.txt', 'a') as file:
-                                            #     file.write(
-                                            #         'Пара {} найден {}, дата {} \n'.format(ct.pair, extremum,
-                                            #                                                datetime.datetime.now()))
+                                            with open(BASE_DIR + '/logs/extremums.txt', 'a') as file:
+                                                file.write(
+                                                    'Пара {} найден {}, дата {} \n'.format(ct.pair, extremum,
+                                                                                           timezone.now()))
                                             print('Пара {} найден {}, дата {}'.format(ct.pair, extremum,
-                                                                                      datetime.datetime.now()))
+                                                                                      timezone.now()))
+                                            Extremum.objects.create(pair_id=self._tickers_list[ticker_id_int],
+                                                                    ext_type=extremum, price=ct.last)
                                             market = self.order_books.get_market_by_name(
                                                 self._tickers_id[ticker_id_int])
                                             if market is not None:
@@ -606,10 +627,7 @@ class PoloniexSubscriber(object):
                                     if market is not None:
                                         market.add_or_change(side=side, price=price, size=size)
                         self._last_seq_dic[ticker_id] = seq
-        except websockets.InvalidHandshake:
-            WampTickerPoloniex.apply_async(queue='high', countdown=10)
-            return True
-        except gaierror:
+        except Exception:
             WampTickerPoloniex.apply_async(queue='high', countdown=10)
             return True
 
@@ -761,7 +779,7 @@ class CheckSetOrderTask(Task):
         try:
             user_orders = UserOrder.objects.filter(date_cancel=None)
             orders_to_close = user_orders.filter(
-                Q(date_created__lte=datetime.datetime.now() - datetime.timedelta(minutes=settings.ORDER_TTL)) | Q(
+                Q(date_created__lte=timezone.now() - timezone.timedelta(minutes=settings.ORDER_TTL)) | Q(
                     to_close=True))
             print('Ордера пользователей {}'.format(user_orders))
             print('Ордера к закрытию {}'.format(orders_to_close))
@@ -772,7 +790,7 @@ class CheckSetOrderTask(Task):
                 })
                 try:
                     order_status = exchange_object.fetch_order_status(str(uo.order_number))
-                except CCXTError as er:
+                except Exception as er:
                     continue
                 if order_status == 'open':
                     if uo in orders_to_close:
@@ -781,10 +799,10 @@ class CheckSetOrderTask(Task):
                             print('Пытаюсь отменить ордер № {}'.format(uo.order_number))
                             canc = exchange_object.cancel_order(str(uo.order_number))
                             if canc['success'] == 1:
-                                uo.date_cancel = datetime.datetime.now()
+                                uo.date_cancel = timezone.now()
                                 uo.cancel_desc = 'TTL'
                                 uo.save()
-                        except CCXTError as er:
+                        except Exception as er:
                             print('При отмене ордера № {} возникла ошибка: {}'.format(uo.order_number, er))
                             continue
                     else:
@@ -797,7 +815,7 @@ class CheckSetOrderTask(Task):
                             pass
                 elif order_status == 'closed':
                     print('Ордер № {} закрыт'.format(uo.order_number))
-                    uo.date_cancel = datetime.datetime.now()
+                    uo.date_cancel = timezone.now()
                     try:
                         current_balance_main_coin = UserBalance.objects.get(ue=uo.ue,
                                                                             coin=uo.pair.main_coin.symbol.lower())
@@ -836,14 +854,12 @@ class CheckSetOrderTask(Task):
                                 uo.is_ok = False
                     uo.cancel_desc = 'Worked'
                     uo.save()
-        except CCXTError:
-            pass
         except Exception as e:
             print('При проверке ордера возникла ошибка: {}'.format(e))
             pass
         try:
             to_trade = ToTrade.objects.filter(
-                date_updated__gte=datetime.datetime.now() - datetime.timedelta(minutes=5)).earliest('date_created')
+                date_updated__gte=timezone.now() - timezone.timedelta(minutes=5)).earliest('date_created')
 
             already_in_orders = UserOrder.objects.filter(ue=to_trade.user_pair.user_exchange,
                                                          pair=to_trade.user_pair.pair, date_cancel=None)
@@ -864,18 +880,18 @@ class CheckSetOrderTask(Task):
                 try:
                     if to_trade.type == 'buy':
                         order = exchange_object.create_limit_buy_order(
-                            symbol=to_trade.user_pair.pair.second_coin.symbol.upper() + '/' + to_trade.user_pair.pair.main_coin.symbol.upper(),
-                            amount=to_trade.amount,
-                            price=to_trade.price,
-                            params={'postOnly': 1}
+                            to_trade.user_pair.pair.second_coin.symbol.upper() + '/' + to_trade.user_pair.pair.main_coin.symbol.upper(),
+                            to_trade.amount,
+                            to_trade.price,
+                            {'postOnly': 1}
                         )
                         print('Ответ от биржи (покупка): {}'.format(order))
                     elif to_trade.type == 'sell':
                         order = exchange_object.create_limit_sell_order(
-                            symbol=to_trade.user_pair.pair.second_coin.symbol.upper() + '/' + to_trade.user_pair.pair.main_coin.symbol.upper(),
-                            amount=to_trade.amount,
-                            price=to_trade.price,
-                            params={'postOnly': 1}
+                            to_trade.user_pair.pair.second_coin.symbol.upper() + '/' + to_trade.user_pair.pair.main_coin.symbol.upper(),
+                            to_trade.amount,
+                            to_trade.price,
+                            {'postOnly': 1}
                         )
                         print('Ответ от биржи (продажа): {}'.format(order))
                     if order is not None:

@@ -1,5 +1,7 @@
 from django import template
-from tradeBOT.models import CoinMarketCupCoin, UserMainCoinPriority, Pair, ExchangeTicker, ExchangeMainCoin, UserPair
+
+from ticker_app.models import ExchangeTicker
+from tradeBOT.models import CoinMarketCupCoin, UserMainCoinPriority, Pair, ExchangeMainCoin, UserPair
 from trade.models import UserBalance
 
 register = template.Library()
@@ -45,18 +47,24 @@ def get_primary_pairs(coin, user_exchange):
 
 @register.filter(name='get_last')
 def get_last(pair, user_exchange):
-    ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
+    # return 0
+    max_pk = ExchangeTicker.objects.filter(exchange_id=user_exchange.exchange.pk, pair_id=pair.pk).order_by(
+        '-id').first().pk
+    ticker = ExchangeTicker.objects.get(pk=max_pk).last
     if ticker is not None:
-        return round(ticker.last, 8)
+        return round(ticker, 8)
     else:
         return 0
 
 
 @register.filter(name='get_change_percent')
 def get_change_percent(pair, user_exchange):
-    ticker = ExchangeTicker.objects.filter(exchange=user_exchange.exchange, pair=pair).order_by('-date_time').first()
+    # return 0
+    max_pk = ExchangeTicker.objects.filter(exchange_id=user_exchange.exchange.pk, pair_id=pair.pk).order_by(
+        '-id').first().pk
+    ticker = ExchangeTicker.objects.get(pk=max_pk).percent_change
     if ticker is not None:
-        return round(ticker.percent_change * 100, 2)
+        return round(ticker * 100, 2)
     else:
         return 0
 
@@ -105,13 +113,3 @@ def haven_percent(coin, ue):
     except UserBalance.DoesNotExist:
         coin_total_btc = 0
     return coin_total_btc / (ue.total_btc / 100)
-
-
-@register.inclusion_tag('tradeBOT/to_trade.html')
-def get_orders_to_trade(to_trade):
-    return {'to_trade': to_trade}
-
-
-@register.inclusion_tag('tradeBOT/orders.html')
-def get_user_orders(orders):
-    return {'orders': orders}

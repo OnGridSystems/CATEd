@@ -29,7 +29,9 @@ class UserPair(models.Model):
         verbose_name_plural = "Пары пользователей"
 
     def __str__(self):
-        return str(self.user_exchange) + ': ' + self.pair.main_coin.symbol.upper() + '_' + self.pair.second_coin.symbol.upper()
+        return str(
+            self.user_exchange) + ': ' + self.pair.main_coin.symbol.upper() + '_' + self.pair.second_coin.symbol.upper()
+
 
 class UserCoinShare(models.Model):
     user_exchange = models.ForeignKey(UserExchange)
@@ -101,22 +103,6 @@ class CoinMarketCupCoin(models.Model):
         return self.name + ' ' + self.symbol
 
 
-class ExchangeTicker(models.Model):
-    exchange = models.ForeignKey(Exchanges)
-    pair = models.ForeignKey(Pair)
-    high = models.DecimalField(max_digits=30, decimal_places=15)
-    last = models.DecimalField(max_digits=30, decimal_places=15)
-    low = models.DecimalField(max_digits=30, decimal_places=15)
-    bid = models.DecimalField(max_digits=30, decimal_places=15)
-    ask = models.DecimalField(max_digits=30, decimal_places=15)
-    base_volume = models.DecimalField(max_digits=30, decimal_places=15, null=True, blank=True)
-    percent_change = models.DecimalField(max_digits=10, decimal_places=8, default=0)
-    date_time = models.DateTimeField(blank=False, null=False)
-
-    def __str__(self):
-        return self.exchange.name + ': ' + self.pair.main_coin.symbol.upper() + '-' + self.pair.second_coin.symbol.upper()
-
-
 class Order(models.Model):
     ue = models.ForeignKey(UserExchange)
     pair = models.CharField(max_length=50)
@@ -171,6 +157,7 @@ class UserOrder(models.Model):
     class Meta:
         verbose_name_plural = 'Ордера пользователей'
         verbose_name = 'Ордер пользователя'
+        ordering = ('date_created',)
 
 
 class ToTrade(models.Model):
@@ -202,3 +189,18 @@ class Сalculations(models.Model):
     bids = models.TextField(blank=True, null=True)
     asks = models.TextField(blank=True, null=True)
     date_created = models.DateTimeField(auto_now=True)
+
+
+class Extremum(models.Model):
+    pair = models.ForeignKey(Pair)
+    ext_type = models.CharField(max_length=10)
+    price = models.DecimalField(max_digits=20, decimal_places=10)
+    date = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Экстремум'
+        verbose_name_plural = 'Экстремумы'
+
+    def __str__(self):
+        return self.pair.main_coin.symbol.upper() + '_' + self.pair.second_coin.symbol.upper() + ' ' + self.ext_type + ': ' + str(
+            self.date)

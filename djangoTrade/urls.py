@@ -19,6 +19,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from trade import views as tradeViews
 from tradeBOT import views as tradeBOTViews
+from ticker_app import views as tickerViews
 from allauth import urls as allauth_urls
 from user_profile import views as user_profile_views
 from django.contrib.auth.decorators import permission_required
@@ -49,6 +50,6 @@ urlpatterns = [
                       name='change_user_exchange_script_activity'),
                   url(r'^trade/exchange_depth_to_trade/$', tradeBOTViews.exchange_depth_to_trade,
                       name='exchange_depth_to_trade'),
-                  url(r'^trade/get_ticker/$', tradeBOTViews.get_ticker, name='get_ticker'),
+                  url(r'^trade/get_ticker/$', tickerViews.get_ticker, name='get_ticker'),
                   url(r'^trade/get_new_orders_to_trade/$', tradeBOTViews.get_new_to_trade, name='get_new_to_trade'),
               ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

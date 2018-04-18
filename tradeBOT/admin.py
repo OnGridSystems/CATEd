@@ -53,12 +53,12 @@ class PairAdmin(admin.ModelAdmin):
     inlines = [UserPairInline]
 
 
-class ExchangeTickerAdmin(admin.ModelAdmin):
-    list_display = [field.name for field in models.ExchangeTicker._meta.fields]
-    list_filter = ['exchange', 'pair']
-
-    class Meta:
-        model = models.ExchangeTicker
+# class ExchangeTickerAdmin(admin.ModelAdmin):
+#     list_display = [field.name for field in models.ExchangeTicker._meta.fields]
+#     list_filter = ['exchange', 'pair']
+#
+#     class Meta:
+#         model = models.ExchangeTicker
 
 
 class OrderAdmin(admin.ModelAdmin):
@@ -78,16 +78,22 @@ class ToTradeAdmin(admin.ModelAdmin):
         model = models.ToTrade
 
 
+class ExtremumAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in models.Extremum._meta.fields]
+
+    class Meta:
+        model = models.Extremum
+
 admin.site.register(models.ExchangeCoin, ExchangeCoinAdmin)
 admin.site.register(models.UserPair, UserPairAdmin)
 admin.site.register(models.Pair, PairAdmin)
 admin.site.register(models.ExchangeMainCoin)
 admin.site.register(models.CoinMarketCupCoin, CoinMarketCupCoinAdmin)
 admin.site.register(models.UserMainCoinPriority)
-admin.site.register(models.ExchangeTicker, ExchangeTickerAdmin)
+# admin.site.register(models.ExchangeTicker, ExchangeTickerAdmin)
 admin.site.register(models.Order, OrderAdmin)
 admin.site.register(models.ToTrade, ToTradeAdmin)
 admin.site.register(models.UserOrder, UserOrderAdmin)
 admin.site.register(models.UserCoinShare)
 admin.site.register(models.Сalculations, CalculationsAdmin)
-
+admin.site.register(models.Extremum, ExtremumAdmin)

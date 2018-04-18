@@ -1,15 +1,10 @@
-import json
-import time
-import datetime
-
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Sum, Max, Min
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from trade.models import UserExchange, Exchanges
-from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, UserMainCoinPriority, \
-    ExchangeTicker, UserPair, ToTrade, UserCoinShare, UserOrder
-from django.core.serializers.json import DjangoJSONEncoder
+from tradeBOT.models import ExchangeCoin, Pair, ExchangeMainCoin, UserMainCoinPriority, UserPair, ToTrade, \
+    UserCoinShare, UserOrder
 
 
 @login_required
@@ -27,7 +22,7 @@ def setup(request, pk):
             'coin__symbol')
         args['to_trade'] = ToTrade.objects.filter(user_pair__user_exchange=args['user_exchange']).order_by(
             'date_updated')
-        args['orders'] = UserOrder.objects.filter(ue=args['user_exchange']).order_by('-pk')
+        args['orders'] = UserOrder.objects.filter(ue=args['user_exchange'])
         args['user_coins'] = UserCoinShare.objects.filter(user_exchange=args['user_exchange'])
     except UserExchange.DoesNotExist:
         return redirect('index')
@@ -40,8 +35,8 @@ def add_user_pair(request):
         user_exchange_pk = request.POST.get('user-exchange')
         try:
             pair = Pair.objects.get(pk=pair_pk)
-            user_pair = UserPair.objects.get_or_create(user=request.user, pair=pair, user_exchange_id=user_exchange_pk)
-            user_coin = UserCoinShare.objects.get_or_create(user_exchange_id=user_exchange_pk, coin=pair.second_coin)
+            UserPair.objects.get_or_create(user=request.user, pair=pair, user_exchange_id=user_exchange_pk)
+            UserCoinShare.objects.get_or_create(user_exchange_id=user_exchange_pk, coin=pair.second_coin)
         except Pair.DoesNotExist:
             pass
         return redirect('/trade/setup/' + str(user_exchange_pk) + '/')
@@ -175,50 +170,6 @@ def change_primary_coin_rank(request):
             new_user_primary_coin.is_active = True
             new_user_primary_coin.save()
         return HttpResponse('ok', status=200)
-
-
-def get_ticker(request):
-    if request.is_ajax():
-        pair_id = request.POST.get('pair_id')
-        intervale = int(request.POST.get('intervale'))
-        zoom = request.POST.get('zoom')
-        ticker_d = []
-        try:
-            if zoom == 'all':
-                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id).values())
-            else:
-                zoom = int(zoom)
-                ticker = list(ExchangeTicker.objects.filter(pair_id=pair_id,
-                                                            date_time__gte=datetime.datetime.now() - datetime.timedelta(
-                                                                hours=zoom)).order_by('date_time').values())
-            for i in range(0, len(ticker), intervale):
-                cur_ticker = {'date': ticker[i]['date_time'],
-                              'open': ticker[i]['last'],
-                              'low': ticker[i]['last'],
-                              'high': ticker[i]['last']}
-                try:
-                    cur_ticker['close'] = ticker[i + intervale]['last']
-                except IndexError:
-                    cur_ticker['close'] = ticker[len(ticker) - 1]['last']
-                for j in range(1, intervale + 1):
-                    try:
-                        if ticker[i + j]['last'] < cur_ticker['low']:
-                            cur_ticker['low'] = ticker[i + j]['last']
-                    except IndexError:
-                        break
-                        # if ticker[len(ticker) - 1]['last'] < cur_ticker['low']:
-                        #     cur_ticker['low'] = ticker[len(ticker) - 1]['last']
-                    try:
-                        if ticker[i + j]['last'] > cur_ticker['high']:
-                            cur_ticker['high'] = ticker[i + j]['last']
-                    except IndexError:
-                        break
-                        # if ticker[len(ticker) - 1]['last'] > cur_ticker['high']:
-                        #     cur_ticker['high'] = ticker[len(ticker) - 1]['last']
-                ticker_d.append(cur_ticker)
-            return HttpResponse(json.dumps(list(ticker_d), cls=DjangoJSONEncoder), status=200)
-        except Pair.DoesNotExist:
-            return None
 
 
 def set_pair_add(request):

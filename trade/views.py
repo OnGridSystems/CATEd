@@ -65,6 +65,9 @@ def wallet(request):
     if request.method == 'POST':
         wallet = Wallets.objects.get(pk=request.POST.get('wallet'))
         if wallet.name == 'Yandex Money':
+            if not settings.YANDEX_MONEY_CLIENT_ID or not settings.YANDEX_MONEY_REDIRECT_URI or not \
+                    settings.YANDEX_MONEY_CLIENT_SECRET:
+                return HttpResponse('You must define yandex money settings', status=404)
             scope = ['account-info', 'operation-history', 'operation-details']
             auth_url = Wallet.build_obtain_token_url(
                 client_id=settings.YANDEX_MONEY_CLIENT_ID,
@@ -78,6 +81,9 @@ def wallet(request):
             uw.wallet = wallet
             uw.save()
     elif request.method == 'GET':
+        if not settings.YANDEX_MONEY_CLIENT_ID or not settings.YANDEX_MONEY_REDIRECT_URI or not \
+                settings.YANDEX_MONEY_CLIENT_SECRET:
+            return HttpResponse('You must define yandex money settings', status=404)
         access_token = Wallet.get_access_token(
             client_id=settings.YANDEX_MONEY_CLIENT_ID,
             redirect_uri=settings.YANDEX_MONEY_REDIRECT_URI,
