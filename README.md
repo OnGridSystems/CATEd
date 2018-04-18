@@ -1,8 +1,23 @@
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
 
-For use bot you must have python3, mysql-server, rabbitmq-server and redis-server installed.
+### Overview
 
-### install
+CATEd is a bot, for the automation of trade in crypto currency.
+
+Main features:
+* View the status of exchange accounts, transactions and orders on them
+* View the status of cold wallets and transactional (with details)
+* History of savings, with the summation of funds on all accounts.
+
+![home_page](https://github.com/OnGridSystems/CATEd/blob/master/images/home_page.jpg)
+
+* Automatic calculation of orders, taking into account the configuration
+* Maintaining balances of different tokens at the established level
+
+![main_bot_page](https://github.com/OnGridSystems/CATEd/blob/master/images/final_screen.jpg)
+### Install
+
+For use bot you must have python3, mysql-server, rabbitmq-server and redis-server installed.
 
 Create virtual env and activate it, in your favorite way ;)
 
@@ -53,7 +68,7 @@ To do this open http://127.0.0.1:8000/ in your browser, login and click red "plu
 
 Bot uses several celery queues for trade, and main is triggered by a signal from a first worker named celery@worker_high.
 Another one worker - worker_set_orders check already exists orders and try to expose new calculated.
-There are also queues low and normal, for calculate orders for users and pull balances. More information about the logic of the bot can be read by reference "LINK HERE"
+There are also queues low and normal, for calculate orders for users and pull balances. More information about the logic of the bot can be read by reference on [Habraharb](https://habrahabr.ru/post/353732/)
 
 You can run celery in several terminal windows:
 ```sh
