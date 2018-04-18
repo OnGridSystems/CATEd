@@ -1,4 +1,4 @@
-# OnGrid cryptocurrency trade bot
+# CATEd - Cryptocurrency Analytics and Trading Engine for Django
 
 For use bot you must have python3, mysql-server, rabbitmq-server and redis-server installed.
 
@@ -107,3 +107,8 @@ sudo update-rc.d celeryd defaults
 sudo update-rc.d celerybeat defaults
 ```
 
+## Authors
+* OnGrid Systems: [Site](https://ongrid.pro), [GitHub](https://github.com/OnGridSystems/), [FaceBook](https://www.facebook.com/ongrid.pro/), [Youtube](https://www.youtube.com/channel/UCT8s-f1FInO6ivn_dp-W34g), [LinkedIn](https://www.linkedin.com/company/ongridpro/)
+* Sergey Korotko [FaceBook](https://www.facebook.com/s.korotko), [GitHub](https://github.com/achievement008)
+* Dmitry Suldin [FaceBook](https://www.facebook.com/novator.klin), [GitHub](https://github.com/Klyaus)
+* Kirill Varlamov: [GitHub](https://github.com/ongrid/), [FaceBook](https://www.facebook.com/kirill.varlamov.12), [LinkedIn](https://www.linkedin.com/in/kvarlamo/)
