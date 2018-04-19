@@ -10,7 +10,7 @@ Main features:
 * View the status of exchange accounts, transactions and orders on them;
 * View the status of cold wallets and transactions details;
 * History of deposits and withdrawals on graphical diagram;
-* Configurable buy/sell/hodl logic, (allowed tokens and proportions);
+* Configurable buy/sell/hold logic, (allowed tokens and proportions);
 * Keeping the balances of different tokens at the configured levels;
 
 ![home_page](https://github.com/OnGridSystems/CATEd/blob/master/images/home_page.jpg)
