@@ -137,3 +137,8 @@ sudo update-rc.d celerybeat defaults
 * Sergey Korotko [FaceBook](https://www.facebook.com/s.korotko), [GitHub](https://github.com/achievement008)
 * Dmitry Suldin [FaceBook](https://www.facebook.com/novator.klin), [GitHub](https://github.com/Klyaus)
 * Kirill Varlamov: [GitHub](https://github.com/ongrid/), [FaceBook](https://www.facebook.com/kirill.varlamov.12), [LinkedIn](https://www.linkedin.com/in/kvarlamo/)
+
+## License
+
+Copyright (c) 2018 OnGrid Systems
+Each file included in this repository is licensed under the [MIT license](LICENSE).
