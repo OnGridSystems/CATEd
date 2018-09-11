@@ -140,5 +140,6 @@ sudo update-rc.d celerybeat defaults
 
 ## License
 
-Copyright (c) 2018 OnGrid Systems
+Copyright (c) 2018 OnGrid Systems.
+
 Each file included in this repository is licensed under the [MIT license](LICENSE).
