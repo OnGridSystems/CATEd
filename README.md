@@ -1,3 +1,12 @@
+[![OnGrid Systems Blockchain Applications DApps Development](img/ongrid-systems-cover.png)](https://ongrid.pro/)
+
+![GitHub last commit](https://img.shields.io/github/last-commit/robotveradev/VeraWebApp.svg)
+![GitHub release](https://img.shields.io/github/release/robotveradev/VeraWebApp.svg)
+[![Project website](https://img.shields.io/website-up-down-green-red/http/vera.jobs.svg?label=project-site)](https://vera.jobs)
+[![Demo website](https://img.shields.io/website-up-down-green-red/http/demo.vera.jobs.svg?label=demo-site)](https://vera.wtf)
+![License](https://img.shields.io/github/license/robotveradev/VeraWebApp.svg)
+
+
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
 
 ## Overview
