@@ -3,7 +3,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/robotveradev/VeraWebApp.svg)
 ![GitHub release](https://img.shields.io/github/release/robotveradev/VeraWebApp.svg)
 [![Project website](https://img.shields.io/website-up-down-green-red/http/vera.jobs.svg?label=project-site)](https://ongrid.pro)
-![License](https://img.shields.io/github/license/robotveradev/VeraWebApp.svg)
+![License](https://img.shields.io/github/license/OnGridPro/CATEd.svg)
 
 
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
