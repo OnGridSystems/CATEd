@@ -1,7 +1,7 @@
 [![OnGrid Systems Blockchain Applications DApps Development](images/ongrid-systems-cover.png)](https://ongrid.pro/)
 
-![GitHub last commit](https://img.shields.io/github/last-commit/robotveradev/VeraWebApp.svg)
-![GitHub release](https://img.shields.io/github/release/robotveradev/VeraWebApp.svg)
+![GitHub last commit](https://img.shields.io/github/last-commit/OnGridSystems/CATEd.svg)
+![GitHub release](https://img.shields.io/github/release/OnGridSystems/CATEd.svg)
 ![License](https://img.shields.io/github/license/OnGridSystems/CATEd.svg)
 
 
