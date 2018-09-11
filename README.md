@@ -2,7 +2,7 @@
 
 ![GitHub last commit](https://img.shields.io/github/last-commit/OnGridSystems/CATEd.svg)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/Django.svg)
-![License](https://img.shields.io/github/license/OnGridSystems/CATEd.svg)
+![License](https://img.shields.io/github/license/mashape/apistatus.svg)
 
 
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
