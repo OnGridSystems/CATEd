@@ -1,3 +1,10 @@
+[![OnGrid Systems Blockchain Applications DApps Development](images/ongrid-systems-cover.png)](https://ongrid.pro/)
+
+![GitHub last commit](https://img.shields.io/github/last-commit/OnGridSystems/CATEd.svg)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/Django.svg)
+![License](https://img.shields.io/github/license/mashape/apistatus.svg)
+
+
 # CATEd - Cryptocurrency Analytics and Trading Engine for Django
 
 ## Overview
@@ -128,3 +135,9 @@ sudo update-rc.d celerybeat defaults
 * Sergey Korotko [FaceBook](https://www.facebook.com/s.korotko), [GitHub](https://github.com/achievement008)
 * Dmitry Suldin [FaceBook](https://www.facebook.com/novator.klin), [GitHub](https://github.com/Klyaus)
 * Kirill Varlamov: [GitHub](https://github.com/ongrid/), [FaceBook](https://www.facebook.com/kirill.varlamov.12), [LinkedIn](https://www.linkedin.com/in/kvarlamo/)
+
+## License
+
+Copyright (c) 2018 OnGrid Systems.
+
+Each file included in this repository is licensed under the [MIT license](LICENSE).
