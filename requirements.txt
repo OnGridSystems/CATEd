@@ -1,5 +1,5 @@
 aiodns==1.1.1
-aiohttp==2.2.5
+aiohttp==3.7.4
 amqp==2.2.2
 anyjson==0.3.3
 asgi-redis==1.4.2
