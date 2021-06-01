@@ -70,7 +70,7 @@ TelegramBotAPI==0.3.2
 tornado==4.2
 Twisted==17.5.0
 txaio==2.8.1
-urllib3==1.21.1
+urllib3==1.26.5
 vine==1.1.4
 websocket==0.2.1
 websocket-client==0.44.0
