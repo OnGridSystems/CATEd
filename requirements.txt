@@ -78,4 +78,4 @@ websockets==3.3
 yandex-money-sdk==0.1.3
 yarl==0.12.0
 zope.interface==4.4.2
-pip==10.0.0
+pip==21.1
